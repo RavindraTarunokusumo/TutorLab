@@ -1,4 +1,4 @@
-# TutorFoundry — MVP Product and Implementation Specification
+# TutorLab — MVP Product and Implementation Specification
 
 **Status:** Finalized hackathon scope  
 **Target:** OpenAI Build Week — Education  
@@ -11,11 +11,11 @@
 
 ## 1. Product definition
 
-TutorFoundry is an **eval-driven AI tutor builder**. A teacher uploads course materials and describes how students should be taught. TutorFoundry converts those inputs into an inspectable pedagogical policy, compiles that policy into a working tutor, tests the tutor against simulated learners, and exports a portable tutor package.
+TutorLab is an **eval-driven AI tutor builder**. A teacher uploads course materials and describes how students should be taught. TutorLab converts those inputs into an inspectable pedagogical policy, compiles that policy into a working tutor, tests the tutor against simulated learners, and exports a portable tutor package.
 
 ### One-sentence pitch
 
-> TutorFoundry lets teachers design, test, and deploy course-specific AI tutors through educational decisions—not prompt engineering.
+> TutorLab lets teachers design, test, and deploy course-specific AI tutors through educational decisions—not prompt engineering.
 
 ### Core product thesis
 
@@ -23,7 +23,7 @@ A tutor should not be considered ready merely because a system prompt has been g
 
 ### Differentiator
 
-Existing classroom chatbot builders commonly provide prompt fields, document upload, preview, sharing, and monitoring. TutorFoundry differentiates itself through a continuous compilation loop:
+Existing classroom chatbot builders commonly provide prompt fields, document upload, preview, sharing, and monitoring. TutorLab differentiates itself through a continuous compilation loop:
 
 ```mermaid
 flowchart TD
@@ -181,9 +181,51 @@ The MVP does not require adding arbitrary new graph nodes. Teachers can edit ext
 
 ### Stage 4 — Choose a tutor design
 
-TutorFoundry generates three cards with explicit trade-offs:
+GPT-5.6 does not invent three arbitrary tutor personalities. It selects candidates from TutorLab's **Tutor Design Catalog**, using the teaching brief and extracted course model to rank the designs. This keeps behavior predictable, comparable, and testable.
 
-#### A. Socratic Concept Tutor
+#### Tutor Design Catalog
+
+| Design archetype | Primary behavior | Best suited to | Main trade-off |
+|---|---|---|---|
+| **Socratic Concept Tutor** | Elicits reasoning and guides through questions before explaining | Conceptual understanding, philosophy, theory, misconception-rich subjects | Can feel slow or evasive when the learner wants direct revision help |
+| **Misconception Diagnostician** | Searches for the belief or missing prerequisite behind an error | Mathematics, science, programming, diagnostic practice | Spends more turns diagnosing before progressing |
+| **Hint-Ladder Problem Coach** | Provides increasingly explicit hints while withholding the complete solution | Homework, problem sets, assessed practice | Less suitable for rapid content review |
+| **Worked-Example Instructor** | Models complete or partial solutions, then gradually removes support | Novices learning procedures or multi-step methods | Can encourage imitation if checks for understanding are weak |
+| **Retrieval Practice Coach** | Uses quizzes, recall prompts, spacing, and corrective feedback | Revision, vocabulary, factual knowledge, exam recall | Less effective as the sole approach for deep conceptual gaps |
+| **Exam and Rubric Coach** | Aligns feedback with assessment criteria, required steps, and expected terminology | Exam preparation, essays, rubric-based assignments | May over-optimize for assessment performance rather than exploration |
+| **Writing and Argument Coach** | Questions claims, structure, evidence, counterarguments, and revision choices | Essays, reports, humanities, communication | Domain correctness depends heavily on strong source material and rubrics |
+| **Inquiry and Case-Based Guide** | Organizes learning around a case, scenario, investigation, or hypothesis | Science inquiry, medicine, law, business, project-based learning | Requires carefully structured cases and can wander without clear milestones |
+| **Teach-Back Coach** | Asks the learner to explain a concept and identifies omissions or weak connections | Consolidation, oral defense, comprehension checks | Some learners need initial instruction before teach-back is productive |
+| **Adaptive Hybrid** | Switches among two or three approved strategies using explicit transition rules | Mixed-ability learners or sessions combining diagnosis, instruction, and practice | More complex to predict and evaluate than a single-strategy tutor |
+
+The catalog is finite for the MVP. Each archetype maps to a tested policy template containing default teaching moves, assistance-state transitions, answer-disclosure rules, and evaluation expectations. Adding an archetype therefore requires adding both its template and its tests; changing a display label alone does not create a new design.
+
+#### How GPT-5.6 selects the three candidates
+
+The Tutor Architect scores every applicable catalog archetype against:
+
+1. **Learning purpose** — conceptual learning, guided practice, revision, exam preparation, or feedback.
+2. **Material evidence** — presence of exercises, solutions, rubrics, misconceptions, cases, or writing samples.
+3. **Student level** — novice, intermediate, or advanced.
+4. **Teacher constraints** — answer policy, desired pace, tone, and assessment conditions.
+5. **Content structure** — conceptual, procedural, factual, argumentative, or case-based.
+6. **Risk profile** — likelihood of answer leakage, shallow imitation, unsupported claims, or cognitive overload.
+
+It returns exactly three candidates:
+
+- **Best fit** — the highest-scoring design for the teacher's stated goal.
+- **Strong alternative** — a materially different design that optimizes for another legitimate priority.
+- **Balanced option** — normally an Adaptive Hybrid or a complementary archetype that combines the strongest aspects of the first two.
+
+The three candidates must be behaviorally distinct. The selection schema requires a rationale, evidence from the course model, a trade-off, excluded alternatives, and the policy-template ID. The server rejects duplicate template IDs or candidates whose strategy profiles are too similar.
+
+GPT-5.6 may customize a candidate's name and description for the course—for example, “Probability Misconception Coach”—but the underlying `archetypeId` must come from the catalog. It may not invent an unsupported pedagogy or silently combine templates.
+
+#### Candidate presentation in the probability MVP
+
+For the seeded probability project, the expected candidates are:
+
+##### A. Socratic Concept Tutor
 
 - asks the student to explain reasoning first;
 - diagnoses misconceptions;
@@ -191,7 +233,7 @@ TutorFoundry generates three cards with explicit trade-offs:
 - minimizes complete worked solutions;
 - best for conceptual understanding.
 
-#### B. Structured Exam Coach
+##### B. Structured Exam Coach
 
 - aligns explanations with the marking scheme;
 - emphasizes required steps and terminology;
@@ -199,7 +241,7 @@ TutorFoundry generates three cards with explicit trade-offs:
 - can show complete solutions in revision mode;
 - best for exam preparation.
 
-#### C. Adaptive Hybrid
+##### C. Adaptive Hybrid
 
 - begins with diagnosis;
 - shifts between questions, explanations, analogies, and worked examples;
@@ -215,6 +257,8 @@ Each card shows:
 - likely benefit;
 - likely trade-off;
 - two sample tutor responses to the same learner message.
+
+The card also shows its catalog archetype, any secondary strategy, why TutorLab selected it, and why another plausible archetype was not selected.
 
 The teacher selects one card and may change six high-impact settings:
 
@@ -306,8 +350,14 @@ After approval, the teacher can:
 ### FR-4 Design generation
 
 - Produce exactly three designs with meaningful behavioral differences.
+- Select every design from the versioned Tutor Design Catalog.
+- Return a valid `archetypeId` and `templateVersion` for every candidate.
+- Label the candidates as best fit, strong alternative, and balanced option.
 - Designs must respect the selected use context.
 - Each design must include a trade-off, not merely a positive description.
+- Each design must cite the teaching-brief or course-model evidence used to select it.
+- Include at least one excluded archetype with a concise reason for exclusion.
+- Reject duplicate archetypes and unapproved strategy combinations.
 - Sample responses must be generated from the same fixed learner message for comparison.
 
 ### FR-5 Policy compilation
@@ -428,7 +478,7 @@ The model recommends the next state using Structured Outputs. Server logic valid
 
 ## 7. Tutor package specification
 
-The package is intentionally described as **TutorFoundry Package v0.1**, not as an industry standard.
+The package is intentionally described as **TutorLab Package v0.1**, not as an industry standard.
 
 ```json
 {
@@ -446,6 +496,8 @@ The package is intentionally described as **TutorFoundry Package v0.1**, not as 
     "objectives": []
   },
   "pedagogy": {
+    "archetype_id": "socratic_concept_tutor",
+    "template_version": "0.1",
     "primary_strategy": "socratic_diagnosis",
     "diagnose_before_explain": true,
     "hint_escalation": "slow",
@@ -757,7 +809,9 @@ tests/
 
 - `id`
 - `projectId`
-- `kind`
+- `archetypeId`
+- `templateVersion`
+- `candidateRole` (`best_fit`, `strong_alternative`, or `balanced_option`)
 - `data` JSON
 - `selected`
 - `createdAt`
@@ -861,7 +915,7 @@ Analysis, design, compile, scenario, and evaluation endpoints accept an idempote
 
 ### Visual direction
 
-TutorFoundry should feel like a professional creative tool, not a school administration portal.
+TutorLab should feel like a professional creative tool, not a school administration portal.
 
 - Light neutral canvas with indigo and violet accents.
 - Rounded 14–18 px panels.
@@ -1243,7 +1297,7 @@ The project is shippable when all of the following are true:
 - A new user can complete the golden path without editing code or prompts.
 - The provided probability documents produce a reviewable course model.
 - Three tutor designs are generated and visibly different.
-- The selected design compiles into a valid, versioned TutorFoundry package.
+- The selected design compiles into a valid, versioned TutorLab package.
 - The preview tutor uses course sources and displays citations.
 - Six scenarios run and produce transcript-grounded results.
 - The initial demo tutor fails the seeded answer-extraction case.
@@ -1261,7 +1315,7 @@ The project is shippable when all of the following are true:
 
 ### 0:00–0:20 — Problem
 
-“Teachers can create classroom chatbots, but they are still expected to write the right prompt and manually discover whether the tutor teaches well. TutorFoundry compiles educational intent into a tutor and tests it before students see it.”
+“Teachers can create classroom chatbots, but they are still expected to write the right prompt and manually discover whether the tutor teaches well. TutorLab compiles educational intent into a tutor and tests it before students see it.”
 
 ### 0:20–0:45 — Evidence input
 
@@ -1318,7 +1372,6 @@ Only after the MVP is shipped:
 - multimodal work inspection;
 - tutor/copilot/reviewer runtime modes;
 - model bake-offs using teacher-owned scenarios;
-- open TutorFoundry package adapters for other runtimes.
+- open TutorLab package adapters for other runtimes.
 
 These additions must not enter the hackathon branch until the Day 6 definition of done has been met.
-
