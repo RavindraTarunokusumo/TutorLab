@@ -1,0 +1,71 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+# This config is for a Next.js 15 (App Router) + TypeScript + Prisma + PostgreSQL project using npm.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=10000']
+      - id: check-case-conflict
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.3.3
+    hooks:
+      - id: prettier
+        # Run on staged files of these types; add more as needed (css, scss, html, etc.)
+        types_or: [javascript, jsx, ts, tsx, json, yaml, md, mdx]
+        # Exclude generated or lock files if desired via additional args or .prettierignore
+        args: ['--ignore-unknown', '--write']
+
+  - repo: local
+    hooks:
+      # ESLint via direct invocation (supports --fix on the passed staged files).
+      # Assumes "lint" in package.json runs `next lint` or `eslint .` with project config.
+      # For best staged-file performance we call eslint directly and let it receive filenames.
+      - id: eslint
+        name: eslint
+        entry: npx eslint --fix --max-warnings=0
+        language: system
+        types_or: [javascript, jsx, ts, tsx]
+        pass_filenames: true
+
+      # Prisma schema formatting. Only triggers on .prisma files.
+      - id: prisma-format
+        name: prisma format
+        entry: npx prisma format
+        language: system
+        files: ^prisma/.*\.prisma$
+        pass_filenames: false
+
+      # Fast schema validation (optional but cheap).
+      - id: prisma-validate
+        name: prisma validate
+        entry: npx prisma validate
+        language: system
+        files: ^prisma/.*\.prisma$
+        pass_filenames: false
+
+      # TypeScript type checking.
+      # Runs on the whole project (typecheck does not take individual file args usefully).
+      # Can be slow; move to CI-only or pre-push hook if it becomes a bottleneck.
+      - id: typecheck
+        name: TypeScript type check
+        entry: npm run typecheck
+        language: system
+        types_or: [ts, tsx]
+        pass_filenames: false
+
+# Optional CI configuration for pre-commit.ci (if used)
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  # Skip slow hooks in CI autofix runs if desired:
+  # skip: [typecheck]
