@@ -75,11 +75,12 @@ model Project {
 }
 
 model CourseModelVersion {
-  id        String   @id
-  projectId String
-  version   Int
-  artifact  Json
-  createdAt DateTime @default(now())
+  id            String   @id
+  projectId     String
+  version       Int
+  artifact      Json
+  teacherEdited Boolean  @default(false)
+  createdAt     DateTime @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
