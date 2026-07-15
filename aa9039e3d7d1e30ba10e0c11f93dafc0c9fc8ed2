@@ -1,0 +1,5 @@
+Task: Scaffold the application and local runtime
+Summary: Added the Next.js foundation, safe environment clients, Prisma/PostgreSQL runtime, Docker Compose, and baseline test/build tooling.
+Docs: docs/superpowers/specs/2026-07-15-day-1-day-2-design.md, docs/superpowers/plans/2026-07-15-day-1-day-2.md
+TODO: Day 1–2 Milestone / Task 1
+Validation: npm ci; prisma validate/generate; lint; typecheck; 7 Vitest tests; build; compose config; focused spec and quality reviews
