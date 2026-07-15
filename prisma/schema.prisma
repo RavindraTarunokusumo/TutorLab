@@ -62,6 +62,9 @@ model Project {
   stage         ProjectStage @default(brief)
   teachingBrief Json         @default("{}")
   editTokenHash String       @unique
+  vectorStoreId String?      @unique
+  vectorStoreProvisioningToken String?
+  vectorStoreProvisioningStartedAt DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -100,6 +103,8 @@ model SourceDocument {
   pageCount                  Int?
   extractedTokenCount        Int?
   processingError            String?
+  openaiFileId               String?          @unique
+  requiresExtractionMetrics  Boolean          @default(false)
   createdAt                  DateTime         @default(now())
   updatedAt                  DateTime         @updatedAt
 

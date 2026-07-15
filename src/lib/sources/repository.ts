@@ -33,12 +33,29 @@ type PersistedSource = {
   pageCount: number | null;
   extractedTokenCount: number | null;
   processingError: string | null;
+  openaiFileId: string | null;
+  requiresExtractionMetrics: boolean;
 };
 
 export type SourceExtractionMetrics = {
   pageCount?: number;
   extractedTokenCount?: number;
   finalized?: boolean;
+  requiresExtractionMetrics?: boolean;
+};
+
+export type SourceIngestionUpdate = {
+  openaiFileId?: string;
+  uploadStatus?: SourceDocument["processing"]["uploadStatus"];
+  extractionStatus?: SourceDocument["processing"]["extractionStatus"];
+  analysisStatus?: SourceDocument["processing"]["analysisStatus"];
+  processingError?: string | null;
+  requiresExtractionMetrics?: boolean;
+};
+
+export type ProviderSourceDocument = {
+  source: SourceDocument;
+  openaiFileId: string | null;
 };
 
 export interface SourceRepository {
@@ -49,6 +66,18 @@ export interface SourceRepository {
     sourceId: string,
     metrics: SourceExtractionMetrics,
   ): Promise<SourceDocument>;
+  findById(
+    projectId: string,
+    sourceId: string,
+  ): Promise<ProviderSourceDocument | null>;
+  findBySourceId(sourceId: string): Promise<ProviderSourceDocument | null>;
+  list(projectId: string): Promise<SourceDocument[]>;
+  updateIngestion(
+    projectId: string,
+    sourceId: string,
+    update: SourceIngestionUpdate,
+  ): Promise<ProviderSourceDocument>;
+  delete(projectId: string, sourceId: string): Promise<void>;
 }
 
 function usageFromSources(sources: PersistedSource[]): WorkspaceBudgetUsage {
@@ -90,6 +119,9 @@ function toSourceDocument(source: PersistedSource): SourceDocument {
       ...(source.extractedTokenCount === null
         ? {}
         : { extractedTokenCount: source.extractedTokenCount }),
+      ...(source.requiresExtractionMetrics
+        ? { requiresExtractionMetrics: true }
+        : {}),
       ...(source.processingError === null ? {} : { error: source.processingError }),
     },
   });
@@ -112,7 +144,13 @@ const sourceSelection = {
   pageCount: true,
   extractedTokenCount: true,
   processingError: true,
+  openaiFileId: true,
+  requiresExtractionMetrics: true,
 } as const;
+
+function toProviderSourceDocument(source: PersistedSource): ProviderSourceDocument {
+  return { source: toSourceDocument(source), openaiFileId: source.openaiFileId };
+}
 
 function invalidSourceMetadata(): SourceValidationError {
   return new SourceValidationError(
@@ -212,6 +250,8 @@ export function getSourceRepository(): SourceRepository {
               pageCount: parsed.data.processing.pageCount,
               extractedTokenCount: parsed.data.processing.extractedTokenCount,
               processingError: parsed.data.processing.error,
+              requiresExtractionMetrics:
+                parsed.data.processing.requiresExtractionMetrics ?? false,
             },
             select: sourceSelection,
           });
@@ -285,10 +325,82 @@ export function getSourceRepository(): SourceRepository {
               ? {}
               : { extractedTokenCount: metrics.extractedTokenCount }),
             ...(metrics.finalized ? { extractionStatus: "ready" } : {}),
+            ...(metrics.requiresExtractionMetrics === undefined
+              ? {}
+              : { requiresExtractionMetrics: metrics.requiresExtractionMetrics }),
           },
           select: sourceSelection,
         });
         return toSourceDocument(updated);
+      });
+    },
+    async findById(projectId, sourceId) {
+      const source = await db.sourceDocument.findFirst({
+        where: { id: sourceId, projectId },
+        select: sourceSelection,
+      });
+      return source ? toProviderSourceDocument(source) : null;
+    },
+    async findBySourceId(sourceId) {
+      const source = await db.sourceDocument.findUnique({
+        where: { id: sourceId },
+        select: sourceSelection,
+      });
+      return source ? toProviderSourceDocument(source) : null;
+    },
+    async list(projectId) {
+      const sources = await db.sourceDocument.findMany({
+        where: { projectId },
+        select: sourceSelection,
+        orderBy: { createdAt: "asc" },
+      });
+      return sources.map(toSourceDocument);
+    },
+    async updateIngestion(projectId, sourceId, update) {
+      return inLockedProjectTransaction(projectId, async (transaction) => {
+        const sources = await transaction.sourceDocument.findMany({
+          where: { projectId },
+          select: sourceSelection,
+        });
+        const source = sources.find((item) => item.id === sourceId);
+        if (!source) {
+          throw new Error("Source not found");
+        }
+        const updated = await transaction.sourceDocument.update({
+          where: { id: sourceId },
+          data: {
+            ...(update.openaiFileId === undefined
+              ? {}
+              : { openaiFileId: update.openaiFileId }),
+            ...(update.uploadStatus === undefined
+              ? {}
+              : { uploadStatus: update.uploadStatus }),
+            ...(update.extractionStatus === undefined
+              ? {}
+              : { extractionStatus: update.extractionStatus }),
+            ...(update.analysisStatus === undefined
+              ? {}
+              : { analysisStatus: update.analysisStatus }),
+            ...(update.processingError === undefined
+              ? {}
+              : { processingError: update.processingError }),
+            ...(update.requiresExtractionMetrics === undefined
+              ? {}
+              : { requiresExtractionMetrics: update.requiresExtractionMetrics }),
+          },
+          select: sourceSelection,
+        });
+        return toProviderSourceDocument(updated);
+      });
+    },
+    async delete(projectId, sourceId) {
+      await inLockedProjectTransaction(projectId, async (transaction) => {
+        const deleted = await transaction.sourceDocument.deleteMany({
+          where: { id: sourceId, projectId },
+        });
+        if (deleted.count !== 1) {
+          throw new Error("Source not found");
+        }
       });
     },
   };
