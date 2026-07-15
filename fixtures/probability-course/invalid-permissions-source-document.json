@@ -1,0 +1,24 @@
+{
+  "id": "document-invalid-permissions",
+  "projectId": "project-probability",
+  "name": "sample-exam.pdf",
+  "role": "assessment",
+  "authority": "course_authoritative",
+  "permissions": {
+    "useForCourseModel": true,
+    "useForPedagogyDrafting": true,
+    "useForRuntimeRetrieval": true,
+    "useForEvaluation": true,
+    "revealExcerptsToStudents": "never"
+  },
+  "containsProtectedSolutions": true,
+  "contentHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "mimeType": "application/pdf",
+  "sizeBytes": 42000,
+  "processing": {
+    "uploadStatus": "ready",
+    "extractionStatus": "ready",
+    "analysisStatus": "ready",
+    "pageCount": 2
+  }
+}

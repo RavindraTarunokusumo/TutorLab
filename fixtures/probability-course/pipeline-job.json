@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "0.1",
+  "id": "job-synthesis-1",
+  "projectId": "project-probability",
+  "stage": "synthesis",
+  "idempotencyKey": "project-probability-synthesis-v1",
+  "status": "completed",
+  "attemptCount": 1,
+  "progress": 1,
+  "usage": { "inputTokens": 12400, "outputTokens": 3100 },
+  "latencyMs": 18420,
+  "resultId": "course-model-1",
+  "startedAt": "2026-07-15T10:01:00.000Z",
+  "completedAt": "2026-07-15T10:01:18.420Z"
+}

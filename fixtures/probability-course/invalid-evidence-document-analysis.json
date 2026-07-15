@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "0.1",
+  "id": "analysis-invalid-evidence",
+  "projectId": "project-probability",
+  "documentId": "document-practice",
+  "documentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "classification": { "role": "exercise", "confidence": 0.99 },
+  "coverage": { "pageCount": 6, "analyzedPages": 6, "extractionWarnings": [] },
+  "findings": {
+    "topics": [{ "id": "finding-unsupported", "label": "Unsupported claim", "description": "This material claim has no evidence reference.", "provenance": "source_grounded", "evidence": [], "confidence": 0.9 }],
+    "objectives": [],
+    "terminology": [],
+    "acceptedMethods": [],
+    "exercises": [],
+    "assessmentCriteria": [],
+    "protectedSolutions": [],
+    "misconceptions": [],
+    "pedagogicalPatterns": []
+  },
+  "summary": "Invalid evidence fixture.",
+  "analyzedAt": "2026-07-15T10:00:00.000Z"
+}
