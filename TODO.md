@@ -26,7 +26,7 @@ Rules:
 - [x] Task 9 — Implement compact incremental course synthesis (`cec9392`)
 - [x] Task 10 — Build the source-management interface (`26dd987`)
 - [x] Task 11 — Build the course-model review interface (`6a27ee2`)
-- [ ] Task 12 — Complete milestone verification and operating documentation
+- [x] Task 12 — Complete milestone verification and operating documentation (`0059e40`)
 
 ## Session: Docs & Config — Lint, Test, Pre-commit (2026-07-14)
 
