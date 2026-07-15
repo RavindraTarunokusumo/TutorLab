@@ -20,7 +20,7 @@ Rules:
 - [x] Task 3 — Add persistence, project authorization, and project APIs (`2fd84d5`)
 - [x] Task 4 — Build the seven-stage shell and fixture routes (`129a8aa`)
 - [x] Task 5 — Implement the teaching-brief wizard and autosave (`14ba4f9`)
-- [ ] Task 6 — Add source metadata, permissions, and budget enforcement
+- [x] Task 6 — Add source metadata, permissions, and budget enforcement (`ee674e0`)
 - [ ] Task 7 — Implement OpenAI file and vector-store ingestion
 - [ ] Task 8 — Implement per-document analysis
 - [ ] Task 9 — Implement compact incremental course synthesis
