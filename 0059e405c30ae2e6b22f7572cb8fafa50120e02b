@@ -1,0 +1,6 @@
+Task: Complete milestone verification and operating documentation
+Summary: Added real Next fixture-mode browser golden path, fixture integration coverage, protected-source assertions, and operating documentation for the Day 1–2 source pipeline.
+Docs: docs/architecture.md, docs/database.md, docs/commands.md, docs/testing.md, docs/changelog.md
+TODO: Day 1–2 Milestone / Task 12
+Validation: Focused review; npm run lint; npm run typecheck; npm run test:run (135 tests); npm run test:e2e:fixture (1 Playwright test)
+Caveat: Live verification remains pending owner-supplied course PDFs.
