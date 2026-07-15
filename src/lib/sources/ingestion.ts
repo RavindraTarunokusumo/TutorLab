@@ -21,7 +21,10 @@ import {
   type ProviderSourceDocument,
   type SourceRepository,
 } from "./repository";
-import { extractedTokenCountFromContent } from "./extraction-metrics";
+import {
+  extractedPageCountFromContent,
+  extractedTokenCountFromContent,
+} from "./extraction-metrics";
 import { createSourceMetadata, SourceValidationError } from "./validation";
 
 const SourceUploadMetadataSchema = z.strictObject({
@@ -221,10 +224,13 @@ async function finalizeCompletedIndexing(
   openaiFileId: string,
   dependencies: SourceIngestionDependencies,
 ): Promise<SourceDocument> {
-  const extractedTokenCount = extractedTokenCountFromContent(
-    await dependencies.provider.getExtractedText(vectorStoreId, openaiFileId),
+  const extractedContent = await dependencies.provider.getExtractedText(
+    vectorStoreId,
+    openaiFileId,
   );
-  if (extractedTokenCount === undefined) {
+  const extractedTokenCount = extractedTokenCountFromContent(extractedContent);
+  const pageCount = extractedPageCountFromContent(extractedContent);
+  if (extractedTokenCount === undefined || pageCount === undefined) {
     return (
       await dependencies.sourceRepository.updateIngestion(projectId, sourceId, {
         uploadStatus: "ready",
@@ -235,6 +241,7 @@ async function finalizeCompletedIndexing(
     ).source;
   }
   return dependencies.sourceRepository.recordExtractionMetrics(projectId, sourceId, {
+    pageCount,
     extractedTokenCount,
     finalized: true,
     requiresExtractionMetrics: false,
@@ -382,7 +389,7 @@ export async function ingestSource(
       processingError: null,
     });
     await dependencies.provider.attachFile(vectorStoreId, uploadedId);
-    return pollIndexing(
+    return await pollIndexing(
       projectId,
       source.id,
       vectorStoreId,
@@ -420,7 +427,7 @@ export async function refreshSourceProcessing(
         dependencies,
       );
     }
-    return pollIndexing(
+    return await pollIndexing(
       projectId,
       sourceId,
       vectorStoreId,

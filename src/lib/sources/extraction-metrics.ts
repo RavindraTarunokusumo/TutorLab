@@ -10,3 +10,25 @@ export function extractedTokenCountFromContent(content: string | undefined): num
   }
   return countExtractedTokens(content);
 }
+
+/**
+ * The provider's parsed-content endpoint does not expose a page field. Only count
+ * pages when it preserves explicit form-feed page boundaries; otherwise callers
+ * must leave the source pending rather than guessing from bytes or text length.
+ */
+export function extractedPageCountFromContent(
+  content: string | undefined,
+): number | undefined {
+  if (
+    content === undefined ||
+    !content.trim() ||
+    !content.includes("\f")
+  ) {
+    return undefined;
+  }
+  const pages = content.split("\f");
+  if (pages.at(-1) === "") {
+    pages.pop();
+  }
+  return pages.length;
+}

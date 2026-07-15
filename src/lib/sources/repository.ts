@@ -177,6 +177,13 @@ function requireExtractedTokenCount(): SourceValidationError {
   );
 }
 
+function requireExtractionMetrics(): SourceValidationError {
+  return new SourceValidationError(
+    "EXTRACTED_TOKEN_COUNT_REQUIRED",
+    "Page and extracted-token counts are required before extraction can be finalized.",
+  );
+}
+
 export function getSourceRepository(): SourceRepository {
   if (isFixtureRuntime()) return getFixtureSourceRepository();
   const db = getDb();
@@ -319,11 +326,10 @@ export function getSourceRepository(): SourceRepository {
           metrics.extractedTokenCount ??
           source.extractedTokenCount ??
           undefined;
-        if (
-          (metrics.finalized || source.extractionStatus === "ready") &&
-          extractedTokenCount === undefined
-        ) {
-          throw requireExtractedTokenCount();
+        if (metrics.finalized || source.extractionStatus === "ready") {
+          if (pageCount === undefined || extractedTokenCount === undefined) {
+            throw requireExtractionMetrics();
+          }
         }
         const budget = evaluateWorkspaceBudget(otherUsage, {
           fileCount: 1,

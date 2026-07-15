@@ -76,6 +76,7 @@ function sourceRepository(initial: ProviderSourceDocument[] = []) {
       }
       const processing = {
         ...document.source.processing,
+        ...(metrics.pageCount === undefined ? {} : { pageCount: metrics.pageCount }),
         extractedTokenCount: metrics.extractedTokenCount,
         extractionStatus: metrics.finalized ? ("ready" as const) : document.source.processing.extractionStatus,
       };
@@ -200,7 +201,7 @@ function provider(
       return typeof next === "string" ? { status: next } : next;
     }),
     getExtractedText: vi.fn().mockResolvedValue(
-      options ? options.extractedText : "one two three four",
+      options ? options.extractedText : "one two three four\f",
     ),
     detachFile: vi.fn().mockResolvedValue(undefined),
     deleteFile: vi.fn().mockResolvedValue(undefined),
@@ -248,7 +249,7 @@ describe("OpenAI source ingestion", () => {
     expect(sources.repository.recordExtractionMetrics).toHaveBeenCalledWith(
       "project-alpha",
       result.id,
-      expect.objectContaining({ extractedTokenCount: 4, finalized: true }),
+      expect.objectContaining({ pageCount: 1, extractedTokenCount: 4, finalized: true }),
     );
     expect(JSON.stringify(result)).not.toContain("file-alpha");
     expect(JSON.stringify(result)).not.toContain("vs-alpha");
@@ -282,6 +283,33 @@ describe("OpenAI source ingestion", () => {
       requiresExtractionMetrics: true,
     });
     expect(sources.repository.recordExtractionMetrics).not.toHaveBeenCalled();
+  });
+
+  it("keeps an over-page-budget source non-ready when atomic metric finalization rejects it", async () => {
+    const sources = sourceRepository();
+    sources.repository.recordExtractionMetrics = vi.fn(async (_projectId, _sourceId, metrics) => {
+      if ((metrics.pageCount ?? 0) > 500) {
+        throw new Error("The source would exceed the workspace page limit.");
+      }
+      throw new Error("Unexpected metrics");
+    });
+    const openAI = provider(["completed"], {
+      extractedText: Array.from({ length: 501 }, (_, index) => `page ${index + 1}`).join("\f"),
+    });
+
+    const result = await ingestSource(
+      "project-alpha",
+      { name: "too-many-pages.pdf", mimeType: "application/pdf", bytes: new TextEncoder().encode("pdf") },
+      { role: "lecture", authority: "course_authoritative", permissions, containsProtectedSolutions: false },
+      dependencies(sources.repository, projectRepository(), openAI),
+    );
+
+    expect(sources.repository.recordExtractionMetrics).toHaveBeenCalledWith(
+      "project-alpha",
+      result.id,
+      expect.objectContaining({ pageCount: 501, finalized: true }),
+    );
+    expect(result.processing.extractionStatus).toBe("failed");
   });
 
   it("persists a safe failed state without raw provider diagnostics", async () => {

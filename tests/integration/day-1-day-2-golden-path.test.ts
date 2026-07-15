@@ -100,13 +100,18 @@ function sourceRepository(): {
         (total, item) => total + item.source.sizeBytes,
         0,
       ),
-      pageCount: 0,
+      pageCount: documents.reduce(
+        (total, item) => total + (item.source.processing.pageCount ?? 0),
+        0,
+      ),
       extractedTokenCount: documents.reduce(
         (total, item) =>
           total + (item.source.processing.extractedTokenCount ?? 0),
         0,
       ),
-      unknownPageCount: documents.length,
+      unknownPageCount: documents.filter(
+        (item) => item.source.processing.pageCount === undefined,
+      ).length,
       unknownExtractedTokenCount: documents.filter(
         (item) => item.source.processing.extractedTokenCount === undefined,
       ).length,
@@ -123,6 +128,7 @@ function sourceRepository(): {
         ...record.source,
         processing: {
           ...record.source.processing,
+          ...(metrics.pageCount === undefined ? {} : { pageCount: metrics.pageCount }),
           extractedTokenCount: metrics.extractedTokenCount,
           extractionStatus: metrics.finalized
             ? "ready"
@@ -344,8 +350,8 @@ describe("Day 1–2 fixture golden path", () => {
       getFileStatus: vi.fn().mockResolvedValue({ status: "completed" }),
       getExtractedText: vi.fn(async (_vectorStoreId, fileId) =>
         fileId === "file-fixture-3"
-          ? "PRIVATE MARKING SCHEME ANSWER CONTENT"
-          : "fixture extracted probability content",
+          ? "PRIVATE MARKING SCHEME ANSWER CONTENT\f"
+          : "fixture extracted probability content\f",
       ),
       detachFile: vi.fn().mockResolvedValue(undefined),
       deleteFile: vi.fn().mockResolvedValue(undefined),

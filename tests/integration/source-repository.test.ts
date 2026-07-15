@@ -13,7 +13,11 @@ const database = vi.hoisted(() => ({
 vi.mock("@/lib/db", () => ({ getDb: () => database }));
 
 import { DEFAULT_WORKSPACE_BUDGET, parseSourceDocument } from "@/lib/schemas";
-import { getSourceRepository, SourceValidationError } from "@/lib/sources";
+import {
+  extractedPageCountFromContent,
+  getSourceRepository,
+  SourceValidationError,
+} from "@/lib/sources";
 
 function storedSource(overrides: Record<string, unknown> = {}) {
   return {
@@ -144,6 +148,39 @@ describe("source repository policy boundary", () => {
     expect(transaction.sourceDocument.update).not.toHaveBeenCalled();
   });
 
+  it("atomically finalizes 500 parsed pages and rejects 501 parsed pages", async () => {
+    const contentForPages = (pageCount: number) =>
+      `${Array.from({ length: pageCount }, (_, index) => `page ${index + 1}`).join("\f")}\f`;
+    const acceptedPageCount = extractedPageCountFromContent(contentForPages(500));
+    const rejectedPageCount = extractedPageCountFromContent(contentForPages(501));
+
+    expect(acceptedPageCount).toBe(500);
+    expect(rejectedPageCount).toBe(501);
+
+    const acceptedTransaction = transactionFor([storedSource()]);
+    database.$transaction.mockImplementationOnce((callback) => callback(acceptedTransaction));
+    await expect(
+      getSourceRepository().recordExtractionMetrics(
+        "project-alpha",
+        "document-alpha",
+        { pageCount: acceptedPageCount, extractedTokenCount: 500, finalized: true },
+      ),
+    ).resolves.toMatchObject({ processing: { pageCount: 500, extractionStatus: "ready" } });
+
+    const rejectedTransaction = transactionFor([storedSource()]);
+    database.$transaction.mockImplementationOnce((callback) => callback(rejectedTransaction));
+    await expect(
+      getSourceRepository().recordExtractionMetrics(
+        "project-alpha",
+        "document-alpha",
+        { pageCount: rejectedPageCount, extractedTokenCount: 501, finalized: true },
+      ),
+    ).rejects.toEqual(
+      expect.objectContaining({ code: "PAGE_LIMIT_EXCEEDED" } satisfies Partial<SourceValidationError>),
+    );
+    expect(rejectedTransaction.sourceDocument.update).not.toHaveBeenCalled();
+  });
+
   it("rejects aggregate budgets and protected retrieval permissions inside creation", async () => {
     const cappedTransaction = transactionFor(
       Array.from({ length: DEFAULT_WORKSPACE_BUDGET.maxFiles }, (_, index) =>
@@ -251,16 +288,17 @@ describe("source repository policy boundary", () => {
     const source = await getSourceRepository().recordExtractionMetrics(
       "project-alpha",
       "document-alpha",
-      { extractedTokenCount: 42, finalized: true },
+      { pageCount: 3, extractedTokenCount: 42, finalized: true },
     );
 
     expect(source.processing).toMatchObject({
+      pageCount: 3,
       extractedTokenCount: 42,
       extractionStatus: "ready",
     });
     expect(transaction.sourceDocument.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { extractedTokenCount: 42, extractionStatus: "ready" },
+        data: { pageCount: 3, extractedTokenCount: 42, extractionStatus: "ready" },
       }),
     );
   });

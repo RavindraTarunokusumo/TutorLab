@@ -249,13 +249,18 @@ export function getFixtureSourceRepository(): SourceRepository {
           (total, item) => total + item.source.sizeBytes,
           0,
         ),
-        pageCount: 0,
+        pageCount: current.reduce(
+          (total, item) => total + (item.source.processing.pageCount ?? 0),
+          0,
+        ),
         extractedTokenCount: current.reduce(
           (total, item) =>
             total + (item.source.processing.extractedTokenCount ?? 0),
           0,
         ),
-        unknownPageCount: current.length,
+        unknownPageCount: current.filter(
+          (item) => item.source.processing.pageCount === undefined,
+        ).length,
         unknownExtractedTokenCount: current.filter(
           (item) => item.source.processing.extractedTokenCount === undefined,
         ).length,
@@ -358,7 +363,8 @@ export function getFixtureOpenAIFileProvider(): OpenAIFileProvider {
       return { status: "completed" };
     },
     async getExtractedText(_vectorStoreId, fileId) {
-      return files.get(fileId);
+      const content = files.get(fileId);
+      return content === undefined ? undefined : `${content}\f`;
     },
     async detachFile() {},
     async deleteFile(fileId) {
