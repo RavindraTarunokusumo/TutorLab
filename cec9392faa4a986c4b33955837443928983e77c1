@@ -1,0 +1,5 @@
+Task: Implement compact incremental course synthesis
+Summary: Added bounded structured synthesis from document analyses, atomic versioning, teacher edit protection, provenance coverage, and authenticated course-model APIs.
+Docs: docs/superpowers/specs/2026-07-15-day-1-day-2-design.md, docs/superpowers/plans/2026-07-15-day-1-day-2.md
+TODO: Day 1–2 Milestone / Task 9
+Validation: Focused reviews; npm run lint; npm run typecheck; npm run test:run (121 tests)
