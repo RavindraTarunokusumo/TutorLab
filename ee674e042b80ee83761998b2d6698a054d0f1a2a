@@ -1,0 +1,5 @@
+Task: Add source metadata, permissions, and budget enforcement
+Summary: Added transaction-safe source policy, hashing, budget enforcement, aggregate persistence, and extraction-metric finalization.
+Docs: docs/superpowers/specs/2026-07-15-day-1-day-2-design.md, docs/superpowers/plans/2026-07-15-day-1-day-2.md
+TODO: Day 1–2 Milestone / Task 6
+Validation: TDD; prisma validate/generate; npm run lint; npm run typecheck; npm run test:run (89 tests); focused spec and quality reviews
