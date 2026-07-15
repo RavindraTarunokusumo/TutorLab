@@ -4,7 +4,10 @@ import { CreateProjectInputSchema } from "@/lib/schemas/project";
 import { createProject } from "@/lib/projects/service";
 
 function invalidRequest() {
-  return NextResponse.json({ error: "Invalid project request" }, { status: 400 });
+  return NextResponse.json(
+    { error: "Invalid project request" },
+    { status: 400 },
+  );
 }
 
 export async function POST(request: Request) {
@@ -19,7 +22,7 @@ export async function POST(request: Request) {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      path: "/api/projects",
+      path: "/",
     });
     return response;
   } catch (error) {

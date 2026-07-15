@@ -27,7 +27,8 @@ function project(overrides: Record<string, unknown> = {}) {
 
 describe("project APIs", () => {
   beforeEach(() => {
-    process.env.PROJECT_EDIT_TOKEN_SECRET = "a-test-secret-with-at-least-32-characters";
+    process.env.PROJECT_EDIT_TOKEN_SECRET =
+      "a-test-secret-with-at-least-32-characters";
     vi.resetModules();
     vi.clearAllMocks();
   });
@@ -53,11 +54,13 @@ describe("project APIs", () => {
     const body = await response.json();
 
     expect(response.status).toBe(201);
-    expect(body).toEqual({ project: expect.objectContaining({ id: "project-alpha", stage: "brief" }) });
+    expect(body).toEqual({
+      project: expect.objectContaining({ id: "project-alpha", stage: "brief" }),
+    });
     expect(JSON.stringify(body)).not.toContain("token");
     const setCookie = response.headers.get("set-cookie");
     expect(setCookie).toContain("HttpOnly");
-    expect(setCookie).toContain("Path=/api/projects");
+    expect(setCookie).toContain("Path=/");
     expect(setCookie).toContain("SameSite=lax");
     expect(repository.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -89,7 +92,8 @@ describe("project APIs", () => {
     repository.updateTeachingBrief.mockResolvedValue(
       project({ teachingBrief: { purpose: "guided_practice" } }),
     );
-    const { PATCH } = await import("@/app/api/projects/[projectId]/brief/route");
+    const { PATCH } =
+      await import("@/app/api/projects/[projectId]/brief/route");
 
     const response = await PATCH(
       new Request("http://localhost/api/projects/project-alpha/brief", {
@@ -104,11 +108,16 @@ describe("project APIs", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      project: expect.objectContaining({ teachingBrief: { purpose: "guided_practice" } }),
+      project: expect.objectContaining({
+        teachingBrief: { purpose: "guided_practice" },
+      }),
     });
-    expect(repository.updateTeachingBrief).toHaveBeenCalledWith("project-alpha", {
-      purpose: "guided_practice",
-    });
+    expect(repository.updateTeachingBrief).toHaveBeenCalledWith(
+      "project-alpha",
+      {
+        purpose: "guided_practice",
+      },
+    );
   });
 
   it("reads the persisted stage and brief only through the project edit session", async () => {
@@ -143,7 +152,8 @@ describe("project APIs", () => {
     const { createProject } = await import("@/lib/projects/service");
     repository.create.mockResolvedValue(project());
     const created = await createProject({ name: "Probability tutor" });
-    const { PATCH } = await import("@/app/api/projects/[projectId]/brief/route");
+    const { PATCH } =
+      await import("@/app/api/projects/[projectId]/brief/route");
 
     const missingSession = await PATCH(
       new Request("http://localhost/api/projects/project-alpha/brief", {
@@ -172,7 +182,8 @@ describe("project APIs", () => {
     repository.create.mockResolvedValue(project());
     const created = await createProject({ name: "Probability tutor" });
     repository.findByIdAndEditTokenHash.mockResolvedValue(project());
-    const { PATCH } = await import("@/app/api/projects/[projectId]/brief/route");
+    const { PATCH } =
+      await import("@/app/api/projects/[projectId]/brief/route");
 
     const response = await PATCH(
       new Request("http://localhost/api/projects/project-alpha/brief", {
