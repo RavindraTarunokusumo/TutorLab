@@ -1,3 +1,5 @@
+import { FixtureProjectLauncher } from "@/components/projects/fixture-project-launcher";
+
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl items-center px-6 py-16 sm:px-10">
@@ -12,6 +14,9 @@ export default function Home() {
           Build an evidence-grounded tutor from the course materials and
           teaching decisions you trust.
         </p>
+        {process.env.TUTORLAB_FIXTURE_MODE === "1" ? (
+          <FixtureProjectLauncher />
+        ) : null}
       </section>
     </main>
   );

@@ -21,6 +21,7 @@
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
+    "test:e2e:fixture": "node tests/e2e/run-fixture.mjs",
     "test:e2e:ui": "playwright test --ui",
     "prisma": "node scripts/prisma.mjs",
     "prisma:generate": "npm run prisma -- generate",

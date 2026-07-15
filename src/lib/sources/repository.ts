@@ -2,6 +2,10 @@ import "server-only";
 import { Prisma } from "@prisma/client";
 import { getDb } from "@/lib/db";
 import {
+  getFixtureSourceRepository,
+  isFixtureRuntime,
+} from "@/lib/fixture-runtime";
+import {
   SourceDocumentSchema,
   type SourceDocument,
   type SourcePermissions,
@@ -11,10 +15,7 @@ import {
   evaluateWorkspaceBudget,
   type WorkspaceBudgetUsage,
 } from "./budgets";
-import {
-  SourceValidationError,
-  validateSourceCandidate,
-} from "./validation";
+import { SourceValidationError, validateSourceCandidate } from "./validation";
 
 type PersistedSource = {
   id: string;
@@ -81,22 +82,25 @@ export interface SourceRepository {
 }
 
 function usageFromSources(sources: PersistedSource[]): WorkspaceBudgetUsage {
-  return sources.reduce<WorkspaceBudgetUsage>((usage, source) => {
-    usage.fileCount += 1;
-    usage.workspaceBytes += source.sizeBytes;
-    usage.contentHashes = [...usage.contentHashes, source.contentHash];
-    if (source.pageCount === null) {
-      usage.unknownPageCount += 1;
-    } else {
-      usage.pageCount += source.pageCount;
-    }
-    if (source.extractedTokenCount === null) {
-      usage.unknownExtractedTokenCount += 1;
-    } else {
-      usage.extractedTokenCount += source.extractedTokenCount;
-    }
-    return usage;
-  }, { ...EMPTY_WORKSPACE_USAGE, contentHashes: [] });
+  return sources.reduce<WorkspaceBudgetUsage>(
+    (usage, source) => {
+      usage.fileCount += 1;
+      usage.workspaceBytes += source.sizeBytes;
+      usage.contentHashes = [...usage.contentHashes, source.contentHash];
+      if (source.pageCount === null) {
+        usage.unknownPageCount += 1;
+      } else {
+        usage.pageCount += source.pageCount;
+      }
+      if (source.extractedTokenCount === null) {
+        usage.unknownExtractedTokenCount += 1;
+      } else {
+        usage.extractedTokenCount += source.extractedTokenCount;
+      }
+      return usage;
+    },
+    { ...EMPTY_WORKSPACE_USAGE, contentHashes: [] },
+  );
 }
 
 function toSourceDocument(source: PersistedSource): SourceDocument {
@@ -122,7 +126,9 @@ function toSourceDocument(source: PersistedSource): SourceDocument {
       ...(source.requiresExtractionMetrics
         ? { requiresExtractionMetrics: true }
         : {}),
-      ...(source.processingError === null ? {} : { error: source.processingError }),
+      ...(source.processingError === null
+        ? {}
+        : { error: source.processingError }),
     },
   });
 }
@@ -148,8 +154,13 @@ const sourceSelection = {
   requiresExtractionMetrics: true,
 } as const;
 
-function toProviderSourceDocument(source: PersistedSource): ProviderSourceDocument {
-  return { source: toSourceDocument(source), openaiFileId: source.openaiFileId };
+function toProviderSourceDocument(
+  source: PersistedSource,
+): ProviderSourceDocument {
+  return {
+    source: toSourceDocument(source),
+    openaiFileId: source.openaiFileId,
+  };
 }
 
 function invalidSourceMetadata(): SourceValidationError {
@@ -167,6 +178,7 @@ function requireExtractedTokenCount(): SourceValidationError {
 }
 
 export function getSourceRepository(): SourceRepository {
+  if (isFixtureRuntime()) return getFixtureSourceRepository();
   const db = getDb();
 
   async function inLockedProjectTransaction<T>(
@@ -208,55 +220,63 @@ export function getSourceRepository(): SourceRepository {
       }
 
       try {
-        return await inLockedProjectTransaction(parsed.data.projectId, async (transaction) => {
-          const existingSources = await transaction.sourceDocument.findMany({
-            where: { projectId: parsed.data.projectId },
-            select: sourceSelection,
-          });
-          const validation = validateSourceCandidate(
-            {
-              name: parsed.data.name,
-              mimeType: parsed.data.mimeType,
-              sizeBytes: parsed.data.sizeBytes,
-              pageCount: parsed.data.processing.pageCount,
-              extractedTokenCount: parsed.data.processing.extractedTokenCount,
-              role: parsed.data.role,
-              authority: parsed.data.authority,
-              permissions: parsed.data.permissions,
-              containsProtectedSolutions: parsed.data.containsProtectedSolutions,
-              contentHash: parsed.data.contentHash,
-            },
-            usageFromSources(existingSources),
-          );
-          if (!validation.valid) {
-            throw new SourceValidationError(validation.code, validation.message);
-          }
+        return await inLockedProjectTransaction(
+          parsed.data.projectId,
+          async (transaction) => {
+            const existingSources = await transaction.sourceDocument.findMany({
+              where: { projectId: parsed.data.projectId },
+              select: sourceSelection,
+            });
+            const validation = validateSourceCandidate(
+              {
+                name: parsed.data.name,
+                mimeType: parsed.data.mimeType,
+                sizeBytes: parsed.data.sizeBytes,
+                pageCount: parsed.data.processing.pageCount,
+                extractedTokenCount: parsed.data.processing.extractedTokenCount,
+                role: parsed.data.role,
+                authority: parsed.data.authority,
+                permissions: parsed.data.permissions,
+                containsProtectedSolutions:
+                  parsed.data.containsProtectedSolutions,
+                contentHash: parsed.data.contentHash,
+              },
+              usageFromSources(existingSources),
+            );
+            if (!validation.valid) {
+              throw new SourceValidationError(
+                validation.code,
+                validation.message,
+              );
+            }
 
-          const created = await transaction.sourceDocument.create({
-            data: {
-              id: parsed.data.id,
-              projectId: parsed.data.projectId,
-              name: parsed.data.name,
-              role: parsed.data.role,
-              authority: parsed.data.authority,
-              permissions: parsed.data.permissions as Prisma.InputJsonValue,
-              containsProtectedSolutions: parsed.data.containsProtectedSolutions,
-              contentHash: parsed.data.contentHash,
-              mimeType: parsed.data.mimeType,
-              sizeBytes: parsed.data.sizeBytes,
-              uploadStatus: parsed.data.processing.uploadStatus,
-              extractionStatus: parsed.data.processing.extractionStatus,
-              analysisStatus: parsed.data.processing.analysisStatus,
-              pageCount: parsed.data.processing.pageCount,
-              extractedTokenCount: parsed.data.processing.extractedTokenCount,
-              processingError: parsed.data.processing.error,
-              requiresExtractionMetrics:
-                parsed.data.processing.requiresExtractionMetrics ?? false,
-            },
-            select: sourceSelection,
-          });
-          return toSourceDocument(created);
-        });
+            const created = await transaction.sourceDocument.create({
+              data: {
+                id: parsed.data.id,
+                projectId: parsed.data.projectId,
+                name: parsed.data.name,
+                role: parsed.data.role,
+                authority: parsed.data.authority,
+                permissions: parsed.data.permissions as Prisma.InputJsonValue,
+                containsProtectedSolutions:
+                  parsed.data.containsProtectedSolutions,
+                contentHash: parsed.data.contentHash,
+                mimeType: parsed.data.mimeType,
+                sizeBytes: parsed.data.sizeBytes,
+                uploadStatus: parsed.data.processing.uploadStatus,
+                extractionStatus: parsed.data.processing.extractionStatus,
+                analysisStatus: parsed.data.processing.analysisStatus,
+                pageCount: parsed.data.processing.pageCount,
+                extractedTokenCount: parsed.data.processing.extractedTokenCount,
+                processingError: parsed.data.processing.error,
+                requiresExtractionMetrics:
+                  parsed.data.processing.requiresExtractionMetrics ?? false,
+              },
+              select: sourceSelection,
+            });
+            return toSourceDocument(created);
+          },
+        );
       } catch (error) {
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -273,7 +293,8 @@ export function getSourceRepository(): SourceRepository {
     async recordExtractionMetrics(projectId, sourceId, metrics) {
       if (
         (metrics.pageCount !== undefined &&
-          (!Number.isSafeInteger(metrics.pageCount) || metrics.pageCount <= 0)) ||
+          (!Number.isSafeInteger(metrics.pageCount) ||
+            metrics.pageCount <= 0)) ||
         (metrics.extractedTokenCount !== undefined &&
           (!Number.isSafeInteger(metrics.extractedTokenCount) ||
             metrics.extractedTokenCount < 0))
@@ -295,7 +316,9 @@ export function getSourceRepository(): SourceRepository {
         );
         const pageCount = metrics.pageCount ?? source.pageCount ?? undefined;
         const extractedTokenCount =
-          metrics.extractedTokenCount ?? source.extractedTokenCount ?? undefined;
+          metrics.extractedTokenCount ??
+          source.extractedTokenCount ??
+          undefined;
         if (
           (metrics.finalized || source.extractionStatus === "ready") &&
           extractedTokenCount === undefined
@@ -308,8 +331,7 @@ export function getSourceRepository(): SourceRepository {
           pageCount,
           extractedTokenCount,
           unknownPageCount: pageCount === undefined ? 1 : 0,
-          unknownExtractedTokenCount:
-            extractedTokenCount === undefined ? 1 : 0,
+          unknownExtractedTokenCount: extractedTokenCount === undefined ? 1 : 0,
         });
         if (!budget.allowed) {
           throw new SourceValidationError(budget.code, budget.message);
@@ -327,7 +349,9 @@ export function getSourceRepository(): SourceRepository {
             ...(metrics.finalized ? { extractionStatus: "ready" } : {}),
             ...(metrics.requiresExtractionMetrics === undefined
               ? {}
-              : { requiresExtractionMetrics: metrics.requiresExtractionMetrics }),
+              : {
+                  requiresExtractionMetrics: metrics.requiresExtractionMetrics,
+                }),
           },
           select: sourceSelection,
         });
@@ -386,7 +410,9 @@ export function getSourceRepository(): SourceRepository {
               : { processingError: update.processingError }),
             ...(update.requiresExtractionMetrics === undefined
               ? {}
-              : { requiresExtractionMetrics: update.requiresExtractionMetrics }),
+              : {
+                  requiresExtractionMetrics: update.requiresExtractionMetrics,
+                }),
           },
           select: sourceSelection,
         });

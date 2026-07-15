@@ -1,12 +1,22 @@
 import "server-only";
 import { z } from "zod";
 import { getOpenAIClient } from "@/lib/ai/client";
-import { buildCourseSynthesizerInstructions, type CourseSynthesisPromptInput } from "@/lib/ai/prompts/course-synthesizer";
+import {
+  getFixtureCourseSynthesizer,
+  isFixtureRuntime,
+} from "@/lib/fixture-runtime";
+import {
+  buildCourseSynthesizerInstructions,
+  type CourseSynthesisPromptInput,
+} from "@/lib/ai/prompts/course-synthesizer";
 import { CourseModelSchema, type CourseModel } from "@/lib/schemas";
 
 export interface CourseSynthesizer {
   synthesize(input: CourseSynthesisPromptInput): Promise<unknown>;
-  repair(input: CourseSynthesisPromptInput, invalidOutput: unknown): Promise<unknown>;
+  repair(
+    input: CourseSynthesisPromptInput,
+    invalidOutput: unknown,
+  ): Promise<unknown>;
 }
 
 function responseFormat() {
@@ -28,12 +38,15 @@ async function requestStructuredOutput(prompt: string): Promise<unknown> {
 }
 
 export function getCourseSynthesizer(): CourseSynthesizer {
+  if (isFixtureRuntime()) return getFixtureCourseSynthesizer();
   return {
     synthesize(input) {
       return requestStructuredOutput(buildCourseSynthesizerInstructions(input));
     },
     repair(input, invalidOutput) {
-      return requestStructuredOutput(`${buildCourseSynthesizerInstructions(input)}\n\nPrevious invalid JSON: ${JSON.stringify(invalidOutput)}\nRepair it without adding unsupported content.`);
+      return requestStructuredOutput(
+        `${buildCourseSynthesizerInstructions(input)}\n\nPrevious invalid JSON: ${JSON.stringify(invalidOutput)}\nRepair it without adding unsupported content.`,
+      );
     },
   };
 }

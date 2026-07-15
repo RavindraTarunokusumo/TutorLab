@@ -1,5 +1,9 @@
 import "server-only";
 import { getOpenAIClient } from "./client";
+import {
+  getFixtureOpenAIFileProvider,
+  isFixtureRuntime,
+} from "@/lib/fixture-runtime";
 
 export type VectorStoreFileStatus = "in_progress" | "completed" | "failed";
 
@@ -20,7 +24,10 @@ export interface OpenAIFileProvider {
     vectorStoreId: string,
     fileId: string,
   ): Promise<VectorStoreFileProgress>;
-  getExtractedText(vectorStoreId: string, fileId: string): Promise<string | undefined>;
+  getExtractedText(
+    vectorStoreId: string,
+    fileId: string,
+  ): Promise<string | undefined>;
   detachFile(vectorStoreId: string, fileId: string): Promise<void>;
   deleteFile(fileId: string): Promise<void>;
 }
@@ -36,6 +43,7 @@ function normalizeFileStatus(status: string): VectorStoreFileStatus {
 }
 
 export function getOpenAIFileProvider(): OpenAIFileProvider {
+  if (isFixtureRuntime()) return getFixtureOpenAIFileProvider();
   const client = getOpenAIClient();
 
   return {
@@ -50,11 +58,16 @@ export function getOpenAIFileProvider(): OpenAIFileProvider {
       const contents = new ArrayBuffer(bytes.byteLength);
       new Uint8Array(contents).set(bytes);
       const file = new File([contents], name, { type: mimeType });
-      const uploaded = await client.files.create({ file, purpose: "assistants" });
+      const uploaded = await client.files.create({
+        file,
+        purpose: "assistants",
+      });
       return { id: uploaded.id };
     },
     async attachFile(vectorStoreId, fileId) {
-      await client.vectorStores.files.create(vectorStoreId, { file_id: fileId });
+      await client.vectorStores.files.create(vectorStoreId, {
+        file_id: fileId,
+      });
     },
     async getFileStatus(vectorStoreId, fileId) {
       const file = await client.vectorStores.files.retrieve(fileId, {

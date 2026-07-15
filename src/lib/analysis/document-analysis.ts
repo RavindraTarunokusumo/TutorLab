@@ -1,17 +1,42 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
-import { getDocumentAnalyst, parseAnalyzedDocument, type DocumentAnalyst } from "@/lib/ai/document-analyst";
+import {
+  getDocumentAnalyst,
+  parseAnalyzedDocument,
+  type DocumentAnalyst,
+} from "@/lib/ai/document-analyst";
 import {
   DEFAULT_DOCUMENT_ANALYSIS_PROFILE,
   DOCUMENT_ANALYSIS_SCHEMA_VERSION,
 } from "@/lib/ai/prompts/document-analyst";
-import { getOpenAIFileProvider, type OpenAIFileProvider } from "@/lib/ai/openai-files";
+import {
+  getOpenAIFileProvider,
+  type OpenAIFileProvider,
+} from "@/lib/ai/openai-files";
 import { getDb } from "@/lib/db";
-import { getPipelineJobRepository, type PipelineJobRepository } from "@/lib/jobs/repository";
-import { getProjectRepository, type ProjectRepository } from "@/lib/projects/repository";
-import { getSourceRepository, type ProviderSourceDocument, type SourceRepository } from "@/lib/sources/repository";
-import { DocumentAnalysisSchema, type DocumentAnalysis, type PipelineJob } from "@/lib/schemas";
+import {
+  getFixtureDocumentAnalysisRepository,
+  isFixtureRuntime,
+} from "@/lib/fixture-runtime";
+import {
+  getPipelineJobRepository,
+  type PipelineJobRepository,
+} from "@/lib/jobs/repository";
+import {
+  getProjectRepository,
+  type ProjectRepository,
+} from "@/lib/projects/repository";
+import {
+  getSourceRepository,
+  type ProviderSourceDocument,
+  type SourceRepository,
+} from "@/lib/sources/repository";
+import {
+  DocumentAnalysisSchema,
+  type DocumentAnalysis,
+  type PipelineJob,
+} from "@/lib/schemas";
 
 export type AnalyzeOptions = {
   analysisProfile?: string;
@@ -35,7 +60,9 @@ export interface DocumentAnalysisRepository {
     schemaVersion: string;
     analysisProfile: string;
   }): Promise<DocumentAnalysis | null>;
-  save(input: DocumentAnalysis & { analysisProfile: string }): Promise<DocumentAnalysis>;
+  save(
+    input: DocumentAnalysis & { analysisProfile: string },
+  ): Promise<DocumentAnalysis>;
 }
 
 function toAnalysis(record: PersistedAnalysis): DocumentAnalysis {
@@ -43,6 +70,7 @@ function toAnalysis(record: PersistedAnalysis): DocumentAnalysis {
 }
 
 export function getDocumentAnalysisRepository(): DocumentAnalysisRepository {
+  if (isFixtureRuntime()) return getFixtureDocumentAnalysisRepository();
   const db = getDb();
   return {
     async findCached(input) {
@@ -84,8 +112,17 @@ export function getDocumentAnalysisRepository(): DocumentAnalysisRepository {
 }
 
 export class DocumentAnalysisError extends Error {
-  constructor(readonly code: "SOURCE_NOT_READY" | "SOURCE_NOT_ANALYZABLE" | "ANALYSIS_FAILED") {
-    super(code === "SOURCE_NOT_READY" ? "This source is not ready for analysis." : code === "SOURCE_NOT_ANALYZABLE" ? "This source is not enabled for course-model analysis." : "Document analysis could not be completed. Please retry.");
+  constructor(
+    readonly code:
+      "SOURCE_NOT_READY" | "SOURCE_NOT_ANALYZABLE" | "ANALYSIS_FAILED",
+  ) {
+    super(
+      code === "SOURCE_NOT_READY"
+        ? "This source is not ready for analysis."
+        : code === "SOURCE_NOT_ANALYZABLE"
+          ? "This source is not enabled for course-model analysis."
+          : "Document analysis could not be completed. Please retry.",
+    );
   }
 }
 
@@ -102,7 +139,8 @@ type Dependencies = {
 function dependencies(overrides?: Partial<Dependencies>): Dependencies {
   return {
     sourceRepository: overrides?.sourceRepository ?? getSourceRepository(),
-    analysisRepository: overrides?.analysisRepository ?? getDocumentAnalysisRepository(),
+    analysisRepository:
+      overrides?.analysisRepository ?? getDocumentAnalysisRepository(),
     projectRepository: overrides?.projectRepository ?? getProjectRepository(),
     provider: overrides?.provider ?? getOpenAIFileProvider(),
     analyst: overrides?.analyst ?? getDocumentAnalyst(),
@@ -116,7 +154,10 @@ function safeFailure() {
 }
 
 function assertReadyForAnalysis(record: ProviderSourceDocument) {
-  if (record.source.processing.extractionStatus !== "ready" || !record.openaiFileId) {
+  if (
+    record.source.processing.extractionStatus !== "ready" ||
+    !record.openaiFileId
+  ) {
     throw new DocumentAnalysisError("SOURCE_NOT_READY");
   }
   if (!record.source.permissions.useForCourseModel) {
@@ -127,7 +168,9 @@ function assertReadyForAnalysis(record: ProviderSourceDocument) {
 function cacheKey(sources: ProviderSourceDocument[], profile: string) {
   const hash = createHash("sha256");
   hash.update(profile);
-  for (const source of sources.sort((left, right) => left.source.id.localeCompare(right.source.id))) {
+  for (const source of sources.sort((left, right) =>
+    left.source.id.localeCompare(right.source.id),
+  )) {
     hash.update(source.source.id);
     hash.update(source.source.contentHash);
   }
@@ -147,26 +190,41 @@ async function runStructuredAnalysis(
     analysisProfile: profile,
   });
   if (cached) {
-    await deps.sourceRepository.updateIngestion(record.source.projectId, record.source.id, {
-      analysisStatus: "ready",
-      processingError: null,
-    });
+    await deps.sourceRepository.updateIngestion(
+      record.source.projectId,
+      record.source.id,
+      {
+        analysisStatus: "ready",
+        processingError: null,
+      },
+    );
     return cached;
   }
-  await deps.sourceRepository.updateIngestion(record.source.projectId, record.source.id, {
-    analysisStatus: "in_progress",
-    processingError: null,
-  });
+  await deps.sourceRepository.updateIngestion(
+    record.source.projectId,
+    record.source.id,
+    {
+      analysisStatus: "in_progress",
+      processingError: null,
+    },
+  );
   try {
-    const vectorStoreId = await deps.projectRepository.findVectorStoreId(record.source.projectId);
+    const vectorStoreId = await deps.projectRepository.findVectorStoreId(
+      record.source.projectId,
+    );
     if (!vectorStoreId) {
       throw new DocumentAnalysisError("SOURCE_NOT_READY");
     }
-    const documentText = await deps.provider.getExtractedText(vectorStoreId, record.openaiFileId!);
+    const documentText = await deps.provider.getExtractedText(
+      vectorStoreId,
+      record.openaiFileId!,
+    );
     if (!documentText) {
       throw new DocumentAnalysisError("SOURCE_NOT_READY");
     }
-    const project = await deps.projectRepository.findById(record.source.projectId);
+    const project = await deps.projectRepository.findById(
+      record.source.projectId,
+    );
     if (!project) {
       throw new DocumentAnalysisError("SOURCE_NOT_READY");
     }
@@ -193,17 +251,28 @@ async function runStructuredAnalysis(
     ) {
       throw new DocumentAnalysisError("ANALYSIS_FAILED");
     }
-    const saved = await deps.analysisRepository.save({ ...analysis, analysisProfile: profile });
-    await deps.sourceRepository.updateIngestion(record.source.projectId, record.source.id, {
-      analysisStatus: "ready",
-      processingError: null,
+    const saved = await deps.analysisRepository.save({
+      ...analysis,
+      analysisProfile: profile,
     });
+    await deps.sourceRepository.updateIngestion(
+      record.source.projectId,
+      record.source.id,
+      {
+        analysisStatus: "ready",
+        processingError: null,
+      },
+    );
     return saved;
   } catch (error) {
-    await deps.sourceRepository.updateIngestion(record.source.projectId, record.source.id, {
-      analysisStatus: "failed",
-      processingError: safeFailure(),
-    });
+    await deps.sourceRepository.updateIngestion(
+      record.source.projectId,
+      record.source.id,
+      {
+        analysisStatus: "failed",
+        processingError: safeFailure(),
+      },
+    );
     if (error instanceof DocumentAnalysisError) {
       throw error;
     }
@@ -221,10 +290,18 @@ export async function analyzeDocument(
   if (!source) {
     throw new DocumentAnalysisError("SOURCE_NOT_READY");
   }
-  return runStructuredAnalysis(source, options?.analysisProfile ?? DEFAULT_DOCUMENT_ANALYSIS_PROFILE, deps);
+  return runStructuredAnalysis(
+    source,
+    options?.analysisProfile ?? DEFAULT_DOCUMENT_ANALYSIS_PROFILE,
+    deps,
+  );
 }
 
-async function runWithConcurrency<T>(items: T[], limit: number, operation: (item: T) => Promise<void>) {
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  operation: (item: T) => Promise<void>,
+) {
   let index = 0;
   await Promise.all(
     Array.from({ length: Math.min(limit, items.length) }, async () => {
@@ -243,21 +320,35 @@ export async function analyzePendingDocuments(
 ): Promise<PipelineJob> {
   const deps = dependencies(overrides);
   const profile = options?.analysisProfile ?? DEFAULT_DOCUMENT_ANALYSIS_PROFILE;
-  const eligible = (await deps.sourceRepository.list(projectId))
-    .filter((source) => source.processing.extractionStatus === "ready" && source.permissions.useForCourseModel);
-  const records = (await Promise.all(eligible.map((source) => deps.sourceRepository.findById(projectId, source.id))))
-    .filter((source): source is ProviderSourceDocument => source !== null);
+  const eligible = (await deps.sourceRepository.list(projectId)).filter(
+    (source) =>
+      source.processing.extractionStatus === "ready" &&
+      source.permissions.useForCourseModel,
+  );
+  const records = (
+    await Promise.all(
+      eligible.map((source) =>
+        deps.sourceRepository.findById(projectId, source.id),
+      ),
+    )
+  ).filter((source): source is ProviderSourceDocument => source !== null);
   const pending: ProviderSourceDocument[] = [];
   for (const record of records) {
-    const cached = !options?.force && await deps.analysisRepository.findCached({
-      projectId,
-      documentHash: record.source.contentHash,
-      schemaVersion: DOCUMENT_ANALYSIS_SCHEMA_VERSION,
-      analysisProfile: profile,
-    });
+    const cached =
+      !options?.force &&
+      (await deps.analysisRepository.findCached({
+        projectId,
+        documentHash: record.source.contentHash,
+        schemaVersion: DOCUMENT_ANALYSIS_SCHEMA_VERSION,
+        analysisProfile: profile,
+      }));
     if (cached) {
       if (record.source.processing.analysisStatus !== "ready") {
-        await deps.sourceRepository.updateIngestion(projectId, record.source.id, { analysisStatus: "ready", processingError: null });
+        await deps.sourceRepository.updateIngestion(
+          projectId,
+          record.source.id,
+          { analysisStatus: "ready", processingError: null },
+        );
       }
     } else {
       pending.push(record);
@@ -281,13 +372,17 @@ export async function analyzePendingDocuments(
         failures += 1;
       } finally {
         completed += 1;
-        await deps.jobRepository.updateProgress(job.id, pending.length === 0 ? 1 : completed / pending.length);
+        await deps.jobRepository.updateProgress(
+          job.id,
+          pending.length === 0 ? 1 : completed / pending.length,
+        );
       }
     });
     if (failures > 0) {
       return deps.jobRepository.fail(job.id, {
         code: "analysis_failed",
-        message: "One or more documents could not be analyzed. Retry those documents individually.",
+        message:
+          "One or more documents could not be analyzed. Retry those documents individually.",
         retryable: true,
       });
     }
@@ -319,7 +414,11 @@ export async function retryDocumentAnalysis(
   const { job } = started;
   if (!started.shouldRun) return job;
   try {
-    const analysis = await runStructuredAnalysis(source, DEFAULT_DOCUMENT_ANALYSIS_PROFILE, deps);
+    const analysis = await runStructuredAnalysis(
+      source,
+      DEFAULT_DOCUMENT_ANALYSIS_PROFILE,
+      deps,
+    );
     return deps.jobRepository.complete(job.id, analysis.id);
   } catch {
     return deps.jobRepository.fail(job.id, {

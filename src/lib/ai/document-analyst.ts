@@ -1,8 +1,17 @@
 import "server-only";
 import { z } from "zod";
 import { getOpenAIClient } from "@/lib/ai/client";
+import {
+  getFixtureDocumentAnalyst,
+  isFixtureRuntime,
+} from "@/lib/fixture-runtime";
 import { buildDocumentAnalystInstructions } from "@/lib/ai/prompts/document-analyst";
-import { DocumentAnalysisSchema, type DocumentAnalysis, type SourceDocument, type TeachingBriefPatch } from "@/lib/schemas";
+import {
+  DocumentAnalysisSchema,
+  type DocumentAnalysis,
+  type SourceDocument,
+  type TeachingBriefPatch,
+} from "@/lib/schemas";
 
 type DocumentAnalysisInput = {
   source: SourceDocument;
@@ -14,7 +23,10 @@ type DocumentAnalysisInput = {
 
 export interface DocumentAnalyst {
   analyze(input: DocumentAnalysisInput): Promise<unknown>;
-  repair(input: DocumentAnalysisInput, invalidOutput: unknown): Promise<unknown>;
+  repair(
+    input: DocumentAnalysisInput,
+    invalidOutput: unknown,
+  ): Promise<unknown>;
 }
 
 function responseFormat() {
@@ -26,7 +38,10 @@ function responseFormat() {
   };
 }
 
-function promptFor(input: DocumentAnalysisInput, repairOutput?: unknown): string {
+function promptFor(
+  input: DocumentAnalysisInput,
+  repairOutput?: unknown,
+): string {
   const instructions = buildDocumentAnalystInstructions(input);
   const requiredEnvelope = {
     schemaVersion: "0.1",
@@ -50,6 +65,7 @@ async function requestStructuredOutput(prompt: string): Promise<unknown> {
 }
 
 export function getDocumentAnalyst(): DocumentAnalyst {
+  if (isFixtureRuntime()) return getFixtureDocumentAnalyst();
   return {
     analyze(input) {
       return requestStructuredOutput(promptFor(input));

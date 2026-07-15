@@ -1,10 +1,11 @@
 import "server-only";
 import { Prisma, type Project as PrismaProject } from "@prisma/client";
 import { getDb } from "@/lib/db";
-import type {
-  ProjectStage,
-  TeachingBriefPatch,
-} from "@/lib/schemas/project";
+import {
+  getFixtureProjectRepository,
+  isFixtureRuntime,
+} from "@/lib/fixture-runtime";
+import type { ProjectStage, TeachingBriefPatch } from "@/lib/schemas/project";
 
 export type ProjectRecord = {
   id: string;
@@ -46,7 +47,10 @@ export interface ProjectRepository {
     token: string,
     vectorStoreId: string,
   ): Promise<string | null>;
-  releaseVectorStoreProvisioning(projectId: string, token: string): Promise<void>;
+  releaseVectorStoreProvisioning(
+    projectId: string,
+    token: string,
+  ): Promise<void>;
 }
 
 function toProjectRecord(project: PrismaProject): ProjectRecord {
@@ -61,6 +65,7 @@ function toProjectRecord(project: PrismaProject): ProjectRecord {
 }
 
 export function getProjectRepository(): ProjectRepository {
+  if (isFixtureRuntime()) return getFixtureProjectRepository();
   const db = getDb();
 
   return {
@@ -143,11 +148,18 @@ export function getProjectRepository(): ProjectRepository {
         where: { id: projectId },
         select: { vectorStoreId: true },
       });
-      return { vectorStoreId: project.vectorStoreId, acquired: acquired.count === 1 };
+      return {
+        vectorStoreId: project.vectorStoreId,
+        acquired: acquired.count === 1,
+      };
     },
     async completeVectorStoreProvisioning(projectId, token, vectorStoreId) {
       const completed = await db.project.updateMany({
-        where: { id: projectId, vectorStoreId: null, vectorStoreProvisioningToken: token },
+        where: {
+          id: projectId,
+          vectorStoreId: null,
+          vectorStoreProvisioningToken: token,
+        },
         data: {
           vectorStoreId,
           vectorStoreProvisioningToken: null,

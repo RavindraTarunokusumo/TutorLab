@@ -1,6 +1,10 @@
 import "server-only";
 import { Prisma, type PipelineJob as PrismaPipelineJob } from "@prisma/client";
 import { getDb } from "@/lib/db";
+import {
+  getFixtureJobRepository,
+  isFixtureRuntime,
+} from "@/lib/fixture-runtime";
 import { PipelineJobSchema, type PipelineJob } from "@/lib/schemas";
 
 export type JobFailure = {
@@ -44,6 +48,7 @@ function toPipelineJob(job: PrismaPipelineJob): PipelineJob {
 }
 
 export function getPipelineJobRepository(): PipelineJobRepository {
+  if (isFixtureRuntime()) return getFixtureJobRepository();
   const db = getDb();
   return {
     async start(input) {
@@ -56,24 +61,28 @@ export function getPipelineJobRepository(): PipelineJobRepository {
           },
         },
       });
-      if (existing?.status === "running" || existing?.status === "pending" || existing?.status === "completed") {
+      if (
+        existing?.status === "running" ||
+        existing?.status === "pending" ||
+        existing?.status === "completed"
+      ) {
         return { job: toPipelineJob(existing), shouldRun: false };
       }
       const now = new Date();
       let job: PrismaPipelineJob;
       if (existing) {
         job = await db.pipelineJob.update({
-            where: { id: existing.id },
-            data: {
-              status: "running",
-              attemptCount: { increment: 1 },
-              progress: 0,
-              diagnostic: Prisma.JsonNull,
-              resultId: null,
-              startedAt: now,
-              completedAt: null,
-            },
-          });
+          where: { id: existing.id },
+          data: {
+            status: "running",
+            attemptCount: { increment: 1 },
+            progress: 0,
+            diagnostic: Prisma.JsonNull,
+            resultId: null,
+            startedAt: now,
+            completedAt: null,
+          },
+        });
       } else {
         try {
           job = await db.pipelineJob.create({
@@ -86,7 +95,10 @@ export function getPipelineJobRepository(): PipelineJobRepository {
             },
           });
         } catch (error) {
-          if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+          if (
+            !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+            error.code !== "P2002"
+          ) {
             throw error;
           }
           existing = await db.pipelineJob.findUniqueOrThrow({
