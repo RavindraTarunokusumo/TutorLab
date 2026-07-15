@@ -37,7 +37,9 @@ Deliver a navigable, persisted TutorLab application through the course-model rev
 
 ### 2.4 Course evidence
 
-- Accept one to four PDF, DOCX, TXT, MD, or JSON files, up to 10 MB each.
+- Accept one to 20 PDF, DOCX, TXT, MD, or JSON files, up to 10 MB each.
+- Use the three project-owner-supplied probability documents for test and initial live verification: practice exercises, sample exam, and marking scheme.
+- Do not download or substitute third-party course materials from the internet.
 - Require a declared role: course material, exercises, assessment, marking scheme/rubric, or tutor trace.
 - Require explicit anonymization confirmation for tutor traces and restrict traces to TXT, MD, or JSON.
 - Reject unsupported, oversized, duplicate, malformed, or password-protected files with actionable messages.
@@ -160,12 +162,13 @@ Load latest version → select structured item → inspect source evidence → e
 
 ### Browser
 
-- Create project, finish wizard, upload fixture documents, load fixture analysis in explicit test mode, inspect evidence, edit a misconception/disclosure label, save, refresh, and confirm persistence.
+- Create project, finish wizard, upload the three supplied fixture documents, load fixture analysis in explicit test mode, inspect evidence, edit a misconception/disclosure label, save, refresh, and confirm persistence.
 - Verify keyboard navigation, focus behavior, upload announcements, responsive layouts, and all seven stage routes.
 
 ### Live
 
-- Run the curated probability pack against the live API and confirm valid source-grounded output, warnings behavior, persistence, and editable review. Live mode is the normal development default; fixture mode requires an explicit test/demo switch.
+- Run the three-document curated probability pack against the live API and confirm valid source-grounded output, warnings behavior, persistence, and editable review. Live mode is the normal development default; fixture mode requires an explicit test/demo switch.
+- Before final submission, exercise the ingestion and review flow with 10–20 representative documents in one project.
 
 ## 8. Success criteria
 
@@ -173,7 +176,8 @@ Load latest version → select structured item → inspect source evidence → e
 - A project can be created and reopened through its edit session.
 - Wizard data persists and resumes after refresh.
 - Every stage route renders, with fixture data beyond Day 2.
-- Four valid probability documents reach Ready in one project vector store.
+- Three valid probability documents reach Ready in one project vector store during automated and initial live verification.
+- One project can accept, index, and review 20 valid documents for final-submission readiness.
 - Live analysis produces a schema-valid course model with source references.
 - Missing solution/rubric evidence creates warnings instead of blocking.
 - Teacher corrections persist as a new course-model version.

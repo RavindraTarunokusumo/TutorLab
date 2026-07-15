@@ -47,7 +47,7 @@ The generated artifact is not only a chatbot. It is a versioned specification co
 By the end of the hackathon, a teacher must be able to:
 
 1. Create a tutor project through a short guided setup.
-2. Upload up to four course documents.
+2. Upload up to 20 course documents.
 3. Review an AI-extracted model of concepts, objectives, exercises, solutions, rubrics, and misconceptions.
 4. Compare three meaningfully different tutor designs.
 5. Adjust a small number of high-impact behavior controls.
@@ -108,9 +108,8 @@ If schedule pressure appears, share links and JSON export remain in scope; the e
 
 ### Demonstration course
 
-The repository will include a small, curated probability course pack:
+The repository will include a small, curated probability course pack supplied by the project owner:
 
-- `probability-notes.pdf` — independence, conditional probability, and mutually exclusive events;
 - `practice-exercises.pdf` — six exercises;
 - `sample-exam.pdf` — two representative assessment questions;
 - `marking-scheme.pdf` — expected reasoning steps, solutions, and common errors.
@@ -139,7 +138,7 @@ The wizard must use educator-facing language. It must not ask the teacher to spe
 
 ### Stage 2 — Upload course evidence
 
-The teacher uploads one to four PDF, DOCX, Markdown, or text files. Each file receives a declared role:
+The teacher uploads one to 20 PDF, DOCX, Markdown, or text files. Each file receives a declared role:
 
 - course material;
 - exercises;
@@ -333,7 +332,7 @@ After approval, the teacher can:
 ### FR-2 File handling
 
 - Accept PDF, DOCX, TXT, MD, and JSON.
-- Maximum four files per project.
+- Maximum 20 files per project.
 - Maximum 10 MB per file for the hackathon deployment.
 - Reject password-protected or unsupported files with a clear message.
 - Store OpenAI file and vector-store identifiers server-side only.
