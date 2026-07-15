@@ -47,7 +47,7 @@ The generated artifact is not only a chatbot. It is a versioned specification co
 By the end of the hackathon, a teacher must be able to:
 
 1. Create a tutor project through a short guided setup.
-2. Upload up to 20 course documents.
+2. Upload up to 30 course documents within the course-workspace ingestion budget.
 3. Review an AI-extracted model of concepts, objectives, exercises, solutions, rubrics, and misconceptions.
 4. Compare three meaningfully different tutor designs.
 5. Adjust a small number of high-impact behavior controls.
@@ -138,28 +138,44 @@ The wizard must use educator-facing language. It must not ask the teacher to spe
 
 ### Stage 2 — Upload course evidence
 
-The teacher uploads one to 20 PDF, DOCX, Markdown, or text files. Each file receives a declared role:
+The teacher uploads up to 30 PDF, DOCX, Markdown, JSON, or text files. Each file receives a declared role:
 
-- course material;
-- exercises;
-- assessment;
-- marking scheme or rubric;
-- tutor trace.
+- syllabus or learning objectives;
+- lecture notes, slides, or textbook excerpts;
+- exercises or worksheets;
+- sample exams or assessments;
+- rubrics or marking schemes;
+- answer keys or worked solutions;
+- teacher notes;
+- other supporting material.
 
-For the MVP, tutor traces must be anonymized and accepted only as `.txt`, `.md`, or `.json`.
+Tutor traces are deferred beyond the MVP ingestion milestone.
 
-The UI shows upload and indexing states separately:
+The MVP ingestion budget is configurable up to 500 pages, approximately 1–2 million extracted tokens, 25–50 MB per file, and approximately 100–200 MB per course workspace. The default hard caps are 30 files, 500 pages, 2 million extracted tokens, 50 MB per file, and 200 MB per workspace.
+
+| Material | TutorLab extracts | Possible policy influence |
+|---|---|---|
+| Syllabus and learning objectives | Scope, outcomes, sequence, prerequisites | What the tutor may teach and how deeply |
+| Lecture notes, slides, and textbook excerpts | Concepts, terminology, methods, examples | Preferred explanations and source-grounding rules |
+| Exercises and worksheets | Task types, difficulty, expected steps | Hint structure and progression |
+| Sample exams | Assessment style, time pressure, question patterns | Exam-coaching behavior and answer-disclosure limits |
+| Rubrics and marking schemes | Success criteria and common deductions | Feedback priorities and self-check questions |
+| Answer keys and worked solutions | Accepted methods and intermediate steps | Hint ladders; never exposed directly unless permitted |
+| Teacher notes | Explicit preferences and known misconceptions | Highest-priority pedagogical constraints |
+
+The UI shows upload, extraction, and analysis states separately:
 
 - Uploading
 - Reading
+- Analyzing
 - Ready
 - Failed
 
 ### Stage 3 — Review the extracted course model
 
-GPT-5.6 analyzes the teaching brief and documents into a structured `CourseModel`. The teacher sees an editable review screen with:
+GPT-5.6 analyzes each source into a structured `DocumentAnalysis`, then synthesizes those findings into a compact structured `CourseModel`. The teacher sees an editable review screen with:
 
-- 3–8 concepts;
+- prioritized, consolidated concepts;
 - prerequisite relationships;
 - learning objectives;
 - important terminology;
@@ -167,8 +183,10 @@ GPT-5.6 analyzes the teaching brief and documents into a structured `CourseModel
 - protected solutions;
 - rubric criteria;
 - candidate misconceptions;
+- pedagogical observations and proposed downstream policy effects;
 - detected gaps or contradictions;
-- source references for every material claim.
+- multi-source evidence references for every material claim;
+- coverage, failed-document, and missing-material warnings.
 
 The teacher may edit labels and descriptions, delete incorrect items, and mark a solution as:
 
@@ -332,18 +350,26 @@ After approval, the teacher can:
 ### FR-2 File handling
 
 - Accept PDF, DOCX, TXT, MD, and JSON.
-- Maximum 20 files per project.
-- Maximum 10 MB per file for the hackathon deployment.
+- Maximum 30 files per project.
+- Enforce configurable course-workspace budgets with default hard caps of 500 pages, 2 million extracted tokens, 50 MB per file, and 200 MB total source bytes.
 - Reject password-protected or unsupported files with a clear message.
 - Store OpenAI file and vector-store identifiers server-side only.
-- Mark trace uploads as requiring anonymization confirmation.
+- Defer tutor-trace ingestion.
+- Record each source's declared role, authority, permissions, protected-solution flag, content hash, and separate upload/extraction/analysis status.
+- Prevent protected or restricted sources from being exposed through student-facing retrieval.
 
 ### FR-3 Course-model extraction
 
-- Return schema-valid structured data.
-- Every extracted fact must include a source document and locator when available.
+- Analyze each changed document independently into a schema-valid `DocumentAnalysis` with limited concurrency.
+- Cache analysis by content hash and retry only failed or changed documents.
+- Synthesize a compact schema-valid `CourseModel` from `DocumentAnalysis` records rather than raw document contents.
+- Support incremental resynthesis without rereading unchanged files.
+- Every synthesized claim must include one or more evidence references containing document, excerpt, and human-readable locator information.
 - Unsupported inferences must be marked `teacher_supplied` or `model_inferred`.
 - Missing solutions or rubrics should generate warnings rather than block the flow.
+- Surface partial-analysis coverage when one or more documents fail.
+- Include teacher-reviewable pedagogical evidence that proposes, but does not automatically approve, downstream policy effects.
+- Keep raw chunks, full document summaries, and complete worked solutions outside `CourseModel`.
 - Regeneration must preserve teacher edits only if explicitly selected; otherwise warn before replacement.
 
 ### FR-4 Design generation
@@ -553,9 +579,10 @@ The MVP uses deterministic application orchestration around several specialized 
 
 | Component | Input | Output | Suggested model |
 |---|---|---|---|
-| Material Analyst | Brief + uploaded files | `CourseModel` | `gpt-5.6` |
+| Document Analyst | Brief + one source document | `DocumentAnalysis` | `gpt-5.6` |
+| Course Synthesizer | Brief + document analyses | compact `CourseModel` | `gpt-5.6` |
 | Tutor Architect | Course model + teacher preferences | 3 `TutorDesign`s | `gpt-5.6` |
-| Policy Compiler | Selected design + overrides | `TutorSpec` | `gpt-5.6` |
+| Policy Compiler | `PolicyDraftingInput` | `TutorSpec` | `gpt-5.6` |
 | Scenario Generator | Course model + tutor spec | 6 `EvalScenario`s | `gpt-5.6-terra` |
 | Student Simulator | Scenario + transcript | Next learner turn | `gpt-5.6-luna` |
 | Tutor Runtime | Tutor spec + retrieved evidence + state | Tutor message + metadata | `gpt-5.6-terra` |
@@ -570,14 +597,24 @@ The OpenAI Responses API provides file inputs, file search, tool use, conversati
 
 ### File processing strategy
 
+```mermaid
+flowchart TD
+    A["SourceDocument"] --> B["DocumentAnalysis"]
+    B --> C["CourseModel"]
+    C --> D["Pedagogy policy proposals"]
+```
+
 1. Upload files through the server to the OpenAI Files API.
 2. Add files to a project-specific vector store.
 3. Poll until indexing completes.
-4. Send the files as direct inputs to the Material Analyst for holistic extraction.
-5. Use file search for tutor chat and source-grounding evaluation.
-6. Retain raw source files only for the life of the demo project.
+4. Calculate the content hash and reuse a matching valid `DocumentAnalysis` when available.
+5. Analyze changed documents independently with limited concurrency and persist findings with excerpt-level evidence references.
+6. Retry only failed documents.
+7. Synthesize or incrementally resynthesize the compact `CourseModel` from successful document analyses, using category-level reduction when required by context limits.
+8. Use file search for tutor chat and source-grounding evaluation, filtered by source permissions.
+9. Retain raw source files only for the life of the demo project.
 
-Direct file input is chosen for the one-time course-model extraction; file search is chosen for repeated tutor turns. The OpenAI API supports file IDs as `input_file` items in Responses. [File inputs](https://developers.openai.com/api/docs/guides/file-inputs)
+Direct file input is used for per-document analysis; synthesis consumes structured `DocumentAnalysis` records rather than all raw files in one request. File search is reserved for repeated tutor turns and evidence lookup. The OpenAI API supports file IDs as `input_file` items in Responses. [File inputs](https://developers.openai.com/api/docs/guides/file-inputs)
 
 ### Long-running build strategy
 
@@ -789,11 +826,31 @@ tests/
 - `projectId`
 - `name`
 - `role`
+- `authority` (`teacher_instruction`, `course_authoritative`, `supplementary`, or `observational`)
+- `permissions` JSON (`useForCourseModel`, `useForPedagogyDrafting`, `useForRuntimeRetrieval`, `useForEvaluation`, `revealExcerptsToStudents`)
+- `containsProtectedSolutions`
+- `contentHash`
 - `mimeType`
 - `sizeBytes`
 - `openaiFileId`
-- `indexStatus`
+- `processing` JSON with distinct upload, extraction, and analysis states plus page count and safe error metadata
 - `createdAt`
+
+#### `DocumentAnalysis`
+
+- `id`
+- `projectId`
+- `documentId`
+- `documentHash`
+- `schemaVersion`
+- `classification` JSON
+- `coverage` JSON
+- `findings` JSON
+- `summary`
+- `status`
+- `analyzedAt`
+
+The document/hash/schema-version tuple is reusable. Findings include topics, objectives, terminology, accepted methods, exercises, assessment criteria, protected solutions, misconceptions, and pedagogical patterns. Raw chunks and full source text are not duplicated into the record.
 
 #### `CourseModelVersion`
 
@@ -803,6 +860,18 @@ tests/
 - `data` JSON
 - `teacherEdited`
 - `createdAt`
+
+`CourseModelVersion.data` uses `schemaVersion: "0.2"` and contains:
+
+- coverage: document counts, page count, completeness, failures, and missing material types;
+- course identity;
+- course structure and prerequisite relations;
+- consolidated objectives, concepts, terminology, accepted methods, exercises, assessments, rubric criteria, protected solutions, misconceptions, and content boundaries;
+- pedagogical evidence with proposed policy effects, evidence, confidence, and teacher decision status;
+- conflicts and warnings;
+- a compact source manifest and explicit teacher decisions.
+
+The course model references `DocumentAnalysis` evidence using document ID, optional analysis ID, excerpt ID, page/section when available, and a human-readable locator. It never embeds full lecture text, every slide summary, raw chunks, entire worked solutions, or duplicated per-document observations.
 
 #### `TutorDesign`
 
@@ -890,7 +959,9 @@ All mutation endpoints require the project edit token except public tutor chat.
 | `PATCH` | `/api/projects/:id/brief` | Save wizard answers |
 | `POST` | `/api/projects/:id/files` | Upload and index a document |
 | `DELETE` | `/api/projects/:id/files/:fileId` | Remove a document before analysis |
-| `POST` | `/api/projects/:id/analyze` | Start material analysis |
+| `POST` | `/api/projects/:id/analyze` | Analyze pending/changed documents and synthesize the course model |
+| `POST` | `/api/projects/:id/files/:fileId/analyze` | Retry or refresh one document analysis |
+| `POST` | `/api/projects/:id/synthesize` | Incrementally rebuild the course model from valid document analyses |
 | `GET` | `/api/jobs/:jobId` | Poll stage status |
 | `PATCH` | `/api/projects/:id/course-model` | Save teacher corrections |
 | `POST` | `/api/projects/:id/designs` | Generate three tutor designs |
@@ -997,7 +1068,7 @@ Brief → Sources → Course Model → Design → Build → Report → Preview
 
 The product will display this statement before upload:
 
-> Use course materials and synthetic or anonymized tutor traces only. Do not upload student names, contact details, health information, grades, or other sensitive records to this hackathon prototype.
+> Use course materials only. Tutor traces are deferred. Do not upload student names, contact details, health information, grades, or other sensitive records to this hackathon prototype.
 
 ### Data controls
 
@@ -1065,7 +1136,8 @@ Do not log raw uploaded document content or full public chat text in ordinary ap
 
 | Workload | Target |
 |---|---:|
-| Material analysis | ≤ 1 flagship call |
+| Document analysis | 1 cacheable call per changed document, concurrency limited to 3 |
+| Course synthesis | 1 flagship synthesis call for the demo pack; staged/category reduction allowed for large workspaces |
 | Design generation | 1 flagship call |
 | Policy compilation | 1 flagship call |
 | Scenario generation | 1 Terra call |
@@ -1092,6 +1164,10 @@ The estimate is a development target, not a user-facing price guarantee. Track a
 ### Unit tests
 
 - Zod schemas accept valid and reject malformed AI artifacts.
+- Workspace budget validation enforces file, page, extracted-token, per-file-byte, and total-byte caps.
+- Source authority and permissions prevent protected material from entering student-visible retrieval.
+- Document-analysis caching keys include content hash and schema version.
+- Course synthesis remains compact and preserves multi-source evidence references.
 - State-machine transitions enforce answer policy.
 - Policy patch allowlist rejects arbitrary paths.
 - Export strips file IDs, internal prompts, and teacher-only fields.
@@ -1102,7 +1178,8 @@ The estimate is a development target, not a user-facing price guarantee. Track a
 
 - Project creation through course-model persistence.
 - File upload metadata and indexing state.
-- Mocked Responses API structured output for every pipeline stage.
+- Parallel per-document analysis, isolated retry, content-hash reuse, and incremental resynthesis with mocked Responses API output.
+- Partial synthesis continues with failed-document coverage warnings.
 - Eval runner continues when one scenario errors.
 - Applying a repair creates a new tutor version.
 - Chat runtime retrieves sources and returns valid teaching metadata.
@@ -1170,13 +1247,16 @@ Before submission, run the real probability demo at least three times and record
 
 - Implement file validation and upload.
 - Create project vector store and index files.
-- Implement Material Analyst with Structured Outputs.
+- Enforce the 30-file, 500-page, 2-million-token, 50-MB-file, and 200-MB-workspace default caps.
+- Implement per-document analysis with Structured Outputs, content-hash caching, limited concurrency, and isolated retries.
+- Persist `DocumentAnalysis` records.
+- Implement compact course synthesis with multi-source evidence, pedagogical observations, and incremental resynthesis.
 - Persist `CourseModelVersion`.
 - Build course-model review UI and source drawer.
-- Allow edits to concepts, objectives, misconceptions, and disclosure labels.
+- Allow edits to concepts, objectives, misconceptions, disclosure labels, and pedagogical-observation status.
 - Add warnings for missing rubric or solutions.
 
-**Exit criteria:** The probability pack produces a valid course model with source references, and the teacher can correct and save it.
+**Exit criteria:** The probability pack produces valid document analyses and a compact course model with multi-source evidence; failed documents can be retried independently; and the teacher can correct and save the synthesis.
 
 ### Day 3 — Designs, compilation, and tutor runtime
 
@@ -1276,6 +1356,8 @@ Those are the product’s core story.
 | Risk | Likelihood | Impact | Mitigation |
 |---|---:|---:|---|
 | File analysis exceeds serverless limits | Medium | High | Separate idempotent stages; background mode and polling |
+| Large workspaces exceed model context | Medium | High | Per-document analysis, category reduction, compact synthesis, and hard ingestion budgets |
+| Protected solutions leak through retrieval | Medium | High | Per-source permissions, protected-solution flags, and retrieval filters |
 | Evaluation cost grows unexpectedly | Medium | Medium | Fixed six scenarios, turn caps, context caps, usage logging |
 | Model does not produce stable demo failure | Medium | High | Fixed adversarial learner sequence and seeded weak policy |
 | Judge disagrees across runs | Medium | Medium | Deterministic checks first; evidence requirement; warnings rather than false precision |
@@ -1318,7 +1400,7 @@ The project is shippable when all of the following are true:
 
 ### 0:20–0:45 — Evidence input
 
-Show the probability brief and upload notes, exercises, exam, and marking scheme.
+Show the probability brief and upload the curated exercises, exam, and marking scheme. The production workspace supports up to 30 sources.
 
 ### 0:45–1:10 — Inspectable course model
 
