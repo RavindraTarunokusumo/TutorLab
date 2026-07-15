@@ -1,0 +1,3 @@
+Task: Address final PR page-budget review
+Summary: Derive explicit parsed page metrics, require both page and token metrics before ready, and atomically enforce 500-page workspace limit.
+Validation: Focused final review; npm run lint; npm run typecheck; npm run test:run (137 tests)
