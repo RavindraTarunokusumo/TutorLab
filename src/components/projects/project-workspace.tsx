@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ProjectStage } from "@/lib/schemas/project";
 import { fixturePreview } from "@/lib/projects/fixture-preview";
 import type { ProjectSnapshot } from "@/lib/projects/project-snapshot";
@@ -6,20 +5,11 @@ import { lastCompletedProjectStage } from "@/lib/projects/stages";
 import { StageHeader } from "./stage-header";
 import { TeachingBriefWizard } from "./teaching-brief-wizard";
 import { SourceWorkspace } from "@/components/sources/source-workspace";
+import { CourseModelReview } from "@/components/course-model/course-model-review";
 
 type ProjectWorkspaceProps = {
   project: ProjectSnapshot;
   routeStage: ProjectStage;
-};
-
-const routeLabels: Record<ProjectStage, string> = {
-  brief: "Teaching brief",
-  sources: "Course sources",
-  course_model: "Course model",
-  design: "Tutor design comparison",
-  build: "Build evidence",
-  report: "Readiness report",
-  preview: "Tutor preview",
 };
 
 function FixtureNotice() {
@@ -28,33 +18,6 @@ function FixtureNotice() {
       Deterministic fixture preview — no model or paid operations run on this
       screen.
     </p>
-  );
-}
-
-function Placeholder({ routeStage }: { routeStage: ProjectStage }) {
-  const followUp =
-    routeStage === "brief"
-      ? "The guided brief will be added in the next task."
-      : routeStage === "sources"
-        ? "Source upload and classification will be added in a later task."
-        : "Course-model review and approval will be added in a later task.";
-
-  return (
-    <section className="max-w-2xl space-y-5 rounded-xl border bg-card p-6 shadow-sm">
-      <p className="font-mono text-sm tracking-wide text-primary uppercase">
-        Stage workspace
-      </p>
-      <h1 className="text-3xl font-semibold tracking-tight">
-        {routeLabels[routeStage]}
-      </h1>
-      <p className="leading-7 text-muted-foreground">{followUp}</p>
-      <Link
-        className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        href="#next-task"
-      >
-        Continue when this stage is available
-      </Link>
-    </section>
   );
 }
 
@@ -177,7 +140,7 @@ export function ProjectWorkspace({
         ) : routeStage === "sources" ? (
           <SourceWorkspace projectId={project.id} />
         ) : routeStage === "course_model" ? (
-          <Placeholder routeStage={routeStage} />
+          <CourseModelReview projectId={project.id} />
         ) : (
           <FixtureScreen routeStage={routeStage} />
         )}
