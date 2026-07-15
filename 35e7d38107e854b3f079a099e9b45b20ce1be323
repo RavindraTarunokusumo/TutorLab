@@ -1,0 +1,4 @@
+Task: Harden vector-store provisioning
+Summary: Persisted repository claims and provisioning leases, plus source metric-pending serialization required by source ingestion.
+TODO: Day 1–2 Milestone / Task 7
+Validation: Focused review; npm run lint; npm run typecheck; npm run test:run (107 tests)
