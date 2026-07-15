@@ -1,0 +1,5 @@
+Task: Implement per-document analysis
+Summary: Added cached structured analysis per source, bounded batch concurrency, persisted jobs, retries, and authenticated analysis/polling APIs.
+Docs: docs/superpowers/specs/2026-07-15-day-1-day-2-design.md, docs/superpowers/plans/2026-07-15-day-1-day-2.md
+TODO: Day 1–2 Milestone / Task 8
+Validation: Focused reviews; npm run lint; npm run typecheck; npm run test:run (114 tests)
