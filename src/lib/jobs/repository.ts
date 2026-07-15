@@ -1,0 +1,144 @@
+import "server-only";
+import { Prisma, type PipelineJob as PrismaPipelineJob } from "@prisma/client";
+import { getDb } from "@/lib/db";
+import { PipelineJobSchema, type PipelineJob } from "@/lib/schemas";
+
+export type JobFailure = {
+  code: string;
+  message: string;
+  retryable: boolean;
+};
+
+export interface PipelineJobRepository {
+  start(input: {
+    id: string;
+    projectId: string;
+    sourceDocumentId?: string;
+    stage: "analysis";
+    idempotencyKey: string;
+  }): Promise<{ job: PipelineJob; shouldRun: boolean }>;
+  updateProgress(id: string, progress: number): Promise<PipelineJob>;
+  complete(id: string, resultId?: string): Promise<PipelineJob>;
+  fail(id: string, diagnostic: JobFailure): Promise<PipelineJob>;
+  findById(projectId: string, id: string): Promise<PipelineJob | null>;
+}
+
+function toPipelineJob(job: PrismaPipelineJob): PipelineJob {
+  return PipelineJobSchema.parse({
+    schemaVersion: "0.1",
+    id: job.id,
+    projectId: job.projectId,
+    ...(job.sourceDocumentId ? { sourceDocumentId: job.sourceDocumentId } : {}),
+    stage: job.stage,
+    idempotencyKey: job.idempotencyKey,
+    status: job.status,
+    attemptCount: job.attemptCount,
+    progress: job.progress,
+    ...(job.diagnostic ? { diagnostic: job.diagnostic } : {}),
+    ...(job.usage ? { usage: job.usage } : {}),
+    ...(job.latencyMs === null ? {} : { latencyMs: job.latencyMs }),
+    ...(job.resultId === null ? {} : { resultId: job.resultId }),
+    ...(job.startedAt ? { startedAt: job.startedAt.toISOString() } : {}),
+    ...(job.completedAt ? { completedAt: job.completedAt.toISOString() } : {}),
+  });
+}
+
+export function getPipelineJobRepository(): PipelineJobRepository {
+  const db = getDb();
+  return {
+    async start(input) {
+      let existing = await db.pipelineJob.findUnique({
+        where: {
+          projectId_stage_idempotencyKey: {
+            projectId: input.projectId,
+            stage: input.stage,
+            idempotencyKey: input.idempotencyKey,
+          },
+        },
+      });
+      if (existing?.status === "running" || existing?.status === "pending" || existing?.status === "completed") {
+        return { job: toPipelineJob(existing), shouldRun: false };
+      }
+      const now = new Date();
+      let job: PrismaPipelineJob;
+      if (existing) {
+        job = await db.pipelineJob.update({
+            where: { id: existing.id },
+            data: {
+              status: "running",
+              attemptCount: { increment: 1 },
+              progress: 0,
+              diagnostic: Prisma.JsonNull,
+              resultId: null,
+              startedAt: now,
+              completedAt: null,
+            },
+          });
+      } else {
+        try {
+          job = await db.pipelineJob.create({
+            data: {
+              ...input,
+              status: "running",
+              attemptCount: 1,
+              progress: 0,
+              startedAt: now,
+            },
+          });
+        } catch (error) {
+          if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+            throw error;
+          }
+          existing = await db.pipelineJob.findUniqueOrThrow({
+            where: {
+              projectId_stage_idempotencyKey: {
+                projectId: input.projectId,
+                stage: input.stage,
+                idempotencyKey: input.idempotencyKey,
+              },
+            },
+          });
+          return { job: toPipelineJob(existing), shouldRun: false };
+        }
+      }
+      return { job: toPipelineJob(job), shouldRun: true };
+    },
+    async updateProgress(id, progress) {
+      return toPipelineJob(
+        await db.pipelineJob.update({
+          where: { id },
+          data: { progress: Math.min(1, Math.max(0, progress)) },
+        }),
+      );
+    },
+    async complete(id, resultId) {
+      return toPipelineJob(
+        await db.pipelineJob.update({
+          where: { id },
+          data: {
+            status: "completed",
+            progress: 1,
+            ...(resultId === undefined ? {} : { resultId }),
+            completedAt: new Date(),
+          },
+        }),
+      );
+    },
+    async fail(id, diagnostic) {
+      return toPipelineJob(
+        await db.pipelineJob.update({
+          where: { id },
+          data: {
+            status: "failed",
+            diagnostic: diagnostic as Prisma.InputJsonValue,
+            completedAt: new Date(),
+          },
+        }),
+      );
+    },
+    async findById(projectId, id) {
+      const job = await db.pipelineJob.findFirst({ where: { projectId, id } });
+      return job ? toPipelineJob(job) : null;
+    },
+  };
+}

@@ -118,17 +118,20 @@ model SourceDocument {
 }
 
 model DocumentAnalysis {
-  id           String   @id
-  projectId    String
-  documentId   String
-  documentHash String
-  artifact     Json
-  createdAt    DateTime @default(now())
+  id              String   @id
+  projectId       String
+  documentId      String
+  documentHash    String
+  schemaVersion   String
+  analysisProfile String
+  artifact        Json
+  createdAt       DateTime @default(now())
 
   project  Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   document SourceDocument @relation(fields: [projectId, documentId], references: [projectId, id], onDelete: Restrict)
 
-  @@unique([documentId, documentHash])
+  @@unique([projectId, documentHash, schemaVersion, analysisProfile])
+  @@unique([documentId, documentHash, schemaVersion, analysisProfile])
   @@index([projectId])
 }
 
