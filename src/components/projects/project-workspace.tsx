@@ -5,6 +5,7 @@ import type { ProjectSnapshot } from "@/lib/projects/project-snapshot";
 import { lastCompletedProjectStage } from "@/lib/projects/stages";
 import { StageHeader } from "./stage-header";
 import { TeachingBriefWizard } from "./teaching-brief-wizard";
+import { SourceWorkspace } from "@/components/sources/source-workspace";
 
 type ProjectWorkspaceProps = {
   project: ProjectSnapshot;
@@ -173,8 +174,9 @@ export function ProjectWorkspace({
         </p>
         {routeStage === "brief" ? (
           <TeachingBriefWizard project={project} />
-        ) : routeStage === "sources" ||
-        routeStage === "course_model" ? (
+        ) : routeStage === "sources" ? (
+          <SourceWorkspace projectId={project.id} />
+        ) : routeStage === "course_model" ? (
           <Placeholder routeStage={routeStage} />
         ) : (
           <FixtureScreen routeStage={routeStage} />
