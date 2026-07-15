@@ -13,6 +13,21 @@ Rules:
 
 ## Backlog
 
+## Session: Day 1–2 Milestone (2026-07-15)
+
+- [ ] Task 1 — Scaffold the application and local runtime
+- [ ] Task 2 — Define canonical schemas and deterministic fixtures
+- [ ] Task 3 — Add persistence, project authorization, and project APIs
+- [ ] Task 4 — Build the seven-stage shell and fixture routes
+- [ ] Task 5 — Implement the teaching-brief wizard and autosave
+- [ ] Task 6 — Add source metadata, permissions, and budget enforcement
+- [ ] Task 7 — Implement OpenAI file and vector-store ingestion
+- [ ] Task 8 — Implement per-document analysis
+- [ ] Task 9 — Implement compact incremental course synthesis
+- [ ] Task 10 — Build the source-management interface
+- [ ] Task 11 — Build the course-model review interface
+- [ ] Task 12 — Complete milestone verification and operating documentation
+
 ## Session: Docs & Config — Lint, Test, Pre-commit (2026-07-14)
 
 - [x] Add structured task list entry for pre-commit and testing docs
