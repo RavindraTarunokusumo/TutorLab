@@ -21,7 +21,7 @@ Rules:
 - [x] Task 4 — Build the seven-stage shell and fixture routes (`129a8aa`)
 - [x] Task 5 — Implement the teaching-brief wizard and autosave (`14ba4f9`)
 - [x] Task 6 — Add source metadata, permissions, and budget enforcement (`ee674e0`)
-- [ ] Task 7 — Implement OpenAI file and vector-store ingestion
+- [x] Task 7 — Implement OpenAI file and vector-store ingestion (`70fe3f8`, `35e7d38`)
 - [ ] Task 8 — Implement per-document analysis
 - [ ] Task 9 — Implement compact incremental course synthesis
 - [ ] Task 10 — Build the source-management interface
