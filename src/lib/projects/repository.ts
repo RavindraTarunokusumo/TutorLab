@@ -34,6 +34,19 @@ export interface ProjectRepository {
     id: string,
     patch: TeachingBriefPatch,
   ): Promise<ProjectRecord>;
+  findVectorStoreId(projectId: string): Promise<string | null>;
+  claimVectorStoreId(projectId: string, candidateId: string): Promise<string>;
+  acquireVectorStoreProvisioning(
+    projectId: string,
+    token: string,
+    staleBefore: Date,
+  ): Promise<{ vectorStoreId: string | null; acquired: boolean }>;
+  completeVectorStoreProvisioning(
+    projectId: string,
+    token: string,
+    vectorStoreId: string,
+  ): Promise<string | null>;
+  releaseVectorStoreProvisioning(projectId: string, token: string): Promise<void>;
 }
 
 function toProjectRecord(project: PrismaProject): ProjectRecord {
@@ -83,6 +96,81 @@ export function getProjectRepository(): ProjectRepository {
           data: { teachingBrief },
         }),
       );
+    },
+    async findVectorStoreId(projectId) {
+      const project = await db.project.findUnique({
+        where: { id: projectId },
+        select: { vectorStoreId: true },
+      });
+      if (!project) {
+        throw new Error("Project not found");
+      }
+      return project.vectorStoreId;
+    },
+    async claimVectorStoreId(projectId, candidateId) {
+      const claimed = await db.project.updateMany({
+        where: { id: projectId, vectorStoreId: null },
+        data: { vectorStoreId: candidateId },
+      });
+      if (claimed.count === 1) {
+        return candidateId;
+      }
+      const project = await db.project.findUniqueOrThrow({
+        where: { id: projectId },
+        select: { vectorStoreId: true },
+      });
+      if (!project.vectorStoreId) {
+        throw new Error("Project vector store was not persisted");
+      }
+      return project.vectorStoreId;
+    },
+    async acquireVectorStoreProvisioning(projectId, token, staleBefore) {
+      const acquired = await db.project.updateMany({
+        where: {
+          id: projectId,
+          vectorStoreId: null,
+          OR: [
+            { vectorStoreProvisioningToken: null },
+            { vectorStoreProvisioningStartedAt: { lt: staleBefore } },
+          ],
+        },
+        data: {
+          vectorStoreProvisioningToken: token,
+          vectorStoreProvisioningStartedAt: new Date(),
+        },
+      });
+      const project = await db.project.findUniqueOrThrow({
+        where: { id: projectId },
+        select: { vectorStoreId: true },
+      });
+      return { vectorStoreId: project.vectorStoreId, acquired: acquired.count === 1 };
+    },
+    async completeVectorStoreProvisioning(projectId, token, vectorStoreId) {
+      const completed = await db.project.updateMany({
+        where: { id: projectId, vectorStoreId: null, vectorStoreProvisioningToken: token },
+        data: {
+          vectorStoreId,
+          vectorStoreProvisioningToken: null,
+          vectorStoreProvisioningStartedAt: null,
+        },
+      });
+      if (completed.count === 1) {
+        return vectorStoreId;
+      }
+      const project = await db.project.findUniqueOrThrow({
+        where: { id: projectId },
+        select: { vectorStoreId: true },
+      });
+      return project.vectorStoreId;
+    },
+    async releaseVectorStoreProvisioning(projectId, token) {
+      await db.project.updateMany({
+        where: { id: projectId, vectorStoreProvisioningToken: token },
+        data: {
+          vectorStoreProvisioningToken: null,
+          vectorStoreProvisioningStartedAt: null,
+        },
+      });
     },
   };
 }
