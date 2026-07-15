@@ -81,6 +81,7 @@ export const SourceDocumentSchema = z.strictObject({
       extractionStatus: ProcessingStatusSchema,
       analysisStatus: ProcessingStatusSchema,
       pageCount: z.number().int().positive().optional(),
+      extractedTokenCount: z.number().int().nonnegative().optional(),
       error: z.string().trim().min(1).max(SCHEMA_LIMITS.shortText).optional(),
     })
     .superRefine((processing, context) => {

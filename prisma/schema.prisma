@@ -98,6 +98,7 @@ model SourceDocument {
   extractionStatus           ProcessingStatus @default(pending)
   analysisStatus             ProcessingStatus @default(pending)
   pageCount                  Int?
+  extractedTokenCount        Int?
   processingError            String?
   createdAt                  DateTime         @default(now())
   updatedAt                  DateTime         @updatedAt
@@ -107,7 +108,7 @@ model SourceDocument {
   pipelineJobs PipelineJob[]
 
   @@index([projectId])
-  @@index([projectId, contentHash])
+  @@unique([projectId, contentHash])
   @@unique([projectId, id])
 }
 
