@@ -1,0 +1,5 @@
+Task: Add persistence, project authorization, and project APIs
+Summary: Added Prisma project/artifact foundations, secure edit-session authorization, and create/read/brief project APIs with containment constraints.
+Docs: docs/superpowers/specs/2026-07-15-day-1-day-2-design.md, docs/superpowers/plans/2026-07-15-day-1-day-2.md
+TODO: Day 1–2 Milestone / Task 3
+Validation: TDD; prisma validate/generate; lint; typecheck; npm run test:run (36 tests); focused spec and quality reviews
