@@ -19,7 +19,7 @@ Rules:
 - [x] Task 2 — Define canonical schemas and deterministic fixtures (`87ba9fc`)
 - [x] Task 3 — Add persistence, project authorization, and project APIs (`2fd84d5`)
 - [x] Task 4 — Build the seven-stage shell and fixture routes (`129a8aa`)
-- [ ] Task 5 — Implement the teaching-brief wizard and autosave
+- [x] Task 5 — Implement the teaching-brief wizard and autosave (`14ba4f9`)
 - [ ] Task 6 — Add source metadata, permissions, and budget enforcement
 - [ ] Task 7 — Implement OpenAI file and vector-store ingestion
 - [ ] Task 8 — Implement per-document analysis
