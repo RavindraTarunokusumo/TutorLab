@@ -15,7 +15,7 @@ Rules:
 
 ## Session: Day 1–2 Milestone (2026-07-15)
 
-- [ ] Task 1 — Scaffold the application and local runtime
+- [x] Task 1 — Scaffold the application and local runtime (`aa9039e`)
 - [ ] Task 2 — Define canonical schemas and deterministic fixtures
 - [ ] Task 3 — Add persistence, project authorization, and project APIs
 - [ ] Task 4 — Build the seven-stage shell and fixture routes
