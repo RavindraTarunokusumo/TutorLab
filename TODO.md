@@ -18,7 +18,7 @@ Rules:
 - [x] Task 1 — Scaffold the application and local runtime (`aa9039e`)
 - [x] Task 2 — Define canonical schemas and deterministic fixtures (`87ba9fc`)
 - [x] Task 3 — Add persistence, project authorization, and project APIs (`2fd84d5`)
-- [ ] Task 4 — Build the seven-stage shell and fixture routes
+- [x] Task 4 — Build the seven-stage shell and fixture routes (`129a8aa`)
 - [ ] Task 5 — Implement the teaching-brief wizard and autosave
 - [ ] Task 6 — Add source metadata, permissions, and budget enforcement
 - [ ] Task 7 — Implement OpenAI file and vector-store ingestion
