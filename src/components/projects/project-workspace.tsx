@@ -4,6 +4,7 @@ import { fixturePreview } from "@/lib/projects/fixture-preview";
 import type { ProjectSnapshot } from "@/lib/projects/project-snapshot";
 import { lastCompletedProjectStage } from "@/lib/projects/stages";
 import { StageHeader } from "./stage-header";
+import { TeachingBriefWizard } from "./teaching-brief-wizard";
 
 type ProjectWorkspaceProps = {
   project: ProjectSnapshot;
@@ -170,8 +171,9 @@ export function ProjectWorkspace({
         <p className="mb-8 text-sm text-muted-foreground">
           Project: {project.name}
         </p>
-        {routeStage === "brief" ||
-        routeStage === "sources" ||
+        {routeStage === "brief" ? (
+          <TeachingBriefWizard project={project} />
+        ) : routeStage === "sources" ||
         routeStage === "course_model" ? (
           <Placeholder routeStage={routeStage} />
         ) : (
