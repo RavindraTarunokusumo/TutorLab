@@ -25,7 +25,7 @@ Rules:
 - [x] Task 8 — Generate evaluation scenarios (`ccc7b17`)
 - [x] Task 9 — Add deterministic evaluation checks (`61112f6`)
 - [x] Task 10 — Run tutor evaluations (`9585e88`)
-- [ ] Task 11 — Verify the Day 3–4 milestone
+- [x] Task 11 — Verify the Day 3–4 milestone (`3c18568`)
 
 ## Future Backlog
 
