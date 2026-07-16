@@ -59,6 +59,7 @@ export interface TutorRepository {
   createVersion(input: CreateTutorVersionInput): Promise<TutorVersionRecord>;
   findVersion(projectId: string, tutorVersionId: string): Promise<TutorVersionRecord | null>;
   findLatestVersion(projectId: string): Promise<TutorVersionRecord | null>;
+  findActiveVersion?(projectId: string): Promise<TutorVersionRecord | null>;
 }
 
 function toTutorDesignRecord(design: PrismaTutorDesign): TutorDesignRecord {
@@ -203,6 +204,13 @@ export function getTutorRepository(): TutorRepository {
     async findLatestVersion(projectId) {
       const version = await db.tutorVersion.findFirst({
         where: { projectId },
+        orderBy: { version: "desc" },
+      });
+      return version ? toTutorVersionRecord(version) : null;
+    },
+    async findActiveVersion(projectId) {
+      const version = await db.tutorVersion.findFirst({
+        where: { projectId, status: "ready" },
         orderBy: { version: "desc" },
       });
       return version ? toTutorVersionRecord(version) : null;

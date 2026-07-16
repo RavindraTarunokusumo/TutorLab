@@ -192,6 +192,7 @@ model PipelineJob {
   sourceDocumentId String?
   stage            PipelineStage
   idempotencyKey   String
+  requestFingerprint String?
   status           PipelineJobStatus @default(pending)
   attemptCount     Int               @default(0)
   progress         Float             @default(0)

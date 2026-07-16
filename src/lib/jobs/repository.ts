@@ -13,6 +13,12 @@ export type JobFailure = {
   retryable: boolean;
 };
 
+export class JobIdempotencyConflict extends Error {
+  constructor() {
+    super("Idempotency key cannot be reused for a different request.");
+  }
+}
+
 export interface PipelineJobRepository {
   start(input: {
     id: string;
@@ -20,6 +26,7 @@ export interface PipelineJobRepository {
     sourceDocumentId?: string;
     stage: PipelineJob["stage"];
     idempotencyKey: string;
+    requestFingerprint?: string;
   }): Promise<{ job: PipelineJob; shouldRun: boolean }>;
   updateProgress(id: string, progress: number): Promise<PipelineJob>;
   complete(id: string, resultId?: string): Promise<PipelineJob>;
@@ -35,6 +42,7 @@ function toPipelineJob(job: PrismaPipelineJob): PipelineJob {
     ...(job.sourceDocumentId ? { sourceDocumentId: job.sourceDocumentId } : {}),
     stage: job.stage,
     idempotencyKey: job.idempotencyKey,
+    ...(job.requestFingerprint ? { requestFingerprint: job.requestFingerprint } : {}),
     status: job.status,
     attemptCount: job.attemptCount,
     progress: job.progress,
@@ -61,6 +69,13 @@ export function getPipelineJobRepository(): PipelineJobRepository {
           },
         },
       });
+      if (
+        input.requestFingerprint &&
+        existing &&
+        existing.requestFingerprint !== input.requestFingerprint
+      ) {
+        throw new JobIdempotencyConflict();
+      }
       if (
         existing?.status === "running" ||
         existing?.status === "pending" ||
@@ -110,6 +125,12 @@ export function getPipelineJobRepository(): PipelineJobRepository {
               },
             },
           });
+          if (
+            input.requestFingerprint &&
+            existing.requestFingerprint !== input.requestFingerprint
+          ) {
+            throw new JobIdempotencyConflict();
+          }
           return { job: toPipelineJob(existing), shouldRun: false };
         }
       }

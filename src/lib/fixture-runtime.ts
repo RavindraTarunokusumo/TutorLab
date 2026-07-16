@@ -8,6 +8,11 @@ import type { DocumentAnalyst } from "@/lib/ai/document-analyst";
 import type { OpenAIFileProvider } from "@/lib/ai/openai-files";
 import type { TutorArchitect } from "@/lib/ai/tutor-architect";
 import type { TutorArchitectPromptInput } from "@/lib/ai/prompts/tutor-architect";
+import type { PolicyCompiler } from "@/lib/ai/policy-compiler";
+import {
+  buildFixtureTutorSpec,
+  type PolicyCompilerPromptInput,
+} from "@/lib/ai/prompts/policy-compiler";
 import type {
   CourseAnalysisRecord,
   CourseModelRepository,
@@ -623,6 +628,17 @@ export function getFixtureTutorArchitect(): TutorArchitect {
   };
 }
 
+export function getFixturePolicyCompiler(): PolicyCompiler {
+  return {
+    async compile(input: PolicyCompilerPromptInput) {
+      return buildFixtureTutorSpec(input);
+    },
+    async repair(input: PolicyCompilerPromptInput) {
+      return buildFixtureTutorSpec(input);
+    },
+  };
+}
+
 export function getFixtureDocumentAnalysisRepository(): DocumentAnalysisRepository {
   refreshState();
   return {
@@ -663,8 +679,9 @@ export function getFixtureJobRepository(): PipelineJobRepository {
         ...(input.sourceDocumentId
           ? { sourceDocumentId: input.sourceDocumentId }
           : {}),
-        stage: input.stage,
-        idempotencyKey: input.idempotencyKey,
+          stage: input.stage,
+          idempotencyKey: input.idempotencyKey,
+          ...(input.requestFingerprint ? { requestFingerprint: input.requestFingerprint } : {}),
         status: "running",
         attemptCount: (existing?.attemptCount ?? 0) + 1,
         progress: 0,
@@ -779,6 +796,11 @@ export function getFixtureTutorRepository(): TutorRepository {
     async findLatestVersion(projectId) {
       return [...tutorVersions.values()]
         .filter((version) => version.projectId === projectId)
+        .sort((a, b) => b.version - a.version)[0] ?? null;
+    },
+    async findActiveVersion(projectId) {
+      return [...tutorVersions.values()]
+        .filter((version) => version.projectId === projectId && version.status === "ready")
         .sort((a, b) => b.version - a.version)[0] ?? null;
     },
   };
