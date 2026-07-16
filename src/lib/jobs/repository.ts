@@ -32,6 +32,11 @@ export interface PipelineJobRepository {
   complete(id: string, resultId?: string): Promise<PipelineJob>;
   fail(id: string, diagnostic: JobFailure): Promise<PipelineJob>;
   findById(projectId: string, id: string): Promise<PipelineJob | null>;
+  findLatest?(input: {
+    projectId: string;
+    stage: PipelineJob["stage"];
+    requestFingerprint?: string;
+  }): Promise<PipelineJob | null>;
 }
 
 function toPipelineJob(job: PrismaPipelineJob): PipelineJob {
@@ -174,6 +179,19 @@ export function getPipelineJobRepository(): PipelineJobRepository {
     },
     async findById(projectId, id) {
       const job = await db.pipelineJob.findFirst({ where: { projectId, id } });
+      return job ? toPipelineJob(job) : null;
+    },
+    async findLatest(input) {
+      const job = await db.pipelineJob.findFirst({
+        where: {
+          projectId: input.projectId,
+          stage: input.stage,
+          ...(input.requestFingerprint
+            ? { requestFingerprint: input.requestFingerprint }
+            : {}),
+        },
+        orderBy: { startedAt: "desc" },
+      });
       return job ? toPipelineJob(job) : null;
     },
   };

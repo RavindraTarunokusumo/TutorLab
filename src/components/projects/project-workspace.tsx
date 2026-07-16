@@ -8,6 +8,7 @@ import { SourceWorkspace } from "@/components/sources/source-workspace";
 import { CourseModelReview } from "@/components/course-model/course-model-review";
 import { TutorDesignComparison } from "@/components/tutor-design/tutor-design-comparison";
 import { PreviewStage } from "@/components/chat/preview-stage";
+import { BuildProgress } from "@/components/build-progress/build-progress";
 
 type ProjectWorkspaceProps = {
   project: ProjectSnapshot;
@@ -30,31 +31,14 @@ function FixtureScreen({
   projectId: string;
   routeStage: Extract<ProjectStage, "design" | "build" | "report" | "preview">;
 }) {
-  const { courseModel, pipelineJob } = fixturePreview;
+  const { courseModel } = fixturePreview;
 
   if (routeStage === "design") {
     return <TutorDesignComparison projectId={projectId} />;
   }
 
   if (routeStage === "build") {
-    return (
-      <section className="max-w-3xl space-y-5">
-        <FixtureNotice />
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Build evidence
-        </h1>
-        <article className="rounded-xl border bg-card p-5 shadow-sm">
-          <p className="font-medium">Course synthesis</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {pipelineJob.status === "completed"
-              ? "Completed"
-              : pipelineJob.status}{" "}
-            at {Math.round(pipelineJob.progress * 100)}% from the deterministic
-            pipeline job fixture.
-          </p>
-        </article>
-      </section>
-    );
+    return <BuildProgress projectId={projectId} />;
   }
 
   if (routeStage === "report") {

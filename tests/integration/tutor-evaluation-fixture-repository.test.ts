@@ -75,6 +75,36 @@ describe("fixture tutor and evaluation persistence", () => {
     await expect(tutors.createVersion({ id: "tutor-2", projectId: "project-1", spec: spec("tutor-2", 1, courseModel.id), compiledPrompt: "Safe compiled prompt." })).rejects.toThrow("monotonic");
     await expect(tutors.createVersion({ id: "tutor-2", projectId: "project-1", spec: { ...spec("tutor-2", 2, courseModel.id), selectedDesign: { designId: "design-1", archetypeId: "forged", templateVersion: "0.1" } }, compiledPrompt: "Safe compiled prompt." })).rejects.toThrow("identity");
 
+    const { getPipelineJobRepository } = await import("@/lib/jobs/repository");
+    const scenarioJob = await getPipelineJobRepository().start({
+      id: "scenario-job-1",
+      projectId: "project-1",
+      stage: "scenario",
+      idempotencyKey: "scenario-request-1",
+      requestFingerprint: "a".repeat(64),
+    });
+    await getPipelineJobRepository().updateProgress(scenarioJob.job.id, 0.4);
+    await expect(getPipelineJobRepository().findLatest?.({
+      projectId: "project-1",
+      stage: "scenario",
+      requestFingerprint: "a".repeat(64),
+    })).resolves.toMatchObject({ id: "scenario-job-1", status: "running", progress: 0.4 });
+    await getPipelineJobRepository().fail("scenario-job-1", {
+      code: "safe-failure",
+      message: "Retry safely.",
+      retryable: true,
+    });
+    await expect(getPipelineJobRepository().start({
+      id: "scenario-job-duplicate",
+      projectId: "project-1",
+      stage: "scenario",
+      idempotencyKey: "scenario-request-1",
+      requestFingerprint: "a".repeat(64),
+    })).resolves.toMatchObject({
+      shouldRun: true,
+      job: { id: "scenario-job-1", attemptCount: 2, status: "running" },
+    });
+
     const evaluation = getEvaluationRepository();
     await expect(evaluation.saveScenarios(scenarios().map((scenario) => ({ ...scenario, tutorVersionId: "missing-tutor" })))).rejects.toThrow("Tutor version not found");
     await evaluation.saveScenarios(scenarios());
