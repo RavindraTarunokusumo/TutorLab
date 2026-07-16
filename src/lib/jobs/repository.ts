@@ -29,6 +29,7 @@ export interface PipelineJobRepository {
     requestFingerprint?: string;
   }): Promise<{ job: PipelineJob; shouldRun: boolean }>;
   updateProgress(id: string, progress: number): Promise<PipelineJob>;
+  setResultId?(id: string, resultId: string): Promise<PipelineJob>;
   complete(id: string, resultId?: string): Promise<PipelineJob>;
   fail(id: string, diagnostic: JobFailure): Promise<PipelineJob>;
   findById(projectId: string, id: string): Promise<PipelineJob | null>;
@@ -150,6 +151,12 @@ export function getPipelineJobRepository(): PipelineJobRepository {
       return toPipelineJob(await db.pipelineJob.update({
         where: { id },
         data: { progress: bounded },
+      }));
+    },
+    async setResultId(id, resultId) {
+      return toPipelineJob(await db.pipelineJob.update({
+        where: { id },
+        data: { resultId },
       }));
     },
     async complete(id, resultId) {

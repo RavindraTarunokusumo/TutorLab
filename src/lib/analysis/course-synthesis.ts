@@ -55,6 +55,7 @@ export class CourseModelVersionConflict extends Error {
 
 export interface CourseModelRepository {
   findLatest(projectId: string): Promise<CourseModelVersionRecord | null>;
+  findById?(projectId: string, versionId: string): Promise<CourseModelVersionRecord | null>;
   create(input: {
     projectId: string;
     artifact: CourseModel;
@@ -93,6 +94,12 @@ export function getCourseModelRepository(): CourseModelRepository {
       const result = await db.courseModelVersion.findFirst({
         where: { projectId },
         orderBy: { version: "desc" },
+      });
+      return result ? toVersion(result) : null;
+    },
+    async findById(projectId, versionId) {
+      const result = await db.courseModelVersion.findUnique({
+        where: { projectId_id: { projectId, id: versionId } },
       });
       return result ? toVersion(result) : null;
     },

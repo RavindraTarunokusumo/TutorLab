@@ -836,6 +836,12 @@ export function getFixtureJobRepository(): PipelineJobRepository {
       persistState();
       return job;
     },
+    async setResultId(id, resultId) {
+      const job = jobs.get(id)!;
+      job.resultId = resultId;
+      persistState();
+      return job;
+    },
     async complete(id, resultId) {
       const job = jobs.get(id)!;
       job.status = "completed";
@@ -1082,6 +1088,15 @@ export function getFixtureEvaluationRepository(): EvaluationRepository {
       persistState();
       return record;
     },
+    async claimRunExecution(input) {
+      const existing = evalRuns.get(input.runId);
+      if (!existing || existing.projectId !== input.projectId) return null;
+      if (existing.status !== "pending" && existing.status !== "failed") return null;
+      const record: EvalRunRecord = { ...existing, status: "running", readiness: "pending", completedAt: undefined, startedAt: new Date().toISOString(), updatedAt: new Date() };
+      evalRuns.set(record.id, record);
+      persistState();
+      return record;
+    },
     async findRun(projectId, runId) {
       const run = evalRuns.get(runId);
       return run?.projectId === projectId ? run : null;
@@ -1206,6 +1221,9 @@ export function getFixtureCourseModelRepository(): CourseModelRepository {
   return {
     async findLatest(projectId) {
       return versions.get(projectId)?.at(-1) ?? null;
+    },
+    async findById(projectId, versionId) {
+      return versions.get(projectId)?.find((version) => version.id === versionId) ?? null;
     },
     async create(input) {
       const list = versions.get(input.projectId) ?? [];

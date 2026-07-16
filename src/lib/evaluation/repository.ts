@@ -28,6 +28,7 @@ export interface EvaluationRepository {
   findScenario(projectId: string, scenarioId: string): Promise<EvalScenario | null>;
   createRun(input: EvalRun): Promise<EvalRunRecord>;
   saveRun(input: EvalRun): Promise<EvalRunRecord>;
+  claimRunExecution(input: { projectId: string; runId: string }): Promise<EvalRunRecord | null>;
   findRun(projectId: string, runId: string): Promise<EvalRunRecord | null>;
   saveResult(projectId: string, result: EvalResult): Promise<EvalResult>;
   listResults(projectId: string, runId: string): Promise<EvalResult[]>;
@@ -190,6 +191,21 @@ export function getEvaluationRepository(): EvaluationRepository {
           ...(run.completedAt ? { completedAt: new Date(run.completedAt) } : { completedAt: null }),
         },
       }));
+    },
+    async claimRunExecution(input) {
+      const claimed = await db.evalRun.updateMany({
+        where: {
+          projectId: input.projectId,
+          id: input.runId,
+          OR: [
+            { status: "pending" },
+            { status: "failed" },
+          ],
+        },
+        data: { status: "running", readiness: "pending", completedAt: null, startedAt: new Date() },
+      });
+      if (claimed.count !== 1) return null;
+      return toRun(await db.evalRun.findUniqueOrThrow({ where: { projectId_id: { projectId: input.projectId, id: input.runId } } }));
     },
     async findRun(projectId, runId) {
       const run = await db.evalRun.findUnique({
