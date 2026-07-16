@@ -18,7 +18,7 @@ Rules:
 - [x] Task 1 — Define tutor and evaluation contracts (`230695e`)
 - [x] Task 2 — Persist tutor and evaluation artifacts (`669d33e`)
 - [x] Task 3 — Add tutor catalog and state machine (`f6be484`)
-- [ ] Task 4 — Generate tutor designs
+- [x] Task 4 — Generate tutor designs (`8a02ffb`)
 - [ ] Task 5 — Add tutor design comparison
 - [ ] Task 6 — Compile tutor specifications
 - [ ] Task 7 — Add grounded tutor preview
