@@ -21,7 +21,7 @@ Rules:
 - [x] Task 4 — Generate tutor designs (`8a02ffb`)
 - [x] Task 5 — Add tutor design comparison (`937cf44`)
 - [x] Task 6 — Compile tutor specifications (`5cd72fb`)
-- [ ] Task 7 — Add grounded tutor preview
+- [x] Task 7 — Add grounded tutor preview (`7c82ff3`)
 - [ ] Task 8 — Generate evaluation scenarios
 - [ ] Task 9 — Add deterministic evaluation checks
 - [ ] Task 10 — Run tutor evaluations
