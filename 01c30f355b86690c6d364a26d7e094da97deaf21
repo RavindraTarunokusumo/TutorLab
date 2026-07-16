@@ -1,0 +1,1 @@
+Task: Day 3–4 Task 10 follow-up\nSummary: Hardens idempotency, execution leases, retries, exact source provenance, and run lifecycle after review.\nDocs: docs/superpowers/specs/2026-07-16-day-3-day-4-design.md\nTODO: Day 3–4 Task 10\nValidation: final lint, typecheck, serial tests, fixture E2E pending final Task 11 commit
