@@ -1,0 +1,1 @@
+Task: Day 3–4 implementation plan\nSummary: Defines the ordered implementation contract, interfaces, and validation points for the approved milestone.\nDocs: docs/superpowers/plans/2026-07-16-day-3-day-4.md\nTODO: Pending task log\nValidation: git diff --check; placeholder scan
