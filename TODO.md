@@ -23,7 +23,7 @@ Rules:
 - [x] Task 6 — Compile tutor specifications (`5cd72fb`)
 - [x] Task 7 — Add grounded tutor preview (`7c82ff3`)
 - [x] Task 8 — Generate evaluation scenarios (`ccc7b17`)
-- [ ] Task 9 — Add deterministic evaluation checks
+- [x] Task 9 — Add deterministic evaluation checks (`61112f6`)
 - [ ] Task 10 — Run tutor evaluations
 - [ ] Task 11 — Verify the Day 3–4 milestone
 
