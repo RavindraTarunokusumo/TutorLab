@@ -15,7 +15,7 @@ Rules:
 
 ### Day 3–4 tutor design and evaluation milestone
 
-- [ ] Task 1 — Define tutor and evaluation contracts
+- [x] Task 1 — Define tutor and evaluation contracts (`230695e`)
 - [ ] Task 2 — Persist tutor and evaluation artifacts
 - [ ] Task 3 — Add tutor catalog and state machine
 - [ ] Task 4 — Generate tutor designs
