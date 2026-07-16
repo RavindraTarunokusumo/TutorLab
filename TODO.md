@@ -20,7 +20,7 @@ Rules:
 - [x] Task 3 — Add tutor catalog and state machine (`f6be484`)
 - [x] Task 4 — Generate tutor designs (`8a02ffb`)
 - [x] Task 5 — Add tutor design comparison (`937cf44`)
-- [ ] Task 6 — Compile tutor specifications
+- [x] Task 6 — Compile tutor specifications (`5cd72fb`)
 - [ ] Task 7 — Add grounded tutor preview
 - [ ] Task 8 — Generate evaluation scenarios
 - [ ] Task 9 — Add deterministic evaluation checks
