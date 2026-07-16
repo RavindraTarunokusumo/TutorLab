@@ -74,6 +74,7 @@ type FixtureState = {
   tutorDesigns: Map<string, TutorDesignRecord>;
   tutorVersions: Map<string, TutorVersionRecord>;
   conversations: Map<string, Conversation>;
+  conversationClaims: Map<string, string>;
   evalScenarios: Map<string, EvalScenario>;
   evalRuns: Map<string, EvalRunRecord>;
   evalResults: Map<string, EvalResult>;
@@ -89,6 +90,7 @@ const state: FixtureState = {
   tutorDesigns: new Map(),
   tutorVersions: new Map(),
   conversations: new Map(),
+  conversationClaims: new Map(),
   evalScenarios: new Map(),
   evalRuns: new Map(),
   evalResults: new Map(),
@@ -103,6 +105,7 @@ const {
   tutorDesigns,
   tutorVersions,
   conversations,
+  conversationClaims,
   evalScenarios,
   evalRuns,
   evalResults,
@@ -147,6 +150,7 @@ type SerializedFixtureState = {
     },
   ]>;
   conversations: Array<[string, Conversation]>;
+  conversationClaims?: Array<[string, string]>;
   evalScenarios: Array<[string, EvalScenario]>;
   evalRuns: Array<[
     string,
@@ -174,6 +178,7 @@ function refreshState(): void {
   tutorDesigns.clear();
   tutorVersions.clear();
   conversations.clear();
+  conversationClaims.clear();
   evalScenarios.clear();
   evalRuns.clear();
   evalResults.clear();
@@ -216,6 +221,7 @@ function refreshState(): void {
     });
   }
   for (const [id, conversation] of saved.conversations ?? []) conversations.set(id, conversation);
+  for (const [id, token] of saved.conversationClaims ?? []) conversationClaims.set(id, token);
   for (const [id, scenario] of saved.evalScenarios ?? []) evalScenarios.set(id, scenario);
   for (const [id, run] of saved.evalRuns ?? []) {
     evalRuns.set(id, {
@@ -267,6 +273,7 @@ function persistState(): void {
       },
     ]),
     conversations: [...conversations.entries()],
+    conversationClaims: [...conversationClaims.entries()],
     evalScenarios: [...evalScenarios.entries()],
     evalRuns: [...evalRuns.entries()].map(([id, run]) => [
       id,
@@ -498,6 +505,14 @@ export function getFixtureOpenAIFileProvider(): OpenAIFileProvider {
     async getExtractedText(_vectorStoreId, fileId) {
       const content = files.get(fileId);
       return content === undefined ? undefined : `${content}\f`;
+    },
+    async searchPassages({ query, fileIds, limit }) {
+      const terms = new Set(query.toLowerCase().split(/\W+/).filter(Boolean));
+      return fileIds.flatMap((fileId) => {
+        const text = files.get(fileId);
+        const score = text ? [...terms].filter((term) => text.toLowerCase().includes(term)).length : 0;
+        return text && score > 0 ? [{ fileId, text: text.slice(0, 6_000) }] : [];
+      }).slice(0, limit);
     },
     async detachFile() {},
     async deleteFile(fileId) {
@@ -818,6 +833,18 @@ export function getFixtureConversationRepository(): ConversationRepository {
       persistState();
       return conversation;
     },
+    async getOrCreateTeacherPreview(input) {
+      const conversation = ConversationSchema.parse(input);
+      const existing = [...conversations.values()]
+        .filter((item) => item.projectId === conversation.projectId && item.tutorVersionId === conversation.tutorVersionId && item.mode === "teacher_preview")
+        .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))[0];
+      if (existing) return existing;
+      const tutorVersion = tutorVersions.get(conversation.tutorVersionId);
+      if (!tutorVersion || tutorVersion.projectId !== conversation.projectId) throw new Error("Tutor version not found");
+      conversations.set(conversation.id, conversation);
+      persistState();
+      return conversation;
+    },
     async findById(projectId, conversationId) {
       const conversation = conversations.get(conversationId);
       return conversation?.projectId === projectId ? conversation : null;
@@ -842,10 +869,24 @@ export function getFixtureConversationRepository(): ConversationRepository {
       persistState();
       return updated;
     },
+    async claimPreview(input) {
+      const conversation = conversations.get(input.conversationId);
+      if (!conversation || conversation.projectId !== input.projectId || conversation.mode !== "teacher_preview" || conversationClaims.has(input.conversationId)) return false;
+      conversationClaims.set(input.conversationId, input.token);
+      persistState();
+      return true;
+    },
+    async releasePreviewClaim(input) {
+      if (conversationClaims.get(input.conversationId) === input.token) {
+        conversationClaims.delete(input.conversationId);
+        persistState();
+      }
+    },
     async delete(projectId, conversationId) {
       const conversation = conversations.get(conversationId);
       if (conversation?.projectId === projectId) {
         conversations.delete(conversationId);
+        conversationClaims.delete(conversationId);
         persistState();
       }
     },

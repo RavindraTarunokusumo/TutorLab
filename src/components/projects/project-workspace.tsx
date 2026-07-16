@@ -7,6 +7,7 @@ import { TeachingBriefWizard } from "./teaching-brief-wizard";
 import { SourceWorkspace } from "@/components/sources/source-workspace";
 import { CourseModelReview } from "@/components/course-model/course-model-review";
 import { TutorDesignComparison } from "@/components/tutor-design/tutor-design-comparison";
+import { PreviewStage } from "@/components/chat/preview-stage";
 
 type ProjectWorkspaceProps = {
   project: ProjectSnapshot;
@@ -75,24 +76,7 @@ function FixtureScreen({
     );
   }
 
-  return (
-    <section className="max-w-3xl space-y-5">
-      <FixtureNotice />
-      <h1 className="text-3xl font-semibold tracking-tight">Tutor preview</h1>
-      <article className="rounded-xl border bg-card p-5 shadow-sm">
-        <p className="font-medium">
-          Learner: Are mutually exclusive events independent?
-        </p>
-        <p className="mt-3 leading-7 text-muted-foreground">
-          Tutor: Start by comparing what each relationship says about the
-          intersection. What would you expect if the events were independent?
-        </p>
-        <p className="mt-4 text-sm text-muted-foreground">
-          Grounded in: {courseModel.concepts[0]?.name}
-        </p>
-      </article>
-    </section>
-  );
+  return <section className="space-y-5"><FixtureNotice /><PreviewStage projectId={projectId} conceptName={courseModel.concepts[0]?.name} /></section>;
 }
 
 export function ProjectWorkspace({
@@ -116,9 +100,7 @@ export function ProjectWorkspace({
           <SourceWorkspace projectId={project.id} />
         ) : routeStage === "course_model" ? (
           <CourseModelReview projectId={project.id} />
-        ) : (
-          <FixtureScreen projectId={project.id} routeStage={routeStage} />
-        )}
+        ) : <FixtureScreen projectId={project.id} routeStage={routeStage} />}
       </div>
     </main>
   );

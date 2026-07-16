@@ -262,6 +262,8 @@ model Conversation {
   tutorVersionId String
   mode           ConversationMode
   currentState   String
+  previewClaimToken String?
+  previewClaimedAt  DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -271,6 +273,7 @@ model Conversation {
 
   @@unique([projectId, id])
   @@index([projectId, tutorVersionId, mode])
+  @@index([projectId, tutorVersionId, mode, previewClaimedAt])
 }
 
 model Message {

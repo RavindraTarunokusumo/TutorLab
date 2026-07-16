@@ -21,6 +21,7 @@ type ConversationWithMessages = PrismaConversation & { messages: PrismaMessage[]
 
 export interface ConversationRepository {
   create(input: Conversation): Promise<Conversation>;
+  getOrCreateTeacherPreview(input: Conversation): Promise<Conversation>;
   findById(projectId: string, conversationId: string): Promise<Conversation | null>;
   findLatestForTutor(input: {
     projectId: string;
@@ -33,6 +34,8 @@ export interface ConversationRepository {
     message: ConversationMessage;
     currentState?: AssistanceState;
   }): Promise<Conversation>;
+  claimPreview(input: { projectId: string; conversationId: string; token: string; staleBefore: Date }): Promise<boolean>;
+  releasePreviewClaim(input: { projectId: string; conversationId: string; token: string }): Promise<void>;
   delete(projectId: string, conversationId: string): Promise<void>;
 }
 
@@ -91,6 +94,25 @@ export function getConversationRepository(): ConversationRepository {
       });
       return toConversation(created);
     },
+    async getOrCreateTeacherPreview(input) {
+      const conversation = ConversationSchema.parse(input);
+      if (conversation.mode !== "teacher_preview" || conversation.messages.length !== 0) {
+        throw new Error("Teacher preview conversation input is invalid");
+      }
+      return db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`${conversation.projectId}:${conversation.tutorVersionId}:teacher_preview`}))`;
+        const existing = await tx.conversation.findFirst({
+          where: { projectId: conversation.projectId, tutorVersionId: conversation.tutorVersionId, mode: "teacher_preview" },
+          orderBy: { updatedAt: "desc" }, include: conversationInclude(),
+        });
+        if (existing) return toConversation(existing);
+        const created = await tx.conversation.create({
+          data: { id: conversation.id, projectId: conversation.projectId, tutorVersionId: conversation.tutorVersionId, mode: conversation.mode, currentState: conversation.currentState, createdAt: new Date(conversation.createdAt), updatedAt: new Date(conversation.updatedAt) },
+          include: conversationInclude(),
+        });
+        return toConversation(created);
+      });
+    },
     async findById(projectId, conversationId) {
       const conversation = await db.conversation.findUnique({
         where: { projectId_id: { projectId, id: conversationId } },
@@ -141,6 +163,24 @@ export function getConversationRepository(): ConversationRepository {
         });
       });
       return toConversation(updated);
+    },
+    async claimPreview(input) {
+      const claimed = await db.$executeRaw`
+        UPDATE "Conversation"
+        SET "previewClaimToken" = ${input.token}, "previewClaimedAt" = NOW()
+        WHERE "projectId" = ${input.projectId} AND "id" = ${input.conversationId}
+          AND "mode" = 'teacher_preview'
+          AND ("previewClaimToken" IS NULL OR "previewClaimedAt" < ${input.staleBefore})
+      `;
+      return claimed === 1;
+    },
+    async releasePreviewClaim(input) {
+      await db.$executeRaw`
+        UPDATE "Conversation"
+        SET "previewClaimToken" = NULL, "previewClaimedAt" = NULL
+        WHERE "projectId" = ${input.projectId} AND "id" = ${input.conversationId}
+          AND "previewClaimToken" = ${input.token}
+      `;
     },
     async delete(projectId, conversationId) {
       await db.conversation.deleteMany({
