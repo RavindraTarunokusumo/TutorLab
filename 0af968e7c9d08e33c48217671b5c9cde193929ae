@@ -1,0 +1,1 @@
+Task: Day 3–4 milestone specification\nSummary: Defines the approved hybrid tutor design, compilation, runtime, and six-scenario evaluation scope before implementation.\nDocs: docs/superpowers/specs/2026-07-16-day-3-day-4-design.md\nTODO: Pending plan approval\nValidation: git diff --check; placeholder scan
