@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { EvaluationRunError, getEvaluationRun, runTutorEvaluation } from "@/lib/evaluation/runner";
 import { getTutorRepository } from "@/lib/tutor/repository";
+import { getEvaluationRepository } from "@/lib/evaluation/repository";
 import { ProjectAccessError, requireProjectAccess } from "@/lib/projects/service";
 
 const RequestSchema = z.strictObject({
@@ -31,10 +32,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ tuto
   try {
     const projectId = new URL(request.url).searchParams.get("projectId");
     const runId = new URL(request.url).searchParams.get("runId");
-    if (!projectId || !runId) return NextResponse.json({ error: "Invalid evaluation request" }, { status: 400 });
+    if (!projectId) return NextResponse.json({ error: "Invalid evaluation request" }, { status: 400 });
     await requireProjectAccess(request, projectId);
     const { tutorId } = await params;
-    const evaluation = await getEvaluationRun(projectId, runId);
+    const evaluation = runId
+      ? await getEvaluationRun(projectId, runId)
+      : await (async () => {
+          const run = await getEvaluationRepository().findLatestRun(projectId, tutorId);
+          return run ? getEvaluationRun(projectId, run.id) : null;
+        })();
     if (!evaluation || evaluation.run.tutorVersionId !== tutorId) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const tutor = await getTutorRepository().findVersion(projectId, tutorId);
     return tutor ? NextResponse.json(evaluation) : NextResponse.json({ error: "Not found" }, { status: 404 });

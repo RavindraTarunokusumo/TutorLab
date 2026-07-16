@@ -22,6 +22,13 @@ import {
 
 export type EvalRunRecord = EvalRun & { createdAt: Date; updatedAt: Date };
 
+function parseRunForWrite(input: EvalRun | EvalRunRecord): EvalRun {
+  const run = { ...input } as Record<string, unknown>;
+  delete run.createdAt;
+  delete run.updatedAt;
+  return EvalRunSchema.parse(run);
+}
+
 export interface EvaluationRepository {
   saveScenarios(input: EvalScenario[]): Promise<EvalScenario[]>;
   listScenarios(projectId: string, tutorVersionId: string): Promise<EvalScenario[]>;
@@ -30,6 +37,7 @@ export interface EvaluationRepository {
   saveRun(input: EvalRun): Promise<EvalRunRecord>;
   claimRunExecution(input: { projectId: string; runId: string }): Promise<EvalRunRecord | null>;
   findRun(projectId: string, runId: string): Promise<EvalRunRecord | null>;
+  findLatestRun(projectId: string, tutorVersionId: string): Promise<EvalRunRecord | null>;
   saveResult(projectId: string, result: EvalResult): Promise<EvalResult>;
   listResults(projectId: string, runId: string): Promise<EvalResult[]>;
 }
@@ -166,7 +174,7 @@ export function getEvaluationRepository(): EvaluationRepository {
       return toRun(await db.evalRun.create({ data: runData(run) }));
     },
     async saveRun(input) {
-      const run = EvalRunSchema.parse(input);
+      const run = parseRunForWrite(input);
       const existing = await db.evalRun.findUnique({
         where: { projectId_id: { projectId: run.projectId, id: run.id } },
         select: { projectId: true, tutorVersionId: true, scenarioIds: true },
@@ -200,6 +208,12 @@ export function getEvaluationRepository(): EvaluationRepository {
           OR: [
             { status: "pending" },
             { status: "failed" },
+            {
+              status: "completed",
+              results: {
+                some: { status: { in: ["failed", "error", "not_run"] } },
+              },
+            },
           ],
         },
         data: { status: "running", readiness: "pending", completedAt: null, startedAt: new Date() },
@@ -210,6 +224,13 @@ export function getEvaluationRepository(): EvaluationRepository {
     async findRun(projectId, runId) {
       const run = await db.evalRun.findUnique({
         where: { projectId_id: { projectId, id: runId } },
+      });
+      return run ? toRun(run) : null;
+    },
+    async findLatestRun(projectId, tutorVersionId) {
+      const run = await db.evalRun.findFirst({
+        where: { projectId, tutorVersionId },
+        orderBy: { createdAt: "desc" },
       });
       return run ? toRun(run) : null;
     },

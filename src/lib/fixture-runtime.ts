@@ -50,7 +50,6 @@ import type {
   EvalScenario,
   PipelineJob,
   SourceDocument,
-  TeachingBriefPatch,
 } from "@/lib/schemas";
 import {
   ConversationMessageSchema,
@@ -349,7 +348,7 @@ export function getFixtureProjectRepository(): ProjectRepository {
       project.teachingBrief = {
         ...project.teachingBrief,
         ...patch,
-      } as TeachingBriefPatch;
+      } as ProjectRecord["teachingBrief"];
       project.updatedAt = new Date();
       persistState();
       return project;
@@ -1077,7 +1076,10 @@ export function getFixtureEvaluationRepository(): EvaluationRepository {
       return record;
     },
     async saveRun(input) {
-      const run = EvalRunSchema.parse(input);
+      const runInput = { ...input } as Record<string, unknown>;
+      delete runInput.createdAt;
+      delete runInput.updatedAt;
+      const run = EvalRunSchema.parse(runInput);
       const existing = evalRuns.get(run.id);
       if (!existing || existing.projectId !== run.projectId) throw new Error("Evaluation run not found");
       if (existing.tutorVersionId !== run.tutorVersionId || existing.scenarioIds.length !== run.scenarioIds.length || existing.scenarioIds.some((id, index) => id !== run.scenarioIds[index])) {
@@ -1091,7 +1093,8 @@ export function getFixtureEvaluationRepository(): EvaluationRepository {
     async claimRunExecution(input) {
       const existing = evalRuns.get(input.runId);
       if (!existing || existing.projectId !== input.projectId) return null;
-      if (existing.status !== "pending" && existing.status !== "failed") return null;
+      const retryableTerminal = existing.status === "completed" && [...evalResults.values()].some((result) => result.evalRunId === existing.id && ["failed", "error", "not_run"].includes(result.status));
+      if (!retryableTerminal && existing.status !== "pending" && existing.status !== "failed") return null;
       const record: EvalRunRecord = { ...existing, status: "running", readiness: "pending", completedAt: undefined, startedAt: new Date().toISOString(), updatedAt: new Date() };
       evalRuns.set(record.id, record);
       persistState();
@@ -1100,6 +1103,11 @@ export function getFixtureEvaluationRepository(): EvaluationRepository {
     async findRun(projectId, runId) {
       const run = evalRuns.get(runId);
       return run?.projectId === projectId ? run : null;
+    },
+    async findLatestRun(projectId, tutorVersionId) {
+      return [...evalRuns.values()]
+        .filter((run) => run.projectId === projectId && run.tutorVersionId === tutorVersionId)
+        .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0] ?? null;
     },
     async saveResult(projectId, input) {
       const result = EvalResultSchema.parse(input);

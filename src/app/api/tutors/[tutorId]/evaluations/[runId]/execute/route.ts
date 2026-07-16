@@ -12,7 +12,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tut
     const { tutorId, runId } = await params;
     const persisted = await getEvaluationRun(body.projectId, runId);
     if (!persisted || persisted.run.tutorVersionId !== tutorId) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(await runTutorEvaluation({ ...body, tutorVersionId: tutorId, scenarioIds: persisted.run.scenarioIds, resume: true }));
+    return NextResponse.json(await runTutorEvaluation({ ...body, tutorVersionId: tutorId, scenarioIds: persisted.run.scenarioIds, resume: true, existingRunId: runId }));
   } catch (error) {
     if (error instanceof ProjectAccessError) return NextResponse.json({ error: error.status === 401 ? "Unauthorized" : "Not found" }, { status: error.status });
     if (error instanceof EvaluationRunError) return NextResponse.json({ error: "Idempotency key cannot be reused for a different evaluation request.", code: error.code }, { status: 409 });

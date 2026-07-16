@@ -134,7 +134,7 @@ async function mapLimit<T>(items: T[], limit: number, work: (item: T) => Promise
   }));
 }
 
-export async function runTutorEvaluation(input: { projectId: string; tutorVersionId: string; scenarioIds?: string[]; idempotencyKey: string; startOnly?: boolean; resume?: boolean }, overrides?: Partial<EvaluationRunDependencies>, onReady?: (handle: { job: Awaited<ReturnType<PipelineJobRepository["start"]>>["job"]; run: EvalRun; results: EvalResult[] }) => void) {
+export async function runTutorEvaluation(input: { projectId: string; tutorVersionId: string; scenarioIds?: string[]; idempotencyKey: string; startOnly?: boolean; resume?: boolean; existingRunId?: string }, overrides?: Partial<EvaluationRunDependencies>, onReady?: (handle: { job: Awaited<ReturnType<PipelineJobRepository["start"]>>["job"]; run: EvalRun; results: EvalResult[] }) => void) {
   const dependencies = deps(overrides);
   const version = await dependencies.tutorRepository.findVersion(input.projectId, input.tutorVersionId);
   if (!version || version.status !== "ready") throw new Error("Active tutor version not found");
@@ -157,7 +157,13 @@ export async function runTutorEvaluation(input: { projectId: string; tutorVersio
       if (!input.resume) return { job: started.job, run: existing, results };
     run = existing;
   } else {
-    run = await dependencies.evaluationRepository.createRun({ schemaVersion: "0.1", id: dependencies.createId(), projectId: input.projectId, tutorVersionId: input.tutorVersionId, scenarioIds: selected.map(({ id }) => id), status: "pending", readiness: "pending", passCount: 0, warningCount: 0 });
+    const existing = input.existingRunId
+      ? await dependencies.evaluationRepository.findRun(input.projectId, input.existingRunId)
+      : null;
+    if (existing && (existing.tutorVersionId !== input.tutorVersionId || existing.scenarioIds.some((id, index) => id !== selected[index]?.id))) {
+      throw new Error("Evaluation run is unavailable");
+    }
+    run = existing ?? await dependencies.evaluationRepository.createRun({ schemaVersion: "0.1", id: dependencies.createId(), projectId: input.projectId, tutorVersionId: input.tutorVersionId, scenarioIds: selected.map(({ id }) => id), status: "pending", readiness: "pending", passCount: 0, warningCount: 0 });
     await dependencies.jobRepository.setResultId?.(started.job.id, run.id);
     onReady?.({ job: { ...started.job, resultId: run.id }, run, results: [] });
   }
