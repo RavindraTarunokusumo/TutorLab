@@ -6,6 +6,7 @@ import { StageHeader } from "./stage-header";
 import { TeachingBriefWizard } from "./teaching-brief-wizard";
 import { SourceWorkspace } from "@/components/sources/source-workspace";
 import { CourseModelReview } from "@/components/course-model/course-model-review";
+import { TutorDesignComparison } from "@/components/tutor-design/tutor-design-comparison";
 
 type ProjectWorkspaceProps = {
   project: ProjectSnapshot;
@@ -22,42 +23,16 @@ function FixtureNotice() {
 }
 
 function FixtureScreen({
+  projectId,
   routeStage,
 }: {
+  projectId: string;
   routeStage: Extract<ProjectStage, "design" | "build" | "report" | "preview">;
 }) {
   const { courseModel, pipelineJob } = fixturePreview;
 
   if (routeStage === "design") {
-    return (
-      <section className="space-y-5">
-        <FixtureNotice />
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Tutor design comparison
-        </h1>
-        <p className="max-w-2xl text-muted-foreground">
-          Three fixture-backed approaches for {courseModel.courseIdentity.title}
-          .
-        </p>
-        <div className="grid gap-4 md:grid-cols-3">
-          {["Socratic guide", "Exam coach", "Adaptive practice partner"].map(
-            (name) => (
-              <article
-                key={name}
-                className="rounded-xl border bg-card p-5 shadow-sm"
-              >
-                <h2 className="font-semibold">{name}</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Grounds prompts in{" "}
-                  {courseModel.concepts[0]?.name.toLowerCase()} and asks for
-                  reasoning before calculation.
-                </p>
-              </article>
-            ),
-          )}
-        </div>
-      </section>
-    );
+    return <TutorDesignComparison projectId={projectId} />;
   }
 
   if (routeStage === "build") {
@@ -142,7 +117,7 @@ export function ProjectWorkspace({
         ) : routeStage === "course_model" ? (
           <CourseModelReview projectId={project.id} />
         ) : (
-          <FixtureScreen routeStage={routeStage} />
+          <FixtureScreen projectId={project.id} routeStage={routeStage} />
         )}
       </div>
     </main>
