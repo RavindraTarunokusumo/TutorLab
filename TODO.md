@@ -19,7 +19,7 @@ Rules:
 - [x] Task 2 — Persist tutor and evaluation artifacts (`669d33e`)
 - [x] Task 3 — Add tutor catalog and state machine (`f6be484`)
 - [x] Task 4 — Generate tutor designs (`8a02ffb`)
-- [ ] Task 5 — Add tutor design comparison
+- [x] Task 5 — Add tutor design comparison (`937cf44`)
 - [ ] Task 6 — Compile tutor specifications
 - [ ] Task 7 — Add grounded tutor preview
 - [ ] Task 8 — Generate evaluation scenarios
