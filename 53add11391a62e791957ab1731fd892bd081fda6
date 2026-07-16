@@ -1,0 +1,3 @@
+Task: Session reflection
+Summary: Recorded workflow-only lessons from PR closeout and validation.
+Validation: git diff --check
