@@ -62,6 +62,8 @@ prisma/                 # schema.prisma + migrations
 ## Core Fixtures and Helpers
 
 - Reusable course model JSON and document fixtures live under `fixtures/probability-course/`.
+- `tests/integration/day-1-day-2-golden-path.test.ts` composes the fixture project, brief, mocked upload/indexing, document analysis, compact synthesis, and immutable teacher correction flow without a live provider or owner files.
+- `tests/e2e/day-1-day-2.spec.ts` drives the real Next application in deterministic fixture mode, isolated from live OpenAI, PostgreSQL, and owner-supplied files.
 - Deterministic evaluation fixtures for answer leakage, misconception detection, etc.
 - Test DB helpers (e.g. `createTestPrismaClient`, cleanup utilities) should live in `tests/helpers/` or `lib/test-utils.ts`.
 - All external AI calls are mocked at the client layer (`lib/ai/client.ts` or equivalent).
@@ -122,14 +124,17 @@ npm run test:run -- --coverage
 # Install browsers first time (or in CI)
 npx playwright install --with-deps
 
-# Run all E2E tests (uses playwright.config.ts)
+# Run the deterministic Day 1–2 browser golden path
+npm run test:e2e:fixture
+
+# Run the configured application E2E suite (uses playwright.config.ts)
 npm run test:e2e
 ```
 
-Run a specific spec:
+Run the fixture spec directly:
 
 ```bash
-npm run test:e2e -- tests/e2e/golden-path.spec.ts
+npm run test:e2e:fixture
 ```
 
 Run in UI mode (debug):
@@ -143,12 +148,9 @@ Playwright golden path (from SPEC):
 1. Create project
 2. Complete wizard
 3. Attach fixture documents
-4. Load fixture course model (test mode)
-5. Select a tutor design
-6. Run build
-7. Inspect and repair a failing scenario
-8. Preview chat
-9. Export
+4. Load fixture analysis and course model in explicit test mode
+5. Inspect source evidence and save a teacher correction
+6. Refresh and confirm the corrected version persists
 
 ## Database and Prisma for Tests
 
@@ -157,11 +159,13 @@ Tests that touch persistence require a dedicated Postgres database.
 Recommended setup:
 
 1. Define a test connection string (e.g. in `.env.test` or CI secrets):
+
    ```
    DATABASE_URL_TEST="postgresql://user:pass@localhost:5432/tutorlab_test"
    ```
 
 2. Before running DB tests:
+
    ```bash
    # Generate client (if not done)
    npm run prisma:generate
@@ -181,6 +185,12 @@ Recommended setup:
 
 Never run against the development or production database.
 
+## Day 1–2 ingestion coverage
+
+Automated tests cover the 30-file, 500-page, 2-million-token, 50-MB-file, and 200-MB-workspace caps with deterministic metadata and mocked OpenAI responses. They also cover protected-solution permissions, index retries, analysis caching, partial synthesis, and immutable teacher edits.
+
+The manual live gate remains separate: once the owner provides the three probability PDFs (practice exercise, sample exam, marking scheme), ingest them with a real `OPENAI_API_KEY`, confirm all stages reach Ready, and inspect the course model and evidence. Do not replace those files with downloaded content.
+
 ## Full Verification Before Commit / PR
 
 Run the complete local gate (lint + types + tests):
@@ -189,7 +199,8 @@ Run the complete local gate (lint + types + tests):
 npm run lint
 npm run typecheck
 npm run test:run
-npm run test:e2e   # when relevant (slower)
+npm run test:e2e:fixture
+npm run test:e2e   # when configured services and browsers are available
 # Optionally
 npm run build      # ensures production build succeeds
 ```
@@ -219,6 +230,7 @@ pre-commit run --all-files
 ```
 
 The `.pre-commit-config` includes:
+
 - Basic hygiene (trailing whitespace, EOF, YAML/JSON, large files, etc.)
 - Prettier formatting
 - ESLint (with --fix)
@@ -230,6 +242,7 @@ Heavy operations such as the full test suite and E2E are intentionally kept out 
 ## CI Expectations
 
 CI should execute at minimum:
+
 - `npm ci`
 - `npm run lint`
 - `npm run typecheck`

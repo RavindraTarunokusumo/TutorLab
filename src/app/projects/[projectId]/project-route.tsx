@@ -1,0 +1,32 @@
+import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
+import { ProjectWorkspace } from "@/components/projects/project-workspace";
+import { ProjectAccessError } from "@/lib/projects/service";
+import { loadAuthorizedProjectSnapshot } from "@/lib/projects/project-snapshot";
+import { isProjectStageReachable } from "@/lib/projects/stages";
+import type { ProjectStage } from "@/lib/schemas/project";
+
+type ProjectRouteProps = {
+  params: Promise<{ projectId: string }>;
+};
+
+export async function renderProjectRoute(
+  { params }: ProjectRouteProps,
+  routeStage: ProjectStage,
+) {
+  const { projectId } = await params;
+  const editToken = (await cookies()).get("tutorlab_project_edit")?.value;
+
+  try {
+    const project = await loadAuthorizedProjectSnapshot(projectId, editToken);
+    if (!isProjectStageReachable(project.stage, routeStage)) {
+      notFound();
+    }
+    return <ProjectWorkspace project={project} routeStage={routeStage} />;
+  } catch (error) {
+    if (error instanceof ProjectAccessError) {
+      notFound();
+    }
+    throw error;
+  }
+}

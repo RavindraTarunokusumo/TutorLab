@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectStage {
+  brief
+  sources
+  course_model
+  design
+  build
+  report
+  preview
+}
+
+enum SourceRole {
+  syllabus
+  lecture
+  exercise
+  assessment
+  rubric
+  solution
+  teacher_note
+  other
+}
+
+enum SourceAuthority {
+  teacher_instruction
+  course_authoritative
+  supplementary
+  observational
+}
+
+enum ProcessingStatus {
+  pending
+  in_progress
+  ready
+  failed
+}
+
+enum PipelineStage {
+  upload
+  extraction
+  analysis
+  synthesis
+}
+
+enum PipelineJobStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+model Project {
+  id            String       @id
+  name          String
+  stage         ProjectStage @default(brief)
+  teachingBrief Json         @default("{}")
+  editTokenHash String       @unique
+  vectorStoreId String?      @unique
+  vectorStoreProvisioningToken String?
+  vectorStoreProvisioningStartedAt DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  courseModelVersions CourseModelVersion[]
+  sourceDocuments     SourceDocument[]
+  documentAnalyses    DocumentAnalysis[]
+  pipelineJobs        PipelineJob[]
+}
+
+model CourseModelVersion {
+  id            String   @id
+  projectId     String
+  version       Int
+  artifact      Json
+  teacherEdited Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, version])
+}
+
+model SourceDocument {
+  id                         String           @id
+  projectId                  String
+  name                       String
+  role                       SourceRole
+  authority                  SourceAuthority
+  permissions                Json
+  containsProtectedSolutions Boolean
+  contentHash                String
+  mimeType                   String
+  sizeBytes                  Int
+  uploadStatus               ProcessingStatus @default(pending)
+  extractionStatus           ProcessingStatus @default(pending)
+  analysisStatus             ProcessingStatus @default(pending)
+  pageCount                  Int?
+  extractedTokenCount        Int?
+  processingError            String?
+  openaiFileId               String?          @unique
+  requiresExtractionMetrics  Boolean          @default(false)
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analyses     DocumentAnalysis[]
+  pipelineJobs PipelineJob[]
+
+  @@index([projectId])
+  @@unique([projectId, contentHash])
+  @@unique([projectId, id])
+}
+
+model DocumentAnalysis {
+  id              String   @id
+  projectId       String
+  documentId      String
+  documentHash    String
+  schemaVersion   String
+  analysisProfile String
+  artifact        Json
+  createdAt       DateTime @default(now())
+
+  project  Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  document SourceDocument @relation(fields: [projectId, documentId], references: [projectId, id], onDelete: Restrict)
+
+  @@unique([projectId, documentHash, schemaVersion, analysisProfile])
+  @@unique([documentId, documentHash, schemaVersion, analysisProfile])
+  @@index([projectId])
+}
+
+model PipelineJob {
+  id               String            @id
+  projectId        String
+  sourceDocumentId String?
+  stage            PipelineStage
+  idempotencyKey   String
+  status           PipelineJobStatus @default(pending)
+  attemptCount     Int               @default(0)
+  progress         Float             @default(0)
+  diagnostic       Json?
+  usage            Json?
+  latencyMs        Int?
+  resultId         String?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceDocument SourceDocument? @relation(fields: [projectId, sourceDocumentId], references: [projectId, id], onDelete: Restrict)
+
+  @@unique([projectId, stage, idempotencyKey])
+  @@index([sourceDocumentId])
+}

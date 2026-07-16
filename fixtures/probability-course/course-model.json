@@ -1,0 +1,196 @@
+{
+  "schemaVersion": "0.2",
+  "projectId": "project-probability",
+  "version": 1,
+  "coverage": {
+    "documentCount": 3,
+    "analyzedCount": 3,
+    "failedCount": 0,
+    "totalPages": 12,
+    "analysisCompleteness": "complete",
+    "missingMaterialTypes": []
+  },
+  "courseIdentity": {
+    "id": "course-probability",
+    "title": "Introductory Probability",
+    "subject": "Probability",
+    "topic": "Events, independence, and assessment reasoning",
+    "studentLevel": "First-year university",
+    "language": "English",
+    "description": "A compact course model for guided probability practice and exam preparation.",
+    "provenance": "source_grounded",
+    "evidence": [
+      { "documentId": "document-practice", "documentAnalysisId": "analysis-practice", "excerptId": "excerpt-practice-1", "page": 1, "locatorLabel": "Practice exercises" },
+      { "documentId": "document-exam", "documentAnalysisId": "analysis-exam", "excerptId": "excerpt-exam-1", "page": 1, "locatorLabel": "Sample exam" }
+    ]
+  },
+  "structure": {
+    "units": [
+      {
+        "id": "unit-events",
+        "title": "Events and relationships",
+        "description": "Event notation, intersections, mutual exclusivity, and independence.",
+        "conceptIds": ["concept-mutual-exclusivity", "concept-independence"],
+        "provenance": "source_grounded",
+        "evidence": [{ "documentId": "document-practice", "documentAnalysisId": "analysis-practice", "excerptId": "excerpt-practice-1", "page": 1, "locatorLabel": "Exercises 1–4" }]
+      }
+    ],
+    "prerequisiteRelations": [
+      {
+        "id": "relation-exclusive-before-independent",
+        "prerequisiteConceptId": "concept-mutual-exclusivity",
+        "dependentConceptId": "concept-independence",
+        "rationale": "Learners must distinguish a zero intersection from factorized probability before testing independence.",
+        "provenance": "model_inferred",
+        "evidence": [{ "documentId": "document-practice", "documentAnalysisId": "analysis-practice", "excerptId": "excerpt-practice-4", "page": 4, "locatorLabel": "Exercise 4" }]
+      }
+    ]
+  },
+  "learningObjectives": [
+    {
+      "id": "objective-distinguish-events",
+      "statement": "Distinguish mutually exclusive events from independent events using definitions and calculations.",
+      "conceptIds": ["concept-mutual-exclusivity", "concept-independence"],
+      "provenance": "source_grounded",
+      "evidence": [{ "documentId": "document-exam", "documentAnalysisId": "analysis-exam", "excerptId": "excerpt-exam-1", "page": 1, "locatorLabel": "Question 1" }]
+    }
+  ],
+  "concepts": [
+    {
+      "id": "concept-mutual-exclusivity",
+      "name": "Mutual exclusivity",
+      "description": "Two events are mutually exclusive when their intersection is empty.",
+      "unitIds": ["unit-events"],
+      "provenance": "source_grounded",
+      "evidence": [{ "documentId": "document-practice", "documentAnalysisId": "analysis-practice", "excerptId": "excerpt-practice-2", "page": 2, "locatorLabel": "Exercise 2" }]
+    },
+    {
+      "id": "concept-independence",
+      "name": "Independence",
+      "description": "Events are independent when observing either event does not change the probability of the other.",
+      "unitIds": ["unit-events"],
+      "provenance": "source_grounded",
+      "evidence": [
+        { "documentId": "document-practice", "documentAnalysisId": "analysis-practice", "excerptId": "excerpt-practice-4", "page": 4, "locatorLabel": "Exercise 4" },
+        { "documentId": "document-marking", "documentAnalysisId": "analysis-marking", "excerptId": "excerpt-marking-2", "page": 2, "locatorLabel": "Marking criterion 2" }
+      ]
+    }
+  ],
+  "terminology": [
+    {
+      "id": "term-intersection",
+      "term": "Intersection",
+      "definition": "The event in which both named events occur.",
+      "provenance": "source_grounded",
+      "evidence": [{ "documentId": "document-practice", "documentAnalysisId": "analysis-practice", "excerptId": "excerpt-practice-1", "page": 1, "locatorLabel": "Notation box" }]
+    }
+  ],
+  "methods": [
+    {
+      "id": "method-test-independence",
+      "name": "Test independence",
+      "description": "Compare the joint probability with the product of the marginal probabilities.",
+      "steps": ["Identify the intersection probability.", "Compute the product of marginal probabilities.", "Compare the two values and justify the conclusion."],
+      "provenance": "source_grounded",
+      "evidence": [{ "documentId": "document-marking", "documentAnalysisId": "analysis-marking", "excerptId": "excerpt-marking-1", "page": 1, "locatorLabel": "Expected method" }]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "exercise-practice-4",
+      "title": "Classify event relationships",
+      "promptSummary": "Determine whether a pair of events is mutually exclusive or independent and justify the result.",
+      "assessed": false,
+      "conceptIds": ["concept-mutual-exclusivity", "concept-independence"],
+      "protectedSolutionIds": [],
+      "provenance": "source_grounded",
+      "evidence": [{ "documentId": "document-practice", "documentAnalysisId": "analysis-practice", "excerptId": "excerpt-practice-4", "page": 4, "locatorLabel": "Exercise 4" }]
+    },
+    {
+      "id": "exercise-exam-1",
+      "title": "Exam event question",
+      "promptSummary": "Use event probabilities to classify a relationship and provide a formal justification.",
+      "assessed": true,
+      "conceptIds": ["concept-independence"],
+      "protectedSolutionIds": ["solution-exam-1"],
+      "provenance": "source_grounded",
+      "evidence": [{ "documentId": "document-exam", "documentAnalysisId": "analysis-exam", "excerptId": "excerpt-exam-1", "page": 1, "locatorLabel": "Question 1" }]
+    }
+  ],
+  "assessments": [
+    {
+      "id": "assessment-sample-exam",
+      "title": "Sample exam",
+      "format": "Two written probability questions",
+      "exerciseIds": ["exercise-exam-1"],
+      "provenance": "source_grounded",
+      "evidence": [{ "documentId": "document-exam", "documentAnalysisId": "analysis-exam", "excerptId": "excerpt-exam-1", "page": 1, "locatorLabel": "Sample exam" }]
+    }
+  ],
+  "rubricCriteria": [
+    {
+      "id": "rubric-method-justification",
+      "label": "Method and justification",
+      "description": "Award credit for the correct relationship test and an explicit conclusion.",
+      "provenance": "source_grounded",
+      "evidence": [{ "documentId": "document-marking", "documentAnalysisId": "analysis-marking", "excerptId": "excerpt-marking-1", "page": 1, "locatorLabel": "Question 1 marking" }]
+    }
+  ],
+  "protectedSolutions": [
+    {
+      "id": "solution-exam-1",
+      "exerciseId": "exercise-exam-1",
+      "summary": "Protected reasoning and final result for the first sample-exam question.",
+      "disclosureLabel": "never_reveal",
+      "provenance": "source_grounded",
+      "evidence": [{ "documentId": "document-marking", "documentAnalysisId": "analysis-marking", "excerptId": "excerpt-marking-1", "page": 1, "locatorLabel": "Question 1 solution" }]
+    }
+  ],
+  "misconceptions": [
+    {
+      "id": "misconception-exclusive-independent",
+      "statement": "Mutually exclusive events are independent because they cannot occur together.",
+      "correction": "For non-empty events, mutual exclusivity makes the occurrence of one informative about the other.",
+      "provenance": "source_grounded",
+      "evidence": [{ "documentId": "document-practice", "documentAnalysisId": "analysis-practice", "excerptId": "excerpt-practice-4", "page": 4, "locatorLabel": "Exercise 4 distractor" }]
+    }
+  ],
+  "contentBoundaries": [
+    {
+      "id": "boundary-introductory-probability",
+      "boundaryType": "in_scope",
+      "description": "Use elementary event notation and finite probability examples from the supplied course materials.",
+      "provenance": "teacher_supplied",
+      "evidence": [{ "documentId": "document-exam", "documentAnalysisId": "analysis-exam", "excerptId": "excerpt-exam-1", "page": 1, "locatorLabel": "Assessment scope" }]
+    }
+  ],
+  "pedagogicalEvidence": [
+    {
+      "id": "observation-reasoning-first",
+      "observation": "reasoning_before_calculation",
+      "description": "The marking scheme awards method and justification marks independently of the final value.",
+      "suggestedPolicyEffects": [{ "policyPath": "/pedagogy/reasoning_before_calculation", "proposedValue": true, "rationale": "Prompt for the relationship test before numerical calculation." }],
+      "confidence": 0.96,
+      "status": "proposed",
+      "provenance": "source_grounded",
+      "evidence": [{ "documentId": "document-marking", "documentAnalysisId": "analysis-marking", "excerptId": "excerpt-marking-1", "page": 1, "locatorLabel": "Method marks" }]
+    }
+  ],
+  "conflicts": [],
+  "warnings": [
+    {
+      "id": "warning-no-syllabus",
+      "code": "missing_syllabus",
+      "message": "No syllabus was supplied; scope is inferred from exercises and assessment materials.",
+      "severity": "info",
+      "evidence": []
+    }
+  ],
+  "sourceManifest": [
+    { "id": "source-practice", "documentId": "document-practice", "documentAnalysisId": "analysis-practice", "name": "practice-exercises.pdf", "role": "exercise", "authority": "course_authoritative" },
+    { "id": "source-exam", "documentId": "document-exam", "documentAnalysisId": "analysis-exam", "name": "sample-exam.pdf", "role": "assessment", "authority": "course_authoritative" },
+    { "id": "source-marking", "documentId": "document-marking", "documentAnalysisId": "analysis-marking", "name": "marking-scheme.pdf", "role": "rubric", "authority": "teacher_instruction" }
+  ],
+  "teacherDecisions": [],
+  "generatedAt": "2026-07-15T10:05:00.000Z"
+}

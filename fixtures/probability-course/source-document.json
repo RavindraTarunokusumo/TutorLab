@@ -1,0 +1,24 @@
+{
+  "id": "document-practice",
+  "projectId": "project-probability",
+  "name": "practice-exercises.pdf",
+  "role": "exercise",
+  "authority": "course_authoritative",
+  "permissions": {
+    "useForCourseModel": true,
+    "useForPedagogyDrafting": true,
+    "useForRuntimeRetrieval": true,
+    "useForEvaluation": true,
+    "revealExcerptsToStudents": true
+  },
+  "containsProtectedSolutions": false,
+  "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "mimeType": "application/pdf",
+  "sizeBytes": 84231,
+  "processing": {
+    "uploadStatus": "ready",
+    "extractionStatus": "ready",
+    "analysisStatus": "ready",
+    "pageCount": 6
+  }
+}

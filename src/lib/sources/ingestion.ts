@@ -1,0 +1,466 @@
+import { randomUUID } from "node:crypto";
+import "server-only";
+import { z } from "zod";
+import {
+  SourceAuthoritySchema,
+  SourcePermissionsSchema,
+  SourceRoleSchema,
+  type SourceDocument,
+} from "@/lib/schemas";
+import {
+  getOpenAIFileProvider,
+  type OpenAIFileProvider,
+  type VectorStoreFileStatus,
+} from "@/lib/ai/openai-files";
+import {
+  getProjectRepository,
+  type ProjectRepository,
+} from "@/lib/projects/repository";
+import {
+  getSourceRepository,
+  type ProviderSourceDocument,
+  type SourceRepository,
+} from "./repository";
+import {
+  extractedPageCountFromContent,
+  extractedTokenCountFromContent,
+} from "./extraction-metrics";
+import { createSourceMetadata, SourceValidationError } from "./validation";
+
+const SourceUploadMetadataSchema = z.strictObject({
+  role: SourceRoleSchema,
+  authority: SourceAuthoritySchema,
+  permissions: SourcePermissionsSchema,
+  containsProtectedSolutions: z.boolean(),
+});
+
+export type SourceUploadMetadata = z.infer<typeof SourceUploadMetadataSchema>;
+
+export type SourceUploadFile = {
+  name: string;
+  mimeType: string;
+  bytes: Uint8Array;
+};
+
+export type SourceIngestionDependencies = {
+  sourceRepository: SourceRepository;
+  projectRepository: ProjectRepository;
+  provider: OpenAIFileProvider;
+  wait: (milliseconds: number) => Promise<void>;
+  maxPollAttempts: number;
+  pollDelayMs: number;
+};
+
+export class SourceNotFoundError extends Error {
+  constructor() {
+    super("Source not found");
+  }
+}
+
+function safeFailureMessage(): string {
+  return "Source indexing could not be completed. Please retry.";
+}
+
+function safeUploadFailureMessage(): string {
+  return "Upload did not complete. Upload this source again.";
+}
+
+function withDependencies(
+  overrides: Partial<SourceIngestionDependencies> | undefined,
+): SourceIngestionDependencies {
+  return {
+    sourceRepository: overrides?.sourceRepository ?? getSourceRepository(),
+    projectRepository: overrides?.projectRepository ?? getProjectRepository(),
+    provider: overrides?.provider ?? getOpenAIFileProvider(),
+    wait:
+      overrides?.wait ??
+      ((milliseconds) =>
+        new Promise((resolve) => {
+          setTimeout(resolve, milliseconds);
+        })),
+    maxPollAttempts: overrides?.maxPollAttempts ?? 3,
+    pollDelayMs: overrides?.pollDelayMs ?? 250,
+  };
+}
+
+export function parseSourceUploadMetadata(input: unknown): SourceUploadMetadata {
+  return SourceUploadMetadataSchema.parse(input);
+}
+
+async function bestEffort(operation: () => Promise<void>): Promise<void> {
+  try {
+    await operation();
+  } catch {
+    // Local source state remains authoritative when provider cleanup is unavailable.
+  }
+}
+
+function isDuplicateAttachmentError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const providerError = error as { status?: unknown; code?: unknown };
+  return (
+    providerError.status === 409 ||
+    providerError.code === "already_exists" ||
+    providerError.code === "vector_store_file_exists"
+  );
+}
+
+function isMissingAttachmentError(error: unknown): boolean {
+  return !!error && typeof error === "object" && (error as { status?: unknown }).status === 404;
+}
+
+async function ensureVectorStore(
+  projectId: string,
+  dependencies: SourceIngestionDependencies,
+): Promise<string> {
+  const existing = await dependencies.projectRepository.findVectorStoreId(projectId);
+  if (existing) {
+    return existing;
+  }
+
+  for (let attempt = 0; attempt < dependencies.maxPollAttempts; attempt += 1) {
+    const token = randomUUID();
+    const reservation =
+      await dependencies.projectRepository.acquireVectorStoreProvisioning(
+        projectId,
+        token,
+        new Date(Date.now() - 5 * 60_000),
+      );
+    if (reservation.vectorStoreId) {
+      return reservation.vectorStoreId;
+    }
+    if (!reservation.acquired) {
+      await dependencies.wait(dependencies.pollDelayMs * (attempt + 1));
+      continue;
+    }
+
+    let createdId: string | undefined;
+    try {
+      const created = await dependencies.provider.createVectorStore({
+        name: `TutorLab project ${projectId}`,
+      });
+      createdId = created.id;
+      const completed =
+        await dependencies.projectRepository.completeVectorStoreProvisioning(
+          projectId,
+          token,
+          created.id,
+        );
+      if (!completed) {
+        throw new Error("Vector store provisioning was not completed");
+      }
+      if (completed !== created.id) {
+        await bestEffort(() => dependencies.provider.deleteVectorStore(created.id));
+      }
+      return completed;
+    } catch (error) {
+      let reconciled: string | null = null;
+      let reconciliationKnown = false;
+      if (createdId) {
+        try {
+          reconciled = await dependencies.projectRepository.findVectorStoreId(projectId);
+          reconciliationKnown =
+            reconciled === null || typeof reconciled === "string";
+        } catch {
+          reconciliationKnown = false;
+        }
+      }
+      if (createdId && reconciliationKnown && reconciled === createdId) {
+        return createdId;
+      }
+      if (createdId && reconciliationKnown) {
+        const orphanedId = createdId;
+        await bestEffort(() => dependencies.provider.deleteVectorStore(orphanedId));
+      }
+      await dependencies.projectRepository.releaseVectorStoreProvisioning(
+        projectId,
+        token,
+      );
+      throw error;
+    }
+  }
+
+  throw new Error("Vector store provisioning is still in progress");
+}
+
+async function persistProviderStatus(
+  projectId: string,
+  sourceId: string,
+  progress: VectorStoreFileStatus | { status: VectorStoreFileStatus },
+  dependencies: SourceIngestionDependencies,
+): Promise<SourceDocument> {
+  const normalized =
+    typeof progress === "string" ? { status: progress } : progress;
+  const { status } = normalized;
+  if (status === "completed") {
+    throw new Error("Completed source indexing requires extraction metrics");
+  }
+  if (status === "failed") {
+    return (
+      await dependencies.sourceRepository.updateIngestion(projectId, sourceId, {
+        uploadStatus: "ready",
+        extractionStatus: "failed",
+        requiresExtractionMetrics: false,
+        processingError: safeFailureMessage(),
+      })
+    ).source;
+  }
+  return (
+    await dependencies.sourceRepository.updateIngestion(projectId, sourceId, {
+      uploadStatus: "ready",
+      extractionStatus: "in_progress",
+      requiresExtractionMetrics: false,
+      processingError: null,
+    })
+  ).source;
+}
+
+async function finalizeCompletedIndexing(
+  projectId: string,
+  sourceId: string,
+  vectorStoreId: string,
+  openaiFileId: string,
+  dependencies: SourceIngestionDependencies,
+): Promise<SourceDocument> {
+  const extractedContent = await dependencies.provider.getExtractedText(
+    vectorStoreId,
+    openaiFileId,
+  );
+  const extractedTokenCount = extractedTokenCountFromContent(extractedContent);
+  const pageCount = extractedPageCountFromContent(extractedContent);
+  if (extractedTokenCount === undefined || pageCount === undefined) {
+    return (
+      await dependencies.sourceRepository.updateIngestion(projectId, sourceId, {
+        uploadStatus: "ready",
+        extractionStatus: "in_progress",
+        requiresExtractionMetrics: true,
+        processingError: null,
+      })
+    ).source;
+  }
+  return dependencies.sourceRepository.recordExtractionMetrics(projectId, sourceId, {
+    pageCount,
+    extractedTokenCount,
+    finalized: true,
+    requiresExtractionMetrics: false,
+  });
+}
+
+async function pollIndexing(
+  projectId: string,
+  sourceId: string,
+  vectorStoreId: string,
+  openaiFileId: string,
+  dependencies: SourceIngestionDependencies,
+): Promise<SourceDocument> {
+  for (let attempt = 0; attempt < dependencies.maxPollAttempts; attempt += 1) {
+    const progress = await dependencies.provider.getFileStatus(
+      vectorStoreId,
+      openaiFileId,
+    );
+    const source =
+      progress.status === "completed"
+        ? await finalizeCompletedIndexing(
+            projectId,
+            sourceId,
+            vectorStoreId,
+            openaiFileId,
+            dependencies,
+          )
+        : await persistProviderStatus(projectId, sourceId, progress, dependencies);
+    if (
+      progress.status !== "in_progress" ||
+      attempt === dependencies.maxPollAttempts - 1
+    ) {
+      return source;
+    }
+    await dependencies.wait(dependencies.pollDelayMs * (attempt + 1));
+  }
+  throw new Error("Polling did not run");
+}
+
+async function sourceOrThrow(
+  projectId: string,
+  sourceId: string,
+  dependencies: SourceIngestionDependencies,
+): Promise<ProviderSourceDocument> {
+  const source = await dependencies.sourceRepository.findById(projectId, sourceId);
+  if (!source) {
+    throw new SourceNotFoundError();
+  }
+  return source;
+}
+
+async function sourceByIdOrThrow(
+  sourceId: string,
+  dependencies: SourceIngestionDependencies,
+): Promise<ProviderSourceDocument> {
+  const source = await dependencies.sourceRepository.findBySourceId(sourceId);
+  if (!source) {
+    throw new SourceNotFoundError();
+  }
+  return source;
+}
+
+async function markUploadFailure(
+  projectId: string,
+  sourceId: string,
+  dependencies: SourceIngestionDependencies,
+): Promise<SourceDocument> {
+  return (
+    await dependencies.sourceRepository.updateIngestion(projectId, sourceId, {
+      uploadStatus: "failed",
+      extractionStatus: "pending",
+      requiresExtractionMetrics: false,
+      processingError: safeUploadFailureMessage(),
+    })
+  ).source;
+}
+
+async function markIndexingFailure(
+  projectId: string,
+  sourceId: string,
+  dependencies: SourceIngestionDependencies,
+): Promise<SourceDocument> {
+  return (
+    await dependencies.sourceRepository.updateIngestion(projectId, sourceId, {
+      uploadStatus: "ready",
+      extractionStatus: "failed",
+      requiresExtractionMetrics: false,
+      processingError: safeFailureMessage(),
+    })
+  ).source;
+}
+
+async function recreateFailedAssociation(
+  vectorStoreId: string,
+  openaiFileId: string,
+  dependencies: SourceIngestionDependencies,
+): Promise<void> {
+  try {
+    await dependencies.provider.detachFile(vectorStoreId, openaiFileId);
+  } catch (error) {
+    if (!isMissingAttachmentError(error)) {
+      throw error;
+    }
+  }
+  try {
+    await dependencies.provider.attachFile(vectorStoreId, openaiFileId);
+  } catch (error) {
+    if (!isDuplicateAttachmentError(error)) {
+      throw error;
+    }
+    await dependencies.provider.detachFile(vectorStoreId, openaiFileId);
+    await dependencies.provider.attachFile(vectorStoreId, openaiFileId);
+  }
+}
+
+export async function ingestSource(
+  projectId: string,
+  file: SourceUploadFile,
+  metadata: SourceUploadMetadata,
+  overrides?: Partial<SourceIngestionDependencies>,
+): Promise<SourceDocument> {
+  const dependencies = withDependencies(overrides);
+  const parsedMetadata = parseSourceUploadMetadata(metadata);
+  const usage = await dependencies.sourceRepository.getWorkspaceUsage(projectId);
+  const source = await createSourceMetadata({
+    id: randomUUID(),
+    projectId,
+    name: file.name,
+    mimeType: file.mimeType,
+    bytes: file.bytes,
+    usage,
+    ...parsedMetadata,
+  });
+  await dependencies.sourceRepository.create(source);
+
+  let uploadedId: string | undefined;
+  try {
+    const vectorStoreId = await ensureVectorStore(projectId, dependencies);
+    const uploaded = await dependencies.provider.uploadFile(file);
+    uploadedId = uploaded.id;
+    await dependencies.sourceRepository.updateIngestion(projectId, source.id, {
+      openaiFileId: uploadedId,
+      uploadStatus: "ready",
+      extractionStatus: "in_progress",
+      processingError: null,
+    });
+    await dependencies.provider.attachFile(vectorStoreId, uploadedId);
+    return await pollIndexing(
+      projectId,
+      source.id,
+      vectorStoreId,
+      uploadedId,
+      dependencies,
+    );
+  } catch (error) {
+    if (error instanceof SourceValidationError || error instanceof SourceNotFoundError) {
+      throw error;
+    }
+    if (!uploadedId) {
+      return markUploadFailure(projectId, source.id, dependencies);
+    }
+    return markIndexingFailure(projectId, source.id, dependencies);
+  }
+}
+
+export async function refreshSourceProcessing(
+  sourceId: string,
+  overrides?: Partial<SourceIngestionDependencies>,
+): Promise<SourceDocument> {
+  const dependencies = withDependencies(overrides);
+  const current = await sourceByIdOrThrow(sourceId, dependencies);
+  const projectId = current.source.projectId;
+  if (!current.openaiFileId) {
+    return markUploadFailure(projectId, sourceId, dependencies);
+  }
+
+  try {
+    const vectorStoreId = await ensureVectorStore(projectId, dependencies);
+    if (current.source.processing.extractionStatus === "failed") {
+      await recreateFailedAssociation(
+        vectorStoreId,
+        current.openaiFileId,
+        dependencies,
+      );
+    }
+    return await pollIndexing(
+      projectId,
+      sourceId,
+      vectorStoreId,
+      current.openaiFileId,
+      dependencies,
+    );
+  } catch {
+    return markIndexingFailure(projectId, sourceId, dependencies);
+  }
+}
+
+export async function listSources(
+  projectId: string,
+  overrides?: Partial<SourceIngestionDependencies>,
+): Promise<SourceDocument[]> {
+  return withDependencies(overrides).sourceRepository.list(projectId);
+}
+
+export async function removeSource(
+  projectId: string,
+  sourceId: string,
+  overrides?: Partial<SourceIngestionDependencies>,
+): Promise<void> {
+  const dependencies = withDependencies(overrides);
+  const source = await sourceOrThrow(projectId, sourceId, dependencies);
+  if (source.openaiFileId) {
+    const vectorStoreId = await dependencies.projectRepository.findVectorStoreId(projectId);
+    if (vectorStoreId) {
+      await bestEffort(() =>
+        dependencies.provider.detachFile(vectorStoreId, source.openaiFileId!),
+      );
+    }
+    await bestEffort(() => dependencies.provider.deleteFile(source.openaiFileId!));
+  }
+  await dependencies.sourceRepository.delete(projectId, sourceId);
+}

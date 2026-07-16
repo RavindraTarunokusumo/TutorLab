@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "0.1",
+  "id": "analysis-practice",
+  "projectId": "project-probability",
+  "documentId": "document-practice",
+  "documentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "classification": { "role": "exercise", "confidence": 0.99 },
+  "coverage": { "pageCount": 6, "analyzedPages": 6, "extractionWarnings": [] },
+  "findings": {
+    "topics": [
+      {
+        "id": "finding-independence",
+        "label": "Event independence",
+        "description": "Exercises distinguish independence from mutual exclusivity.",
+        "provenance": "source_grounded",
+        "evidence": [{ "documentId": "document-practice", "documentAnalysisId": "analysis-practice", "excerptId": "excerpt-practice-1", "page": 1, "locatorLabel": "Exercise 1" }],
+        "confidence": 0.98
+      }
+    ],
+    "objectives": [],
+    "terminology": [],
+    "acceptedMethods": [],
+    "exercises": [],
+    "assessmentCriteria": [],
+    "protectedSolutions": [],
+    "misconceptions": [
+      {
+        "id": "finding-mutual-exclusive",
+        "label": "Mutual exclusivity implies independence",
+        "description": "A candidate misconception treats events that cannot co-occur as independent.",
+        "provenance": "source_grounded",
+        "evidence": [{ "documentId": "document-practice", "documentAnalysisId": "analysis-practice", "excerptId": "excerpt-practice-4", "page": 4, "locatorLabel": "Exercise 4" }],
+        "confidence": 0.95
+      }
+    ],
+    "pedagogicalPatterns": []
+  },
+  "summary": "Six exercises assess probability rules, independence, and mutually exclusive events.",
+  "analyzedAt": "2026-07-15T10:00:00.000Z"
+}
