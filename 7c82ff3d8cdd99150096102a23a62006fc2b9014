@@ -1,0 +1,1 @@
+Task: Day 3–4 Task 7 — grounded preview\nSummary: Adds permission-filtered tutor preview, safe buffered delivery, and durable conversation coordination.\nDocs: docs/superpowers/specs/2026-07-16-day-3-day-4-design.md, docs/superpowers/plans/2026-07-16-day-3-day-4.md\nTODO: Day 3–4 Task 7\nValidation: npm run lint; npm run typecheck; npm run test:run -- --maxWorkers=1 (202 passing)
