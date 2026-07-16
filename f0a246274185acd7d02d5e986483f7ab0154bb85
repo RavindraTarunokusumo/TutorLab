@@ -1,0 +1,4 @@
+Task: Post-PR documentation archive
+Summary: Archived completed Day 1–2 and legacy Docs & Config TODO sessions with merge metadata; reset TODO to active/future work only.
+Merge: e589918fdea4c832c091117de2bbc5dc1fdcdd77
+Validation: git diff --check
