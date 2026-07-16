@@ -6,6 +6,8 @@ import type { CourseSynthesisPromptInput } from "@/lib/ai/prompts/course-synthes
 import type { CourseSynthesizer } from "@/lib/ai/course-synthesizer";
 import type { DocumentAnalyst } from "@/lib/ai/document-analyst";
 import type { OpenAIFileProvider } from "@/lib/ai/openai-files";
+import type { TutorArchitect } from "@/lib/ai/tutor-architect";
+import type { TutorArchitectPromptInput } from "@/lib/ai/prompts/tutor-architect";
 import type {
   CourseAnalysisRecord,
   CourseModelRepository,
@@ -49,6 +51,7 @@ import {
   TutorDesignSetSchema,
   TutorSpecSchema,
 } from "@/lib/schemas";
+import { listTutorCatalog } from "@/lib/tutor/catalog";
 
 export function isFixtureRuntime(): boolean {
   return process.env.TUTORLAB_FIXTURE_MODE === "1";
@@ -535,6 +538,89 @@ export function getFixtureDocumentAnalyst(): DocumentAnalyst {
     analyzedAt: input.analyzedAt,
   });
   return { analyze, repair: async (input) => analyze(input) };
+}
+
+function fixtureTutorDesignSet(
+  input: TutorArchitectPromptInput,
+) {
+  const evidence = input.courseModel.courseIdentity.evidence;
+  const answerPolicyRank = {
+    never_reveal: 0,
+    reveal_after_sufficient_attempts: 1,
+    available_in_revision_mode: 2,
+  } as const;
+  const responseLengthLimit = {
+    concise: 160,
+    balanced: 320,
+    detailed: 1_000,
+  } as const;
+  const roleByArchetype = new Map([
+    [
+      input.teachingBrief.purpose === "guided_practice"
+        ? "guided-practice"
+        : "socratic",
+      "best_fit",
+    ],
+    [
+      input.teachingBrief.purpose === "guided_practice"
+        ? "socratic"
+        : "guided-practice",
+      "strong_alternative",
+    ],
+    ["inquiry-case-based", "balanced_option"],
+  ] as const);
+  return {
+    schemaVersion: "0.1" as const,
+    id: input.designSetId,
+    projectId: input.projectId,
+    courseModelVersionId: input.courseModelVersionId,
+    candidates: listTutorCatalog().map((template) => ({
+      id: `design-${input.designSetId}-${template.archetypeId}`,
+      archetypeId: template.archetypeId,
+      templateVersion: template.templateVersion,
+      candidateRole: roleByArchetype.get(template.archetypeId)!,
+      title: template.title,
+      strategySummary: template.strategySummary,
+      tradeOff: template.tradeOff,
+      evidence,
+      comparisonLearnerMessage:
+        "I got the final answer, but I am not sure whether my reasoning is valid. Can you help me check it?",
+      sampleResponse:
+        "Show me the reasoning you used, and we can check the method before deciding whether the result is reliable.",
+      controls: {
+        ...template.defaultControls,
+        diagnoseBeforeExplain:
+          template.defaultControls.diagnoseBeforeExplain ||
+          input.teachingBrief.assistanceBoundaries.requireReasoningBeforeAnswer ||
+          input.teachingBrief.style.questioningPreference === "questions_first",
+        answerPolicy: [
+          template.defaultControls.answerPolicy,
+          input.teachingBrief.assistanceBoundaries.defaultDisclosure,
+          input.teachingBrief.assistanceBoundaries.assessedWorkDisclosure,
+        ].sort((left, right) => answerPolicyRank[left] - answerPolicyRank[right])[0]!,
+        tone: input.teachingBrief.style.tone,
+        maxWords: Math.min(
+          template.defaultControls.maxWords,
+          responseLengthLimit[input.teachingBrief.style.responseLength],
+        ),
+      },
+      permittedAssistanceStates: [...template.permittedAssistanceStates],
+      permittedTeachingMoves: [...template.permittedTeachingMoves],
+    })),
+    excludedCatalogOptions: [],
+    generatedAt: input.generatedAt,
+  };
+}
+
+export function getFixtureTutorArchitect(): TutorArchitect {
+  return {
+    async generate(input) {
+      return fixtureTutorDesignSet(input);
+    },
+    async repair(input) {
+      return fixtureTutorDesignSet(input);
+    },
+  };
 }
 
 export function getFixtureDocumentAnalysisRepository(): DocumentAnalysisRepository {
