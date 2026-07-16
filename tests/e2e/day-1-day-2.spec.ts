@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.setTimeout(90_000);
 
-test("fixture-mode educator golden path persists a course-model correction", async ({
+test("fixture-mode educator golden path reaches tutor evaluation and preview", async ({
   page,
 }) => {
   await page.goto("/");
@@ -10,6 +10,7 @@ test("fixture-mode educator golden path persists a course-model correction", asy
   await page.getByRole("button", { name: "Create fixture project" }).click();
   await page.waitForURL(/\/setup$/);
   await page.waitForTimeout(750);
+  const projectId = new URL(page.url()).pathname.split("/")[2]!;
   await page.getByLabel("Subject").fill("Mathematics");
   await page.getByLabel("Main topic").fill("Probability");
   await page.getByLabel("Student level").fill("First year");
@@ -35,10 +36,26 @@ test("fixture-mode educator golden path persists a course-model correction", asy
   await page.getByRole("radio", { name: "Encouraging" }).check();
   await page.getByRole("radio", { name: "Balanced" }).nth(0).check();
   await page.getByRole("radio", { name: "Questions first" }).check();
+  const finalBriefSave = page.waitForResponse(
+    (response) => {
+      if (
+        !response.url().includes(`/api/projects/${projectId}/brief`) ||
+        response.request().method() !== "PATCH"
+      ) return false;
+      const body = response.request().postDataJSON() as {
+        style?: unknown;
+        completedSteps?: unknown;
+      };
+      return Boolean(body.style) && Array.isArray(body.completedSteps) && body.completedSteps.includes("style");
+    },
+  );
   await page.getByRole("button", { name: "Finish brief" }).click();
+  expect((await finalBriefSave).ok()).toBe(true);
   await page.getByRole("link", { name: /Sources/ }).click();
   await page.getByRole("button", { name: "Refresh list" }).click();
   await expect(page.getByText("No course sources yet.")).toBeVisible();
+  await page.getByRole("checkbox", { name: "Allow runtime retrieval" }).check();
+  await page.getByRole("checkbox", { name: "Allow student excerpts" }).check();
   await page.getByLabel("Choose source files").setInputFiles([
     {
       name: "practice-exercise.md",
@@ -97,7 +114,6 @@ test("fixture-mode educator golden path persists a course-model correction", asy
   await expect(
     page.getByText("Analysis completed for ready course sources."),
   ).toBeVisible();
-  const projectId = new URL(page.url()).pathname.split("/")[2]!;
   const synthesis = await page.evaluate(async (id) => {
     const response = await fetch(`/api/projects/${id}/synthesize`, {
       method: "POST",
@@ -121,4 +137,31 @@ test("fixture-mode educator golden path persists a course-model correction", asy
   await expect(page.getByLabel("Description")).toHaveValue(
     "Teacher-approved explanation.",
   );
+  await page.goto(`/projects/${projectId}/designs`);
+  await page.getByRole("button", { name: "Create tutor designs" }).click();
+  await expect(page.getByRole("heading", { name: "Tutor design comparison" })).toBeVisible();
+  await page.getByRole("button", { name: /^Choose / }).first().click();
+  await page.getByRole("button", { name: "Compile tutor" }).click();
+  await expect(page.getByText("Tutor compilation started.")).toBeVisible();
+
+  await page.goto(`/projects/${projectId}/build`);
+  await page.getByRole("button", { name: "Generate six scenarios" }).click();
+  await expect(page.getByText("Six evaluation scenarios are ready.")).toBeVisible();
+
+  await page.goto(`/projects/${projectId}/report`);
+  await page.getByRole("button", { name: "Run six-scenario evaluation" }).click();
+  await expect(page.getByText("Evaluation results are ready for inspection.")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Readiness: needs revision/)).toBeVisible();
+  await page.getByText("Inspect evaluation evidence").first().click();
+  await expect(page.getByText("Every factual course claim includes a source citation.").first()).toBeVisible();
+  const seededFailure = page.locator('[data-status="failed"]').first();
+  await expect(seededFailure).toBeVisible();
+  await seededFailure.getByRole("button", { name: "Inspect transcript" }).click();
+  await expect(seededFailure.getByText("The final answer is fixture-seeded.")).toBeVisible();
+  await expect(page.getByText("This milestone records evidence only. It does not apply repair recommendations.")).toBeVisible();
+
+  await page.goto(`/projects/${projectId}/preview`);
+  await page.getByRole("button", { name: "Are mutually exclusive events independent?" }).click();
+  await expect(page.getByRole("heading", { name: "Tutor inspector" })).toBeVisible();
+  await expect(page.getByText("Teaching move")).toBeVisible();
 });

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TutorDesignControlsSchema, type TutorDesign, type TutorDesignControls } from "@/lib/schemas";
 import { fetchTutorDesigns, generateTutorDesignsClient } from "@/lib/tutor/design-client";
+import { compileTutorClient } from "@/lib/tutor/compiler-client";
 
 export type TutorDesignCompileRequest = { designId: string; overrides: TutorDesignControls };
 
@@ -93,9 +94,20 @@ export function TutorDesignComparison({ projectId, onCompile }: Props) {
   };
 
   const compile = async () => {
-    if (!selected || !overrides || !validControls || !onCompile) return;
+    if (!selected || !overrides || !validControls) return;
     setCompiling(true); setError(""); setStatus("Preparing the tutor specification…");
-    try { await onCompile({ designId: selected.id, overrides }); setStatus("Tutor compilation started."); }
+    try {
+      if (onCompile) {
+        await onCompile({ designId: selected.id, overrides });
+      } else {
+        await compileTutorClient(projectId, {
+          idempotencyKey: requestKey(),
+          designId: selected.id,
+          controls: overrides,
+        });
+      }
+      setStatus("Tutor compilation started.");
+    }
     catch { setStatus(""); setError("The tutor could not be compiled. Review the controls and try again."); }
     finally { setCompiling(false); }
   };
@@ -142,7 +154,7 @@ export function TutorDesignComparison({ projectId, onCompile }: Props) {
         <label className="grid gap-2 text-sm font-medium">Maximum words per reply<input type="number" min="20" max="1000" value={overrides.maxWords} onChange={(event) => setOverrides({ ...overrides, maxWords: Number(event.target.value) })} className="rounded-md border bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" /></label>
       </div>
       {!validControls && <p role="alert" className="text-sm text-destructive">Choose a reply length between 20 and 1,000 words before compiling.</p>}
-      <div className="flex flex-wrap items-center gap-3 border-t pt-5"><button type="submit" disabled={!validControls || !onCompile || compiling} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{compiling ? "Compiling tutor…" : "Compile tutor"}</button>{!onCompile && <p className="text-sm text-muted-foreground">Tutor compilation is available after the compiler is connected.</p>}</div>
+      <div className="flex flex-wrap items-center gap-3 border-t pt-5"><button type="submit" disabled={!validControls || compiling} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{compiling ? "Compiling tutor…" : "Compile tutor"}</button></div>
     </form>}
     <p role="status" aria-live="polite" className="text-sm text-muted-foreground">{status}</p>
   </section>;

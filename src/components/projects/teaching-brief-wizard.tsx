@@ -93,7 +93,8 @@ function patchFromDraft(draft: TeachingBriefDraft): TeachingBriefPatch | null {
   if (TeachingBriefPurposeStepSchema.safeParse({ purpose: draft.purpose }).success) patch.purpose = draft.purpose;
   if (TeachingBriefObjectivesStepSchema.safeParse({ objectives: draft.objectives }).success) patch.objectives = draft.objectives;
   if (TeachingBriefAssistanceStepSchema.safeParse(draft.assistanceBoundaries).success) patch.assistanceBoundaries = draft.assistanceBoundaries;
-  if (TeachingBriefStyleStepSchema.safeParse(draft.style).success) patch.style = draft.style;
+  const style = TeachingBriefStyleStepSchema.safeParse(draft.style);
+  if (style.success) patch.style = style.data;
   if (draft.completedSteps?.length) patch.completedSteps = draft.completedSteps;
 
   return Object.keys(patch).length > 0 ? (patch as TeachingBriefPatch) : null;
@@ -223,16 +224,33 @@ export function TeachingBriefWizard({ project }: TeachingBriefWizardProps) {
   const stepInfo = stepDetails[step];
   const completedCount = steps.filter((item) => validStep(item, brief)).length;
 
-  const next = () => {
+  const next = async () => {
     if (!validStep(step, brief)) {
       setValidationError(validationMessage(step, brief));
       return;
     }
-    updateBrief((current) => ({
-      ...current,
-      completedSteps: Array.from(new Set([...(current.completedSteps ?? []), step])),
-    }));
-    if (currentStep < steps.length - 1) setCurrentStep((index) => index + 1);
+    const nextBrief = {
+      ...brief,
+      completedSteps: Array.from(new Set([...(brief.completedSteps ?? []), step])),
+    };
+    updateBrief(() => nextBrief);
+    if (currentStep < steps.length - 1) {
+      setCurrentStep((index) => index + 1);
+      return;
+    }
+
+    const patch = patchFromDraft(nextBrief);
+    if (!patch) return;
+    setSaveStatus("Saving changes…");
+    try {
+      await saveBriefPatch(project.id, patch);
+      clearDraft(project.id);
+      setDirty(false);
+      setSaveStatus("Saved");
+    } catch {
+      saveDraft(project.id, nextBrief);
+      setSaveStatus("Couldn't save. Your draft is stored in this browser.");
+    }
   };
 
   return (

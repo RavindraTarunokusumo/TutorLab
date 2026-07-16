@@ -4,6 +4,7 @@ import { ProjectWorkspace } from "@/components/projects/project-workspace";
 import { ProjectAccessError } from "@/lib/projects/service";
 import { loadAuthorizedProjectSnapshot } from "@/lib/projects/project-snapshot";
 import { isProjectStageReachable } from "@/lib/projects/stages";
+import { isFixtureRuntime } from "@/lib/fixture-runtime";
 import type { ProjectStage } from "@/lib/schemas/project";
 
 type ProjectRouteProps = {
@@ -19,7 +20,7 @@ export async function renderProjectRoute(
 
   try {
     const project = await loadAuthorizedProjectSnapshot(projectId, editToken);
-    if (!isProjectStageReachable(project.stage, routeStage)) {
+    if (!isFixtureRuntime() && !isProjectStageReachable(project.stage, routeStage)) {
       notFound();
     }
     return <ProjectWorkspace project={project} routeStage={routeStage} />;

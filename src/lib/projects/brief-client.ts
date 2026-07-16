@@ -4,12 +4,17 @@ import {
   TeachingBriefPatchSchema,
   type TeachingBriefPatch,
 } from "@/lib/schemas/project";
+import { TeachingBriefSchema } from "@/lib/schemas/teaching-brief";
 
 const ClientProjectSnapshotSchema = z.strictObject({
   id: z.string().min(1),
   name: z.string().min(1),
   stage: ProjectStageSchema,
-  teachingBrief: z.union([TeachingBriefPatchSchema, z.strictObject({})]),
+  teachingBrief: z.union([
+    TeachingBriefSchema,
+    TeachingBriefPatchSchema,
+    z.strictObject({}),
+  ]),
 });
 
 const SaveBriefResponseSchema = z.object({

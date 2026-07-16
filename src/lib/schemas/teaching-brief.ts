@@ -55,7 +55,8 @@ export const TeachingBriefStyleStepSchema = z.strictObject({
         "teach_back",
       ]),
     )
-    .max(5),
+    .max(5)
+    .default([]),
 });
 
 export const TeachingBriefSchema = z.strictObject({
@@ -76,4 +77,3 @@ export type TeachingBrief = z.infer<typeof TeachingBriefSchema>;
 export function parseTeachingBrief(input: unknown): TeachingBrief {
   return TeachingBriefSchema.parse(input);
 }
-

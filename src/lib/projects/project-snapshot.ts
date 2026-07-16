@@ -1,13 +1,14 @@
 import "server-only";
 import type { ProjectRecord } from "@/lib/projects/repository";
-import type { ProjectStage, TeachingBriefPatch } from "@/lib/schemas/project";
+import type { StoredTeachingBrief } from "./repository";
+import type { ProjectStage } from "@/lib/schemas/project";
 import { requireProjectAccess } from "./service";
 
 export type ProjectSnapshot = {
   id: string;
   name: string;
   stage: ProjectStage;
-  teachingBrief: TeachingBriefPatch | Record<string, never>;
+  teachingBrief: StoredTeachingBrief;
 };
 
 function toProjectSnapshot(project: ProjectRecord): ProjectSnapshot {

@@ -4,6 +4,7 @@ import {
   type CreateProjectInput,
   type TeachingBriefPatch,
 } from "@/lib/schemas/project";
+import { TeachingBriefSchema } from "@/lib/schemas/teaching-brief";
 import {
   createProjectEditToken,
   getProjectEditToken,
@@ -70,5 +71,15 @@ export async function saveTeachingBrief(
   patch: TeachingBriefPatch,
   repository: ProjectRepository = getProjectRepository(),
 ): Promise<ProjectRecord> {
-  return repository.updateTeachingBrief(projectId, patch);
+  const current = await repository.findById(projectId);
+  const candidate = TeachingBriefSchema.safeParse({
+    ...(current?.teachingBrief ?? {}),
+    ...patch,
+    schemaVersion: "0.1",
+    projectId,
+  });
+  return repository.updateTeachingBrief(
+    projectId,
+    candidate.success ? candidate.data : patch,
+  );
 }

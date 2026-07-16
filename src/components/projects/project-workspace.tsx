@@ -9,6 +9,7 @@ import { CourseModelReview } from "@/components/course-model/course-model-review
 import { TutorDesignComparison } from "@/components/tutor-design/tutor-design-comparison";
 import { PreviewStage } from "@/components/chat/preview-stage";
 import { BuildProgress } from "@/components/build-progress/build-progress";
+import { EvaluationReport } from "@/components/evaluation/evaluation-report";
 
 type ProjectWorkspaceProps = {
   project: ProjectSnapshot;
@@ -42,22 +43,7 @@ function FixtureScreen({
   }
 
   if (routeStage === "report") {
-    return (
-      <section className="max-w-3xl space-y-5">
-        <FixtureNotice />
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Readiness report
-        </h1>
-        <article className="rounded-xl border bg-card p-5 shadow-sm">
-          <p className="font-medium">Evidence coverage</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {courseModel.coverage.analyzedCount} of{" "}
-            {courseModel.coverage.documentCount} supplied documents were
-            analyzed in the fixture model.
-          </p>
-        </article>
-      </section>
-    );
+    return <section className="space-y-5"><FixtureNotice /><EvaluationReport projectId={projectId} /></section>;
   }
 
   return <section className="space-y-5"><FixtureNotice /><PreviewStage projectId={projectId} conceptName={courseModel.concepts[0]?.name} /></section>;

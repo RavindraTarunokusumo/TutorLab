@@ -63,7 +63,7 @@ prisma/                 # schema.prisma + migrations
 
 - Reusable course model JSON and document fixtures live under `fixtures/probability-course/`.
 - `tests/integration/day-1-day-2-golden-path.test.ts` composes the fixture project, brief, mocked upload/indexing, document analysis, compact synthesis, and immutable teacher correction flow without a live provider or owner files.
-- `tests/e2e/day-1-day-2.spec.ts` drives the real Next application in deterministic fixture mode, isolated from live OpenAI, PostgreSQL, and owner-supplied files.
+- `tests/e2e/day-1-day-2.spec.ts` drives the deterministic Day 1–4 fixture path: course-model correction, tutor designs, compilation, six scenarios, a seeded answer-extraction failure, report inspection, and preview metadata. It is isolated from live OpenAI, PostgreSQL, and owner-supplied files.
 - Deterministic evaluation fixtures for answer leakage, misconception detection, etc.
 - Test DB helpers (e.g. `createTestPrismaClient`, cleanup utilities) should live in `tests/helpers/` or `lib/test-utils.ts`.
 - All external AI calls are mocked at the client layer (`lib/ai/client.ts` or equivalent).
@@ -143,7 +143,7 @@ Run in UI mode (debug):
 npm run test:e2e:ui
 ```
 
-Playwright golden path (from SPEC):
+Playwright fixture golden path:
 
 1. Create project
 2. Complete wizard
@@ -151,6 +151,8 @@ Playwright golden path (from SPEC):
 4. Load fixture analysis and course model in explicit test mode
 5. Inspect source evidence and save a teacher correction
 6. Refresh and confirm the corrected version persists
+7. Generate and compile one of three tutor designs
+8. Generate six scenarios, inspect the seeded deterministic failure, and verify preview metadata
 
 ## Database and Prisma for Tests
 

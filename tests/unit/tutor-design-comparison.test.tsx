@@ -8,8 +8,10 @@ const client = vi.hoisted(() => ({
   fetchTutorDesigns: vi.fn(),
   generateTutorDesignsClient: vi.fn(),
 }));
+const compiler = vi.hoisted(() => ({ compileTutorClient: vi.fn() }));
 
 vi.mock("@/lib/tutor/design-client", () => client);
+vi.mock("@/lib/tutor/compiler-client", () => compiler);
 
 const baseControls = {
   diagnoseBeforeExplain: true,
@@ -49,6 +51,8 @@ describe("TutorDesignComparison", () => {
     localStorage.clear();
     client.fetchTutorDesigns.mockResolvedValue(designs);
     client.generateTutorDesignsClient.mockReset();
+    compiler.compileTutorClient.mockReset();
+    compiler.compileTutorClient.mockResolvedValue({ job: {}, tutorVersion: null });
   });
 
   afterEach(() => {
@@ -80,7 +84,7 @@ describe("TutorDesignComparison", () => {
     expect(screen.getByLabelText("Tone")).toHaveValue("encouraging");
     expect(screen.getByLabelText("Off-topic requests")).toHaveValue("redirect");
     expect(screen.getByLabelText("Maximum words per reply")).toHaveValue(160);
-    expect(screen.getByRole("button", { name: "Compile tutor" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Compile tutor" })).toBeEnabled();
 
     first.unmount();
     render(<TutorDesignComparison projectId="project-alpha" />);
