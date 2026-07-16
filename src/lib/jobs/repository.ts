@@ -18,7 +18,7 @@ export interface PipelineJobRepository {
     id: string;
     projectId: string;
     sourceDocumentId?: string;
-    stage: "analysis";
+    stage: PipelineJob["stage"];
     idempotencyKey: string;
   }): Promise<{ job: PipelineJob; shouldRun: boolean }>;
   updateProgress(id: string, progress: number): Promise<PipelineJob>;
@@ -116,12 +116,15 @@ export function getPipelineJobRepository(): PipelineJobRepository {
       return { job: toPipelineJob(job), shouldRun: true };
     },
     async updateProgress(id, progress) {
-      return toPipelineJob(
-        await db.pipelineJob.update({
-          where: { id },
-          data: { progress: Math.min(1, Math.max(0, progress)) },
-        }),
-      );
+      const bounded = Math.min(1, Math.max(0, progress));
+      const existing = await db.pipelineJob.findUniqueOrThrow({ where: { id } });
+      if (existing.status !== "running" || existing.progress >= bounded) {
+        return toPipelineJob(existing);
+      }
+      return toPipelineJob(await db.pipelineJob.update({
+        where: { id },
+        data: { progress: bounded },
+      }));
     },
     async complete(id, resultId) {
       return toPipelineJob(

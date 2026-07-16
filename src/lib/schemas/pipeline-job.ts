@@ -7,6 +7,10 @@ export const PipelineStageSchema = z.enum([
   "extraction",
   "analysis",
   "synthesis",
+  "design",
+  "compile",
+  "scenario",
+  "evaluation",
 ]);
 
 export const PipelineJobStatusSchema = z.enum([

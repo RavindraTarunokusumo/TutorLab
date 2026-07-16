@@ -13,6 +13,13 @@ import type {
 } from "@/lib/analysis/course-synthesis";
 import type { DocumentAnalysisRepository } from "@/lib/analysis/document-analysis";
 import type { PipelineJobRepository } from "@/lib/jobs/repository";
+import type { ConversationRepository } from "@/lib/conversations/repository";
+import type { EvaluationRepository, EvalRunRecord } from "@/lib/evaluation/repository";
+import type {
+  TutorDesignRecord,
+  TutorRepository,
+  TutorVersionRecord,
+} from "@/lib/tutor/repository";
 import type {
   ProjectRecord,
   ProjectRepository,
@@ -25,10 +32,22 @@ import type {
 } from "@/lib/sources/repository";
 import type {
   CourseModel,
+  Conversation,
   DocumentAnalysis,
+  EvalResult,
+  EvalScenario,
   PipelineJob,
   SourceDocument,
   TeachingBriefPatch,
+} from "@/lib/schemas";
+import {
+  ConversationMessageSchema,
+  ConversationSchema,
+  EvalResultSchema,
+  EvalRunSchema,
+  EvalScenarioSetSchema,
+  TutorDesignSetSchema,
+  TutorSpecSchema,
 } from "@/lib/schemas";
 
 export function isFixtureRuntime(): boolean {
@@ -44,6 +63,12 @@ type FixtureState = {
   analyses: Map<string, DocumentAnalysis & { analysisProfile: string }>;
   jobs: Map<string, PipelineJob>;
   versions: Map<string, CourseModelVersionRecord[]>;
+  tutorDesigns: Map<string, TutorDesignRecord>;
+  tutorVersions: Map<string, TutorVersionRecord>;
+  conversations: Map<string, Conversation>;
+  evalScenarios: Map<string, EvalScenario>;
+  evalRuns: Map<string, EvalRunRecord>;
+  evalResults: Map<string, EvalResult>;
   files: Map<string, string>;
 };
 
@@ -53,9 +78,28 @@ const state: FixtureState = {
   analyses: new Map(),
   jobs: new Map(),
   versions: new Map(),
+  tutorDesigns: new Map(),
+  tutorVersions: new Map(),
+  conversations: new Map(),
+  evalScenarios: new Map(),
+  evalRuns: new Map(),
+  evalResults: new Map(),
   files: new Map(),
 };
-const { projects, sources, analyses, jobs, versions, files } = state;
+const {
+  projects,
+  sources,
+  analyses,
+  jobs,
+  versions,
+  tutorDesigns,
+  tutorVersions,
+  conversations,
+  evalScenarios,
+  evalRuns,
+  evalResults,
+  files,
+} = state;
 
 type SerializedFixtureState = {
   projects: Array<
@@ -80,6 +124,30 @@ type SerializedFixtureState = {
       >,
     ]
   >;
+  tutorDesigns: Array<[
+    string,
+    Omit<TutorDesignRecord, "createdAt" | "generatedAt"> & {
+      createdAt: string;
+      generatedAt: string;
+    },
+  ]>;
+  tutorVersions: Array<[
+    string,
+    Omit<TutorVersionRecord, "createdAt" | "compiledAt"> & {
+      createdAt: string;
+      compiledAt: string | null;
+    },
+  ]>;
+  conversations: Array<[string, Conversation]>;
+  evalScenarios: Array<[string, EvalScenario]>;
+  evalRuns: Array<[
+    string,
+    Omit<EvalRunRecord, "createdAt" | "updatedAt"> & {
+      createdAt: string;
+      updatedAt: string;
+    },
+  ]>;
+  evalResults: Array<[string, EvalResult]>;
   files: Array<[string, string]>;
 };
 
@@ -95,6 +163,12 @@ function refreshState(): void {
   analyses.clear();
   jobs.clear();
   versions.clear();
+  tutorDesigns.clear();
+  tutorVersions.clear();
+  conversations.clear();
+  evalScenarios.clear();
+  evalRuns.clear();
+  evalResults.clear();
   files.clear();
   if (!path || !existsSync(path)) return;
   const saved = JSON.parse(
@@ -119,6 +193,30 @@ function refreshState(): void {
       })),
     );
   }
+  for (const [id, design] of saved.tutorDesigns ?? []) {
+    tutorDesigns.set(id, {
+      ...design,
+      generatedAt: new Date(design.generatedAt),
+      createdAt: new Date(design.createdAt),
+    });
+  }
+  for (const [id, version] of saved.tutorVersions ?? []) {
+    tutorVersions.set(id, {
+      ...version,
+      createdAt: new Date(version.createdAt),
+      compiledAt: version.compiledAt ? new Date(version.compiledAt) : null,
+    });
+  }
+  for (const [id, conversation] of saved.conversations ?? []) conversations.set(id, conversation);
+  for (const [id, scenario] of saved.evalScenarios ?? []) evalScenarios.set(id, scenario);
+  for (const [id, run] of saved.evalRuns ?? []) {
+    evalRuns.set(id, {
+      ...run,
+      createdAt: new Date(run.createdAt),
+      updatedAt: new Date(run.updatedAt),
+    });
+  }
+  for (const [id, result] of saved.evalResults ?? []) evalResults.set(id, result);
   for (const [id, content] of saved.files) files.set(id, content);
 }
 
@@ -144,6 +242,33 @@ function persistState(): void {
         createdAt: record.createdAt.toISOString(),
       })),
     ]),
+    tutorDesigns: [...tutorDesigns.entries()].map(([id, design]) => [
+      id,
+      {
+        ...design,
+        generatedAt: design.generatedAt.toISOString(),
+        createdAt: design.createdAt.toISOString(),
+      },
+    ]),
+    tutorVersions: [...tutorVersions.entries()].map(([id, version]) => [
+      id,
+      {
+        ...version,
+        createdAt: version.createdAt.toISOString(),
+        compiledAt: version.compiledAt?.toISOString() ?? null,
+      },
+    ]),
+    conversations: [...conversations.entries()],
+    evalScenarios: [...evalScenarios.entries()],
+    evalRuns: [...evalRuns.entries()].map(([id, run]) => [
+      id,
+      {
+        ...run,
+        createdAt: run.createdAt.toISOString(),
+        updatedAt: run.updatedAt.toISOString(),
+      },
+    ]),
+    evalResults: [...evalResults.entries()],
     files: [...files.entries()],
   };
   mkdirSync(dirname(path), { recursive: true });
@@ -489,6 +614,209 @@ export function getFixtureJobRepository(): PipelineJobRepository {
     async findById(projectId, id) {
       const job = jobs.get(id);
       return job?.projectId === projectId ? job : null;
+    },
+  };
+}
+
+export function getFixtureTutorRepository(): TutorRepository {
+  refreshState();
+  return {
+    async saveDesignSet(input) {
+      const set = TutorDesignSetSchema.parse(input);
+      if (!projects.has(set.projectId)) throw new Error("Project not found");
+      if (!versions.get(set.projectId)?.some((version) => version.id === set.courseModelVersionId)) {
+        throw new Error("Course model version not found");
+      }
+      if (set.candidates.some((candidate) => tutorDesigns.has(candidate.id))) {
+        throw new Error("Tutor designs are append-only");
+      }
+      const generatedAt = new Date(set.generatedAt);
+      const records = set.candidates.map((artifact) => ({
+        id: artifact.id,
+        projectId: set.projectId,
+        courseModelVersionId: set.courseModelVersionId,
+        generationId: set.id,
+        artifact,
+        excludedCatalogOptions: set.excludedCatalogOptions,
+        generatedAt,
+        createdAt: new Date(),
+      }));
+      for (const record of records) tutorDesigns.set(record.id, record);
+      persistState();
+      return records;
+    },
+    async listDesigns(projectId, courseModelVersionId) {
+      return [...tutorDesigns.values()]
+        .filter((design) => design.projectId === projectId && (!courseModelVersionId || design.courseModelVersionId === courseModelVersionId))
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    },
+    async findDesign(projectId, designId) {
+      const design = tutorDesigns.get(designId);
+      return design?.projectId === projectId ? design : null;
+    },
+    async createVersion(input) {
+      const spec = TutorSpecSchema.parse(input.spec);
+      if (spec.projectId !== input.projectId || spec.tutorId !== input.id || !input.compiledPrompt.trim()) throw new Error("Tutor version input is invalid");
+      const selected = tutorDesigns.get(spec.selectedDesign.designId);
+      if (!selected || selected.projectId !== input.projectId || selected.courseModelVersionId !== spec.courseModelVersionId) {
+        throw new Error("Selected tutor design is unavailable for this course model");
+      }
+      if (selected.artifact.archetypeId !== spec.selectedDesign.archetypeId || selected.artifact.templateVersion !== spec.selectedDesign.templateVersion) {
+        throw new Error("Selected tutor design identity does not match the specification");
+      }
+      if (tutorVersions.has(input.id)) throw new Error("Tutor versions are append-only");
+      const version = [...tutorVersions.values()]
+        .filter((record) => record.projectId === input.projectId)
+        .reduce((max, record) => Math.max(max, record.version), 0) + 1;
+      if (spec.version !== version) throw new Error("Tutor specification version is not monotonic");
+      const record: TutorVersionRecord = {
+        id: input.id,
+        projectId: input.projectId,
+        version,
+        courseModelVersionId: spec.courseModelVersionId,
+        selectedDesignId: spec.selectedDesign.designId,
+        selectedDesignIdentity: spec.selectedDesign,
+        spec,
+        compiledPrompt: input.compiledPrompt,
+        status: input.status ?? "ready",
+        createdAt: new Date(),
+        compiledAt: input.compiledAt ?? null,
+      };
+      tutorVersions.set(record.id, record);
+      persistState();
+      return record;
+    },
+    async findVersion(projectId, tutorVersionId) {
+      const version = tutorVersions.get(tutorVersionId);
+      return version?.projectId === projectId ? version : null;
+    },
+    async findLatestVersion(projectId) {
+      return [...tutorVersions.values()]
+        .filter((version) => version.projectId === projectId)
+        .sort((a, b) => b.version - a.version)[0] ?? null;
+    },
+  };
+}
+
+export function getFixtureConversationRepository(): ConversationRepository {
+  refreshState();
+  return {
+    async create(input) {
+      const conversation = ConversationSchema.parse(input);
+      const tutorVersion = tutorVersions.get(conversation.tutorVersionId);
+      if (!tutorVersion || tutorVersion.projectId !== conversation.projectId) throw new Error("Tutor version not found");
+      if (conversations.has(conversation.id)) throw new Error("Conversation already exists");
+      conversations.set(conversation.id, conversation);
+      persistState();
+      return conversation;
+    },
+    async findById(projectId, conversationId) {
+      const conversation = conversations.get(conversationId);
+      return conversation?.projectId === projectId ? conversation : null;
+    },
+    async findLatestForTutor(input) {
+      return [...conversations.values()]
+        .filter((conversation) => conversation.projectId === input.projectId && conversation.tutorVersionId === input.tutorVersionId && conversation.mode === input.mode)
+        .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0] ?? null;
+    },
+    async appendMessage(input) {
+      const conversation = conversations.get(input.conversationId);
+      const message = ConversationMessageSchema.parse(input.message);
+      if (!conversation || conversation.projectId !== input.projectId) throw new Error("Conversation not found");
+      if (conversation.messages.length >= 100) throw new Error("Conversation message limit reached");
+      const updated = ConversationSchema.parse({
+        ...conversation,
+        ...(input.currentState ? { currentState: input.currentState } : {}),
+        messages: [...conversation.messages, message],
+        updatedAt: new Date().toISOString(),
+      });
+      conversations.set(updated.id, updated);
+      persistState();
+      return updated;
+    },
+    async delete(projectId, conversationId) {
+      const conversation = conversations.get(conversationId);
+      if (conversation?.projectId === projectId) {
+        conversations.delete(conversationId);
+        persistState();
+      }
+    },
+  };
+}
+
+export function getFixtureEvaluationRepository(): EvaluationRepository {
+  refreshState();
+  return {
+    async saveScenarios(input) {
+      const scenarios = EvalScenarioSetSchema.parse(input);
+      const projectId = scenarios[0]!.projectId;
+      const tutorVersionId = scenarios[0]!.tutorVersionId;
+      if (scenarios.some((scenario) => scenario.projectId !== projectId || scenario.tutorVersionId !== tutorVersionId)) throw new Error("Evaluation scenarios must share ownership");
+      const tutorVersion = tutorVersions.get(tutorVersionId);
+      if (!tutorVersion || tutorVersion.projectId !== projectId) throw new Error("Tutor version not found");
+      if ([...evalScenarios.values()].some((scenario) => scenario.tutorVersionId === tutorVersionId && scenarios.some((candidate) => candidate.type === scenario.type))) {
+        throw new Error("Evaluation scenario type already exists for this tutor version");
+      }
+      if (scenarios.some((scenario) => evalScenarios.has(scenario.id))) throw new Error("Evaluation scenarios are append-only");
+      for (const scenario of scenarios) evalScenarios.set(scenario.id, scenario);
+      persistState();
+      return scenarios;
+    },
+    async listScenarios(projectId, tutorVersionId) {
+      return [...evalScenarios.values()].filter((scenario) => scenario.projectId === projectId && scenario.tutorVersionId === tutorVersionId);
+    },
+    async findScenario(projectId, scenarioId) {
+      const scenario = evalScenarios.get(scenarioId);
+      return scenario?.projectId === projectId ? scenario : null;
+    },
+    async createRun(input) {
+      const run = EvalRunSchema.parse(input);
+      if (evalRuns.has(run.id)) throw new Error("Evaluation run already exists");
+      if (run.scenarioIds.some((id) => {
+        const scenario = evalScenarios.get(id);
+        return !scenario || scenario.projectId !== run.projectId || scenario.tutorVersionId !== run.tutorVersionId;
+      })) {
+        throw new Error("Evaluation run scenarios are unavailable for this tutor version");
+      }
+      const record: EvalRunRecord = { ...run, createdAt: new Date(), updatedAt: new Date() };
+      evalRuns.set(record.id, record);
+      persistState();
+      return record;
+    },
+    async saveRun(input) {
+      const run = EvalRunSchema.parse(input);
+      const existing = evalRuns.get(run.id);
+      if (!existing || existing.projectId !== run.projectId) throw new Error("Evaluation run not found");
+      if (existing.tutorVersionId !== run.tutorVersionId || existing.scenarioIds.length !== run.scenarioIds.length || existing.scenarioIds.some((id, index) => id !== run.scenarioIds[index])) {
+        throw new Error("Evaluation run tutor and scenarios are immutable");
+      }
+      const record: EvalRunRecord = { ...run, createdAt: existing.createdAt, updatedAt: new Date() };
+      evalRuns.set(record.id, record);
+      persistState();
+      return record;
+    },
+    async findRun(projectId, runId) {
+      const run = evalRuns.get(runId);
+      return run?.projectId === projectId ? run : null;
+    },
+    async saveResult(projectId, input) {
+      const result = EvalResultSchema.parse(input);
+      const run = evalRuns.get(result.evalRunId);
+      const scenario = evalScenarios.get(result.scenarioId);
+      if (
+        !run ||
+        !scenario ||
+        run.projectId !== projectId ||
+        scenario.projectId !== projectId ||
+        scenario.tutorVersionId !== run.tutorVersionId ||
+        !run.scenarioIds.includes(result.scenarioId)
+      ) throw new Error("Evaluation result is outside this run");
+      evalResults.set(`${result.evalRunId}:${result.scenarioId}`, result);
+      persistState();
+      return result;
+    },
+    async listResults(projectId, runId) {
+      return [...evalResults.values()].filter((result) => result.evalRunId === runId && evalRuns.get(runId)?.projectId === projectId);
     },
   };
 }
