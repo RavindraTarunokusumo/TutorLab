@@ -1,0 +1,5 @@
+Task: Correct PDF and DOCX extraction metrics
+Summary: Derive canonical text and page metadata from original uploaded documents instead of vector-store retrieval chunks.
+Docs: docs/architecture.md
+TODO: Source ingestion metric correction / Task 1
+Validation: lint; typecheck; 234 Vitest tests; focused PDF/DOCX regression tests; supplied PDF measured as 5 pages and ~1,983 tokens; production bundle compiled before unrelated chat-route export failure; fixture E2E blocked before upload by pre-existing source-list loading wait
