@@ -33,7 +33,10 @@ const SourceUploadMetadataSchema = z.strictObject({
   authority: SourceAuthoritySchema,
   permissions: SourcePermissionsSchema,
   containsProtectedSolutions: z.boolean(),
-});
+}).transform(({ permissions, ...metadata }) => ({
+  ...metadata,
+  permissions: { ...permissions, useForCourseModel: true },
+}));
 
 export type SourceUploadMetadata = z.infer<typeof SourceUploadMetadataSchema>;
 

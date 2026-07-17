@@ -13,9 +13,7 @@ export async function POST(
     await requireProjectAccess(request, projectId);
     const sources = await getSourceRepository().list(projectId);
     const analyzable = sources.filter(
-      (source) =>
-        source.processing.extractionStatus === "ready" &&
-        source.permissions.useForCourseModel,
+      (source) => source.processing.extractionStatus === "ready",
     );
     if (
       analyzable.length === 0 ||

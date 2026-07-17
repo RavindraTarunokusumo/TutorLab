@@ -110,15 +110,12 @@ export function getDocumentAnalysisRepository(): DocumentAnalysisRepository {
 
 export class DocumentAnalysisError extends Error {
   constructor(
-    readonly code:
-      "SOURCE_NOT_READY" | "SOURCE_NOT_ANALYZABLE" | "ANALYSIS_FAILED",
+    readonly code: "SOURCE_NOT_READY" | "ANALYSIS_FAILED",
   ) {
     super(
       code === "SOURCE_NOT_READY"
         ? "This source is not ready for analysis."
-        : code === "SOURCE_NOT_ANALYZABLE"
-          ? "This source is not enabled for course-model analysis."
-          : "Document analysis could not be completed. Please retry.",
+        : "Document analysis could not be completed. Please retry.",
     );
   }
 }
@@ -154,9 +151,6 @@ function assertReadyForAnalysis(record: ProviderSourceDocument) {
     !record.openaiFileId
   ) {
     throw new DocumentAnalysisError("SOURCE_NOT_READY");
-  }
-  if (!record.source.permissions.useForCourseModel) {
-    throw new DocumentAnalysisError("SOURCE_NOT_ANALYZABLE");
   }
 }
 
@@ -308,9 +302,7 @@ export async function analyzePendingDocuments(
   const deps = dependencies(overrides);
   const profile = options?.analysisProfile ?? DEFAULT_DOCUMENT_ANALYSIS_PROFILE;
   const eligible = (await deps.sourceRepository.list(projectId)).filter(
-    (source) =>
-      source.processing.extractionStatus === "ready" &&
-      source.permissions.useForCourseModel,
+    (source) => source.processing.extractionStatus === "ready",
   );
   const records = (
     await Promise.all(

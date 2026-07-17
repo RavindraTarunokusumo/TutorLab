@@ -84,6 +84,22 @@ describe("SourceWorkspace", () => {
     expect(screen.queryByText(/worked solution body/i)).not.toBeInTheDocument();
   });
 
+  it("uses every source for the course model and explains optional uses", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(json({ sources: [] })));
+    const user = userEvent.setup();
+
+    render(<SourceWorkspace projectId="project-alpha" />);
+
+    await screen.findByText("No course sources yet.");
+    expect(screen.queryByLabelText("Use in the course model")).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "About Allow runtime retrieval" }),
+    );
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
+      "Suggested material role: Lecture notes or textbook excerpt.",
+    );
+  });
+
   it("uploads selected files with the chosen metadata through the authorized API", async () => {
     const fetchMock = vi
       .fn()

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
+import { Check, CircleHelp } from "lucide-react";
 import {
   DEFAULT_WORKSPACE_BUDGET,
   type SourceAuthority,
@@ -50,6 +50,29 @@ const defaultPermissions: SourcePermissions = {
   useForEvaluation: true,
   revealExcerptsToStudents: false,
 };
+
+const permissionHelp = {
+  useForPedagogyDrafting: {
+    description:
+      "Lets this source guide lesson structure, explanations, hints, and teaching approaches.",
+    suggestedRoles: "Lecture notes, syllabus, or teacher note",
+  },
+  useForRuntimeRetrieval: {
+    description:
+      "Lets the tutor retrieve relevant material while answering student questions. Protected sources cannot use this option.",
+    suggestedRoles: "Lecture notes or textbook excerpt",
+  },
+  useForEvaluation: {
+    description:
+      "Lets this source inform assessment criteria, feedback, and evaluation design.",
+    suggestedRoles: "Exercises, sample assessments, or rubrics",
+  },
+  revealExcerptsToStudents: {
+    description:
+      "Lets the tutor show short excerpts from this source to students. Protected sources cannot use this option.",
+    suggestedRoles: "Lecture notes or textbook excerpt approved for sharing",
+  },
+} as const;
 
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -382,9 +405,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
   }
 
   const analyzableSources = sources.filter(
-    (source) =>
-      source.processing.extractionStatus === "ready" &&
-      source.permissions.useForCourseModel,
+    (source) => source.processing.extractionStatus === "ready",
   );
   const analyzedSources = analyzableSources.filter(
     (source) => source.processing.analysisStatus === "ready",
@@ -407,9 +428,9 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
         </h1>
         <p className="max-w-3xl text-muted-foreground">
           Add the material that grounds this tutor. Upload course documents and
-          set how each source may influence the course model. Protected answers
-          are used only under the permissions you choose and are never shown
-          here as excerpts.
+          use every source to build the course model, and choose which optional
+          tutor features each source can support. Protected answers are never
+          shown here as excerpts.
         </p>
       </div>
 
@@ -513,30 +534,27 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
           </label>
         </div>
         <fieldset className="grid gap-2 rounded-lg border p-4">
-          <legend className="px-1 text-sm font-medium">Allowed uses</legend>
-          <PermissionCheckbox
-            label="Use in the course model"
-            checked={permissions.useForCourseModel}
-            onChange={(value) => setPermission("useForCourseModel", value)}
-            disabled={busy}
-          />
+          <legend className="px-1 text-sm font-medium">Optional uses</legend>
           <PermissionCheckbox
             label="Use for pedagogy drafting"
             checked={permissions.useForPedagogyDrafting}
             onChange={(value) => setPermission("useForPedagogyDrafting", value)}
             disabled={busy}
+            help={permissionHelp.useForPedagogyDrafting}
           />
           <PermissionCheckbox
             label="Allow runtime retrieval"
             checked={permissions.useForRuntimeRetrieval}
             onChange={(value) => setPermission("useForRuntimeRetrieval", value)}
             disabled={busy}
+            help={permissionHelp.useForRuntimeRetrieval}
           />
           <PermissionCheckbox
             label="Use for evaluation"
             checked={permissions.useForEvaluation}
             onChange={(value) => setPermission("useForEvaluation", value)}
             disabled={busy}
+            help={permissionHelp.useForEvaluation}
           />
           <PermissionCheckbox
             label="Allow student excerpts"
@@ -545,6 +563,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
               setPermission("revealExcerptsToStudents", value)
             }
             disabled={busy}
+            help={permissionHelp.revealExcerptsToStudents}
           />
         </fieldset>
         <label className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
@@ -706,22 +725,46 @@ function PermissionCheckbox({
   checked,
   disabled,
   onChange,
+  help,
 }: {
   label: string;
   checked: boolean;
   disabled: boolean;
   onChange: (value: boolean) => void;
+  help: { description: string; suggestedRoles: string };
 }) {
+  const [showHelp, setShowHelp] = useState(false);
   return (
-    <label className="flex items-center gap-2 text-sm">
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-      {label}
-    </label>
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={checked}
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.checked)}
+          />
+          {label}
+        </label>
+        <button
+          type="button"
+          aria-label={`About ${label}`}
+          aria-expanded={showHelp}
+          onClick={() => setShowHelp((current) => !current)}
+          className="rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <CircleHelp className="size-4" />
+        </button>
+      </div>
+      {showHelp && (
+        <div role="tooltip" className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          <p>{help.description}</p>
+          <p className="mt-1 font-medium text-foreground">
+            Suggested material role: {help.suggestedRoles}.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -753,11 +796,6 @@ function SourceRow({
       </td>
       <td className="px-5 py-4 align-top">
         <p>{source.authority.replaceAll("_", " ")}</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {source.permissions.useForCourseModel
-            ? "Course model enabled"
-            : "Excluded from course model"}
-        </p>
         {!source.permissions.revealExcerptsToStudents && (
           <p className="mt-1 text-xs text-muted-foreground">
             Student excerpts are restricted

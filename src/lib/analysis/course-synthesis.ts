@@ -278,9 +278,7 @@ function buildCoverage(
   sources: SourceDocument[],
   analysisByDocumentId: Map<string, DocumentAnalysis>,
 ) {
-  const eligible = sources.filter(
-    (source) => source.permissions.useForCourseModel,
-  );
+  const eligible = sources;
   const analyzed = eligible.filter((source) =>
     analysisByDocumentId.has(source.id),
   );
@@ -317,7 +315,7 @@ function buildWarnings(
       id: "warning-partial-analysis",
       code: "partial_analysis",
       message:
-        "Some enabled materials are not yet analyzed; this course model is partial.",
+        "Some course materials are not yet analyzed; this course model is partial.",
       severity: "warning",
       evidence: [],
     });
@@ -339,7 +337,6 @@ function sourceManifest(
   analysisByDocumentId: Map<string, DocumentAnalysis>,
 ): CourseModel["sourceManifest"] {
   return sources
-    .filter((source) => source.permissions.useForCourseModel)
     .flatMap((source) => {
       const analysis = analysisByDocumentId.get(source.id);
       return analysis
@@ -406,7 +403,7 @@ function synthesisInput(
     version,
     generatedAt: now.toISOString(),
     teachingBrief,
-    sources: sources.filter((source) => source.permissions.useForCourseModel),
+    sources,
     analyses,
     sourceManifest: sourceManifest(sources, analysisByDocumentId),
     coverage,
@@ -460,11 +457,7 @@ export async function synthesizeCourseModel(
     deps.courseModelRepository.findLatest(projectId),
   ]);
   if (!project) throw new CourseSynthesisError("NO_ANALYSES");
-  const enabledIds = new Set(
-    sources
-      .filter((source) => source.permissions.useForCourseModel)
-      .map(({ id }) => id),
-  );
+  const enabledIds = new Set(sources.map(({ id }) => id));
   const validAnalyses = selectCurrentDocumentAnalyses(analysisRecords).filter(
     (analysis) => enabledIds.has(analysis.documentId),
   );
