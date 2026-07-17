@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ProjectWorkspace } from "@/components/projects/project-workspace";
 import { ProjectAccessError } from "@/lib/projects/service";
 import { loadAuthorizedProjectSnapshot } from "@/lib/projects/project-snapshot";
+import { loadProjectRouteArtifacts } from "@/lib/projects/route-artifacts";
 import { isProjectStageReachable } from "@/lib/projects/stages";
 import { isFixtureRuntime } from "@/lib/fixture-runtime";
 import type { ProjectStage } from "@/lib/schemas/project";
@@ -20,8 +21,11 @@ export async function renderProjectRoute(
 
   try {
     const project = await loadAuthorizedProjectSnapshot(projectId, editToken);
-    if (!isFixtureRuntime() && !isProjectStageReachable(project.stage, routeStage)) {
-      notFound();
+    if (!isFixtureRuntime()) {
+      const artifacts = await loadProjectRouteArtifacts(project.id);
+      if (!isProjectStageReachable(project.stage, routeStage, artifacts)) {
+        notFound();
+      }
     }
     return <ProjectWorkspace project={project} routeStage={routeStage} />;
   } catch (error) {

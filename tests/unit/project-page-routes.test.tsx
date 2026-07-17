@@ -7,6 +7,7 @@ const repository = {
   updateTeachingBrief: vi.fn(),
 };
 const cookieGet = vi.fn();
+const loadProjectRouteArtifacts = vi.fn();
 const notFound = vi.fn(() => {
   throw new Error("not-found");
 });
@@ -19,6 +20,9 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: cookieGet }),
 }));
 vi.mock("next/navigation", () => ({ notFound }));
+vi.mock("@/lib/projects/route-artifacts", () => ({
+  loadProjectRouteArtifacts,
+}));
 
 function project(overrides: Record<string, unknown> = {}) {
   return {
@@ -39,6 +43,12 @@ describe("project pages", () => {
     cookieGet.mockReset();
     notFound.mockClear();
     Object.values(repository).forEach((method) => method.mockReset());
+    loadProjectRouteArtifacts.mockResolvedValue({
+      hasCourseModel: true,
+      hasTutorDesign: true,
+      hasActiveTutor: true,
+      hasEvaluation: true,
+    });
   });
 
   async function authorize(projectRecord = project()) {
@@ -93,6 +103,12 @@ describe("project pages", () => {
   });
 
   it("denies direct navigation to a locked future stage", async () => {
+    loadProjectRouteArtifacts.mockResolvedValue({
+      hasCourseModel: false,
+      hasTutorDesign: false,
+      hasActiveTutor: false,
+      hasEvaluation: false,
+    });
     await authorize(project({ stage: "sources" }));
     const page = (await import("@/app/projects/[projectId]/designs/page")).default;
 
@@ -100,5 +116,22 @@ describe("project pages", () => {
       page({ params: Promise.resolve({ projectId: "project-alpha" }) }),
     ).rejects.toThrow("not-found");
     expect(notFound).toHaveBeenCalledOnce();
+  });
+
+  it("permits a Day 3 route when its durable course model exists", async () => {
+    loadProjectRouteArtifacts.mockResolvedValue({
+      hasCourseModel: true,
+      hasTutorDesign: false,
+      hasActiveTutor: false,
+      hasEvaluation: false,
+    });
+    await authorize(project({ stage: "course_model" }));
+    const page = (await import("@/app/projects/[projectId]/designs/page")).default;
+
+    const element = await page({
+      params: Promise.resolve({ projectId: "project-alpha" }),
+    });
+
+    expect(element.props).toMatchObject({ routeStage: "design" });
   });
 });

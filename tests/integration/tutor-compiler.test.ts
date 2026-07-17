@@ -68,6 +68,11 @@ const deniedPedagogySource: SourceDocument = {
   contentHash: "hash-denied",
   permissions: { ...safeSource.permissions, useForPedagogyDrafting: false },
 };
+const hiddenRuntimeSource: SourceDocument = {
+  ...safeSource,
+  name: "Hidden runtime notes",
+  permissions: { ...safeSource.permissions, revealExcerptsToStudents: false },
+};
 const project: ProjectRecord = { id: "project-alpha", name: "Probability", stage: "design", teachingBrief: brief, createdAt: new Date(timestamp), updatedAt: new Date(timestamp) };
 
 async function selectedDesign(): Promise<TutorDesign> {
@@ -160,6 +165,18 @@ describe("tutor compiler", () => {
     expect(input.courseSummary.methods).toEqual([]);
     expect(input.courseSummary.pedagogicalEvidence.map(({ id }) => id)).toEqual(["observation-confirmed"]);
     expect(input.teacherConfirmedObservations).toEqual(["observation-confirmed"]);
+  });
+
+  it("does not compile sources that cannot be shown to students and fails safe when none remain", async () => {
+    const design = await selectedDesign();
+    const input = buildPolicyDraftingInput({ projectId: project.id, tutorId: "tutor-alpha", version: 1, courseModelVersionId: "course-version-alpha", teachingBrief: brief, courseModel, selectedTutorDesign: design, selectedControls: design.controls, sources: [safeSource, hiddenRuntimeSource, protectedSource] });
+    expect(input.runtimeDocuments).toEqual([{ documentId: "document-alpha", title: "Probability notes" }]);
+    try {
+      buildPolicyDraftingInput({ projectId: project.id, tutorId: "tutor-alpha", version: 1, courseModelVersionId: "course-version-alpha", teachingBrief: brief, courseModel, selectedTutorDesign: design, selectedControls: design.controls, sources: [hiddenRuntimeSource, protectedSource] });
+      throw new Error("Expected compilation to reject unavailable runtime sources");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "NO_RUNTIME_SOURCES" });
+    }
   });
 
   it("delimits untrusted policy data beneath fixed compiler instructions", async () => {

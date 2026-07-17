@@ -1,5 +1,4 @@
 import type { ProjectStage } from "@/lib/schemas/project";
-import { fixturePreview } from "@/lib/projects/fixture-preview";
 import type { ProjectSnapshot } from "@/lib/projects/project-snapshot";
 import { lastCompletedProjectStage } from "@/lib/projects/stages";
 import { StageHeader } from "./stage-header";
@@ -16,24 +15,13 @@ type ProjectWorkspaceProps = {
   routeStage: ProjectStage;
 };
 
-function FixtureNotice() {
-  return (
-    <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">
-      Deterministic fixture preview — no model or paid operations run on this
-      screen.
-    </p>
-  );
-}
-
-function FixtureScreen({
+function TutorScreen({
   projectId,
   routeStage,
 }: {
   projectId: string;
   routeStage: Extract<ProjectStage, "design" | "build" | "report" | "preview">;
 }) {
-  const { courseModel } = fixturePreview;
-
   if (routeStage === "design") {
     return <TutorDesignComparison projectId={projectId} />;
   }
@@ -43,10 +31,10 @@ function FixtureScreen({
   }
 
   if (routeStage === "report") {
-    return <section className="space-y-5"><FixtureNotice /><EvaluationReport projectId={projectId} /></section>;
+    return <EvaluationReport projectId={projectId} />;
   }
 
-  return <section className="space-y-5"><FixtureNotice /><PreviewStage projectId={projectId} conceptName={courseModel.concepts[0]?.name} /></section>;
+  return <PreviewStage projectId={projectId} />;
 }
 
 export function ProjectWorkspace({
@@ -70,7 +58,7 @@ export function ProjectWorkspace({
           <SourceWorkspace projectId={project.id} />
         ) : routeStage === "course_model" ? (
           <CourseModelReview projectId={project.id} />
-        ) : <FixtureScreen projectId={project.id} routeStage={routeStage} />}
+        ) : <TutorScreen projectId={project.id} routeStage={routeStage} />}
       </div>
     </main>
   );

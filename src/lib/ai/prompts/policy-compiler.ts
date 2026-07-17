@@ -147,6 +147,7 @@ export function runtimeDocumentsFromSources(
       (source) =>
         manifestIds.has(source.id) &&
         source.permissions.useForRuntimeRetrieval &&
+        source.permissions.revealExcerptsToStudents &&
         !source.containsProtectedSolutions,
     )
     .map((source) => ({ documentId: source.id, title: source.name }));

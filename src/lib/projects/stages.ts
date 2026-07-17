@@ -1,4 +1,5 @@
 import type { ProjectStage } from "@/lib/schemas/project";
+import type { ProjectRouteArtifacts } from "./route-artifacts";
 
 export const projectStages = [
   { stage: "brief", label: "Brief", href: "setup" },
@@ -21,7 +22,20 @@ export function projectStageIndex(stage: ProjectStage): number {
 export function isProjectStageReachable(
   currentStage: ProjectStage,
   requestedStage: ProjectStage,
+  artifacts?: ProjectRouteArtifacts,
 ): boolean {
+  if (artifacts) {
+    switch (requestedStage) {
+      case "design":
+        return artifacts.hasCourseModel;
+      case "build":
+      case "preview":
+        return artifacts.hasActiveTutor;
+      case "report":
+        return artifacts.hasActiveTutor && artifacts.hasEvaluation;
+    }
+  }
+
   return projectStageIndex(requestedStage) <= projectStageIndex(currentStage);
 }
 
