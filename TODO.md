@@ -27,6 +27,8 @@ Rules:
 
 - [x] Task 3 — Accept successful teaching-brief responses that include server metadata (`8decb3e`)
 
+- [x] Task 4 — Advance a completed teaching brief to Sources and navigate there (`9efe0c1`)
+
 ### Day 3–4 tutor design and evaluation milestone
 
 - [x] Task 1 — Define tutor and evaluation contracts (`230695e`)
