@@ -25,6 +25,8 @@ import {
   extractedPageCountFromContent,
   extractedTokenCountFromContent,
 } from "./extraction-metrics";
+import { extractDocxText } from "./docx-extraction";
+import { extractPdfText } from "./pdf-extraction";
 import { createSourceMetadata, SourceValidationError } from "./validation";
 
 const SourceUploadMetadataSchema = z.strictObject({
@@ -223,9 +225,10 @@ async function finalizeCompletedIndexing(
   vectorStoreId: string,
   openaiFileId: string,
   mimeType: string,
+  originalContent: string | undefined,
   dependencies: SourceIngestionDependencies,
 ): Promise<SourceDocument> {
-  const extractedContent = await dependencies.provider.getExtractedText(
+  const extractedContent = originalContent ?? await dependencies.provider.getExtractedText(
     vectorStoreId,
     openaiFileId,
     mimeType,
@@ -256,6 +259,7 @@ async function pollIndexing(
   vectorStoreId: string,
   openaiFileId: string,
   mimeType: string,
+  originalContent: string | undefined,
   dependencies: SourceIngestionDependencies,
 ): Promise<SourceDocument> {
   for (let attempt = 0; attempt < dependencies.maxPollAttempts; attempt += 1) {
@@ -271,6 +275,7 @@ async function pollIndexing(
             vectorStoreId,
             openaiFileId,
             mimeType,
+            originalContent,
             dependencies,
           )
         : await persistProviderStatus(projectId, sourceId, progress, dependencies);
@@ -283,6 +288,16 @@ async function pollIndexing(
     await dependencies.wait(dependencies.pollDelayMs * (attempt + 1));
   }
   throw new Error("Polling did not run");
+}
+
+async function extractOriginalContent(file: SourceUploadFile): Promise<string | undefined> {
+  if (file.mimeType === "application/pdf") {
+    return extractPdfText(file.bytes);
+  }
+  if (file.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    return extractDocxText(file.bytes);
+  }
+  return undefined;
 }
 
 async function sourceOrThrow(
@@ -369,6 +384,7 @@ export async function ingestSource(
 ): Promise<SourceDocument> {
   const dependencies = withDependencies(overrides);
   const parsedMetadata = parseSourceUploadMetadata(metadata);
+  const originalContent = await extractOriginalContent(file);
   const usage = await dependencies.sourceRepository.getWorkspaceUsage(projectId);
   const source = await createSourceMetadata({
     id: randomUUID(),
@@ -399,6 +415,7 @@ export async function ingestSource(
       vectorStoreId,
       uploadedId,
       source.mimeType,
+      originalContent,
       dependencies,
     );
   } catch (error) {
@@ -438,6 +455,7 @@ export async function refreshSourceProcessing(
       vectorStoreId,
       current.openaiFileId,
       current.source.mimeType,
+      undefined,
       dependencies,
     );
   } catch {
