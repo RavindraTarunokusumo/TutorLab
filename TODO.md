@@ -29,6 +29,8 @@ Rules:
 
 - [x] Task 4 — Advance a completed teaching brief to Sources and navigate there (`9efe0c1`)
 
+- [x] Task 5 — Load the PDF parser outside the Next server bundle for source uploads (`1987327`)
+
 ### Day 3–4 tutor design and evaluation milestone
 
 - [x] Task 1 — Define tutor and evaluation contracts (`230695e`)
