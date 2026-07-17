@@ -4,6 +4,8 @@ import {
   getFixtureOpenAIFileProvider,
   isFixtureRuntime,
 } from "@/lib/fixture-runtime";
+import { extractDocxText } from "@/lib/sources/docx-extraction";
+import { extractPdfText } from "@/lib/sources/pdf-extraction";
 
 export type VectorStoreFileStatus = "in_progress" | "completed" | "failed";
 
@@ -29,6 +31,7 @@ export interface OpenAIFileProvider {
   getExtractedText(
     vectorStoreId: string,
     fileId: string,
+    mimeType?: string,
   ): Promise<string | undefined>;
   searchPassages?(input: { vectorStoreId: string; query: string; fileIds: string[]; limit: number }): Promise<VectorStorePassage[]>;
   detachFile(vectorStoreId: string, fileId: string): Promise<void>;
@@ -78,7 +81,18 @@ export function getOpenAIFileProvider(): OpenAIFileProvider {
       });
       return { status: normalizeFileStatus(file.status) };
     },
-    async getExtractedText(vectorStoreId, fileId) {
+    async getExtractedText(vectorStoreId, fileId, mimeType) {
+      if (
+        mimeType === "application/pdf" ||
+        mimeType ===
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ) {
+        const original = await client.files.content(fileId);
+        const bytes = new Uint8Array(await original.arrayBuffer());
+        return mimeType === "application/pdf"
+          ? extractPdfText(bytes)
+          : extractDocxText(bytes);
+      }
       const content = client.vectorStores.files.content(fileId, {
         vector_store_id: vectorStoreId,
       });

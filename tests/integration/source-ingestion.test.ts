@@ -245,7 +245,11 @@ describe("OpenAI source ingestion", () => {
     });
     expect(openAI.attachFile).toHaveBeenCalledWith("vs-alpha", "file-alpha");
     expect(openAI.getFileStatus).toHaveBeenCalledTimes(2);
-    expect(openAI.getExtractedText).toHaveBeenCalledWith("vs-alpha", "file-alpha");
+    expect(openAI.getExtractedText).toHaveBeenCalledWith(
+      "vs-alpha",
+      "file-alpha",
+      "text/markdown",
+    );
     expect(sources.repository.recordExtractionMetrics).toHaveBeenCalledWith(
       "project-alpha",
       result.id,

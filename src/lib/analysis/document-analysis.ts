@@ -218,6 +218,7 @@ async function runStructuredAnalysis(
     const documentText = await deps.provider.getExtractedText(
       vectorStoreId,
       record.openaiFileId!,
+      record.source.mimeType,
     );
     if (!documentText) {
       throw new DocumentAnalysisError("SOURCE_NOT_READY");

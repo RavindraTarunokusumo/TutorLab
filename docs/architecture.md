@@ -38,7 +38,7 @@ Project mutations require an HTTP-only signed edit cookie. The database stores v
 
 ## OpenAI boundary
 
-OpenAI Files/vector stores supply retrieval text for ingestion and analysis. Responses structured output supplies document analysis and course synthesis. Tests inject mock providers/adapters; automated tests make no live OpenAI calls. Failed provider work records safe, retryable messages rather than provider payloads.
+OpenAI Files/vector stores supply retrieval text for ingestion and analysis. PDF and DOCX text are derived from the original uploaded file because vector-store parsed-content elements are retrieval chunks, not authoritative document pages. PDF.js supplies PDF page boundaries; DOCX uses its saved application page-count property when present and otherwise leaves the page total unknown rather than guessing. Responses structured output supplies document analysis and course synthesis. Tests inject mock providers/adapters; automated tests make no live OpenAI calls. Failed provider work records safe, retryable messages rather than provider payloads.
 
 ## Invariants
 

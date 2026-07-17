@@ -222,11 +222,13 @@ async function finalizeCompletedIndexing(
   sourceId: string,
   vectorStoreId: string,
   openaiFileId: string,
+  mimeType: string,
   dependencies: SourceIngestionDependencies,
 ): Promise<SourceDocument> {
   const extractedContent = await dependencies.provider.getExtractedText(
     vectorStoreId,
     openaiFileId,
+    mimeType,
   );
   const extractedTokenCount = extractedTokenCountFromContent(extractedContent);
   const pageCount = extractedPageCountFromContent(extractedContent);
@@ -253,6 +255,7 @@ async function pollIndexing(
   sourceId: string,
   vectorStoreId: string,
   openaiFileId: string,
+  mimeType: string,
   dependencies: SourceIngestionDependencies,
 ): Promise<SourceDocument> {
   for (let attempt = 0; attempt < dependencies.maxPollAttempts; attempt += 1) {
@@ -267,6 +270,7 @@ async function pollIndexing(
             sourceId,
             vectorStoreId,
             openaiFileId,
+            mimeType,
             dependencies,
           )
         : await persistProviderStatus(projectId, sourceId, progress, dependencies);
@@ -394,6 +398,7 @@ export async function ingestSource(
       source.id,
       vectorStoreId,
       uploadedId,
+      source.mimeType,
       dependencies,
     );
   } catch (error) {
@@ -432,6 +437,7 @@ export async function refreshSourceProcessing(
       sourceId,
       vectorStoreId,
       current.openaiFileId,
+      current.source.mimeType,
       dependencies,
     );
   } catch {
