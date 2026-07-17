@@ -11,6 +11,8 @@ export type VectorStoreFileProgress = {
   status: VectorStoreFileStatus;
 };
 
+export type VectorStorePassage = { fileId: string; text: string };
+
 export interface OpenAIFileProvider {
   createVectorStore(input: { name: string }): Promise<{ id: string }>;
   deleteVectorStore(vectorStoreId: string): Promise<void>;
@@ -28,6 +30,7 @@ export interface OpenAIFileProvider {
     vectorStoreId: string,
     fileId: string,
   ): Promise<string | undefined>;
+  searchPassages?(input: { vectorStoreId: string; query: string; fileIds: string[]; limit: number }): Promise<VectorStorePassage[]>;
   detachFile(vectorStoreId: string, fileId: string): Promise<void>;
   deleteFile(fileId: string): Promise<void>;
 }
@@ -87,6 +90,18 @@ export function getOpenAIFileProvider(): OpenAIFileProvider {
       }
       const text = parts.join("\n");
       return text || undefined;
+    },
+    async searchPassages({ vectorStoreId, query, fileIds, limit }) {
+      const searchable = client.vectorStores as unknown as {
+        search: (id: string, input: { query: string; max_num_results: number }) => Promise<{ data?: Array<{ file_id?: string; content?: Array<{ type?: string; text?: string }> }> }>;
+      };
+      const result = await searchable.search(vectorStoreId, { query, max_num_results: limit });
+      const allowed = new Set(fileIds);
+      return (result.data ?? []).flatMap((item) => {
+        const fileId = item.file_id;
+        const text = item.content?.filter((part) => part.type === "text").map((part) => part.text ?? "").join("\n").trim();
+        return fileId && text && allowed.has(fileId) ? [{ fileId, text }] : [];
+      });
     },
     async detachFile(vectorStoreId, fileId) {
       await client.vectorStores.files.delete(fileId, {

@@ -47,6 +47,10 @@ enum PipelineStage {
   extraction
   analysis
   synthesis
+  design
+  compile
+  scenario
+  evaluation
 }
 
 enum PipelineJobStatus {
@@ -54,6 +58,44 @@ enum PipelineJobStatus {
   running
   completed
   failed
+}
+
+enum TutorVersionStatus {
+  compiling
+  ready
+  failed
+}
+
+enum ConversationMode {
+  teacher_preview
+  student
+}
+
+enum ConversationMessageRole {
+  learner
+  tutor
+}
+
+enum EvalRunStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+enum EvalReadiness {
+  ready
+  ready_with_warnings
+  needs_revision
+  pending
+}
+
+enum EvalResultStatus {
+  not_run
+  running
+  passed
+  failed
+  error
 }
 
 model Project {
@@ -72,6 +114,11 @@ model Project {
   sourceDocuments     SourceDocument[]
   documentAnalyses    DocumentAnalysis[]
   pipelineJobs        PipelineJob[]
+  tutorDesigns        TutorDesign[]
+  tutorVersions       TutorVersion[]
+  conversations       Conversation[]
+  evalScenarios       EvalScenario[]
+  evalRuns            EvalRun[]
 }
 
 model CourseModelVersion {
@@ -83,8 +130,11 @@ model CourseModelVersion {
   createdAt     DateTime @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tutorDesigns TutorDesign[]
+  tutorVersions TutorVersion[]
 
   @@unique([projectId, version])
+  @@unique([projectId, id])
 }
 
 model SourceDocument {
@@ -142,6 +192,7 @@ model PipelineJob {
   sourceDocumentId String?
   stage            PipelineStage
   idempotencyKey   String
+  requestFingerprint String?
   status           PipelineJobStatus @default(pending)
   attemptCount     Int               @default(0)
   progress         Float             @default(0)
@@ -159,4 +210,143 @@ model PipelineJob {
 
   @@unique([projectId, stage, idempotencyKey])
   @@index([sourceDocumentId])
+}
+
+model TutorDesign {
+  id                   String   @id
+  projectId            String
+  courseModelVersionId String
+  generationId         String
+  artifact             Json
+  excludedOptions      Json     @default("[]")
+  generatedAt          DateTime
+  createdAt            DateTime @default(now())
+
+  project            Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  courseModelVersion CourseModelVersion @relation(fields: [projectId, courseModelVersionId], references: [projectId, id], onDelete: Restrict)
+  selectedByVersions TutorVersion[]
+
+  @@unique([projectId, id])
+  @@index([projectId, courseModelVersionId])
+  @@index([projectId, generationId])
+}
+
+model TutorVersion {
+  id                     String             @id
+  projectId              String
+  version                Int
+  courseModelVersionId   String
+  selectedDesignId       String
+  selectedDesignIdentity Json
+  spec                   Json
+  compiledPrompt         String
+  status                 TutorVersionStatus @default(compiling)
+  createdAt              DateTime           @default(now())
+  compiledAt             DateTime?
+
+  project            Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  courseModelVersion CourseModelVersion @relation(fields: [projectId, courseModelVersionId], references: [projectId, id], onDelete: Restrict)
+  selectedDesign     TutorDesign        @relation(fields: [projectId, selectedDesignId], references: [projectId, id], onDelete: Restrict)
+  conversations      Conversation[]
+  evalScenarios      EvalScenario[]
+  evalRuns           EvalRun[]
+
+  @@unique([projectId, version])
+  @@unique([projectId, id])
+  @@index([projectId, status])
+}
+
+model Conversation {
+  id             String       @id
+  projectId      String
+  tutorVersionId String
+  mode           ConversationMode
+  currentState   String
+  previewClaimToken String?
+  previewClaimedAt  DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tutorVersion TutorVersion @relation(fields: [projectId, tutorVersionId], references: [projectId, id], onDelete: Restrict)
+  messages     Message[]
+
+  @@unique([projectId, id])
+  @@index([projectId, tutorVersionId, mode])
+  @@index([projectId, tutorVersionId, mode, previewClaimedAt])
+}
+
+model Message {
+  id             String                  @id
+  conversationId String
+  role           ConversationMessageRole
+  content        String
+  metadata       Json?
+  createdAt      DateTime                @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model EvalScenario {
+  id             String   @id
+  projectId      String
+  tutorVersionId String
+  type           String
+  artifact       Json
+  createdAt      DateTime @default(now())
+
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tutorVersion TutorVersion @relation(fields: [projectId, tutorVersionId], references: [projectId, id], onDelete: Restrict)
+  results      EvalResult[]
+
+  @@unique([projectId, id])
+  @@unique([tutorVersionId, type])
+  @@index([projectId, tutorVersionId])
+}
+
+model EvalRun {
+  id             String        @id
+  projectId      String
+  tutorVersionId String
+  scenarioIds    Json
+  status         EvalRunStatus @default(pending)
+  readiness      EvalReadiness @default(pending)
+  passCount      Int           @default(0)
+  warningCount   Int           @default(0)
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tutorVersion TutorVersion @relation(fields: [projectId, tutorVersionId], references: [projectId, id], onDelete: Restrict)
+  results      EvalResult[]
+
+  @@unique([projectId, id])
+  @@index([projectId, tutorVersionId, createdAt])
+}
+
+model EvalResult {
+  id                  String           @id
+  projectId           String
+  evalRunId           String
+  scenarioId          String
+  status              EvalResultStatus @default(not_run)
+  transcript          Json             @default("[]")
+  deterministicChecks Json             @default("[]")
+  judgeResult         Json?
+  usage               Json?
+  diagnostic          Json?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  evalRun  EvalRun      @relation(fields: [projectId, evalRunId], references: [projectId, id], onDelete: Cascade)
+  scenario EvalScenario @relation(fields: [projectId, scenarioId], references: [projectId, id], onDelete: Restrict)
+
+  @@unique([evalRunId, scenarioId])
+  @@index([projectId, evalRunId])
 }

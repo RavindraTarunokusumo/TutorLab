@@ -30,15 +30,13 @@ describe("ProjectWorkspace", () => {
     expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
   });
 
-  it("labels Day 3+ content as deterministic fixtures without exposing token material", () => {
+  it("renders the live preview entry point without exposing token material", () => {
     const { container } = render(
       <ProjectWorkspace project={project} routeStage="preview" />,
     );
 
-    expect(
-      screen.getByText(/Deterministic fixture preview/i),
-    ).toBeInTheDocument();
-    expect(container.textContent).toContain("Mutual exclusivity");
+    expect(screen.getByRole("heading", { name: "Tutor preview" })).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/Deterministic fixture preview/i);
     expect(container.textContent).not.toMatch(/edit[_ -]?token/i);
   });
 });

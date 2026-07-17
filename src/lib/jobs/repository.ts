@@ -13,18 +13,31 @@ export type JobFailure = {
   retryable: boolean;
 };
 
+export class JobIdempotencyConflict extends Error {
+  constructor() {
+    super("Idempotency key cannot be reused for a different request.");
+  }
+}
+
 export interface PipelineJobRepository {
   start(input: {
     id: string;
     projectId: string;
     sourceDocumentId?: string;
-    stage: "analysis";
+    stage: PipelineJob["stage"];
     idempotencyKey: string;
+    requestFingerprint?: string;
   }): Promise<{ job: PipelineJob; shouldRun: boolean }>;
   updateProgress(id: string, progress: number): Promise<PipelineJob>;
+  setResultId?(id: string, resultId: string): Promise<PipelineJob>;
   complete(id: string, resultId?: string): Promise<PipelineJob>;
   fail(id: string, diagnostic: JobFailure): Promise<PipelineJob>;
   findById(projectId: string, id: string): Promise<PipelineJob | null>;
+  findLatest?(input: {
+    projectId: string;
+    stage: PipelineJob["stage"];
+    requestFingerprint?: string;
+  }): Promise<PipelineJob | null>;
 }
 
 function toPipelineJob(job: PrismaPipelineJob): PipelineJob {
@@ -35,6 +48,7 @@ function toPipelineJob(job: PrismaPipelineJob): PipelineJob {
     ...(job.sourceDocumentId ? { sourceDocumentId: job.sourceDocumentId } : {}),
     stage: job.stage,
     idempotencyKey: job.idempotencyKey,
+    ...(job.requestFingerprint ? { requestFingerprint: job.requestFingerprint } : {}),
     status: job.status,
     attemptCount: job.attemptCount,
     progress: job.progress,
@@ -61,6 +75,13 @@ export function getPipelineJobRepository(): PipelineJobRepository {
           },
         },
       });
+      if (
+        input.requestFingerprint &&
+        existing &&
+        existing.requestFingerprint !== input.requestFingerprint
+      ) {
+        throw new JobIdempotencyConflict();
+      }
       if (
         existing?.status === "running" ||
         existing?.status === "pending" ||
@@ -110,18 +131,33 @@ export function getPipelineJobRepository(): PipelineJobRepository {
               },
             },
           });
+          if (
+            input.requestFingerprint &&
+            existing.requestFingerprint !== input.requestFingerprint
+          ) {
+            throw new JobIdempotencyConflict();
+          }
           return { job: toPipelineJob(existing), shouldRun: false };
         }
       }
       return { job: toPipelineJob(job), shouldRun: true };
     },
     async updateProgress(id, progress) {
-      return toPipelineJob(
-        await db.pipelineJob.update({
-          where: { id },
-          data: { progress: Math.min(1, Math.max(0, progress)) },
-        }),
-      );
+      const bounded = Math.min(1, Math.max(0, progress));
+      const existing = await db.pipelineJob.findUniqueOrThrow({ where: { id } });
+      if (existing.status !== "running" || existing.progress >= bounded) {
+        return toPipelineJob(existing);
+      }
+      return toPipelineJob(await db.pipelineJob.update({
+        where: { id },
+        data: { progress: bounded },
+      }));
+    },
+    async setResultId(id, resultId) {
+      return toPipelineJob(await db.pipelineJob.update({
+        where: { id },
+        data: { resultId },
+      }));
     },
     async complete(id, resultId) {
       return toPipelineJob(
@@ -150,6 +186,19 @@ export function getPipelineJobRepository(): PipelineJobRepository {
     },
     async findById(projectId, id) {
       const job = await db.pipelineJob.findFirst({ where: { projectId, id } });
+      return job ? toPipelineJob(job) : null;
+    },
+    async findLatest(input) {
+      const job = await db.pipelineJob.findFirst({
+        where: {
+          projectId: input.projectId,
+          stage: input.stage,
+          ...(input.requestFingerprint
+            ? { requestFingerprint: input.requestFingerprint }
+            : {}),
+        },
+        orderBy: { startedAt: "desc" },
+      });
       return job ? toPipelineJob(job) : null;
     },
   };

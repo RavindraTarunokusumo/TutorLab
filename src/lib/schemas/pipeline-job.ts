@@ -7,6 +7,10 @@ export const PipelineStageSchema = z.enum([
   "extraction",
   "analysis",
   "synthesis",
+  "design",
+  "compile",
+  "scenario",
+  "evaluation",
 ]);
 
 export const PipelineJobStatusSchema = z.enum([
@@ -24,6 +28,7 @@ export const PipelineJobSchema = z
     sourceDocumentId: StableIdSchema.optional(),
     stage: PipelineStageSchema,
     idempotencyKey: z.string().trim().min(1).max(SCHEMA_LIMITS.label),
+    requestFingerprint: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     status: PipelineJobStatusSchema,
     attemptCount: z.number().int().nonnegative(),
     progress: z.number().min(0).max(1),

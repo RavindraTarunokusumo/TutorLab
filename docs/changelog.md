@@ -2,6 +2,12 @@
 
 Record notable behavior, architecture, API, persistence, or workflow changes.
 
+## 2026-07-16 — Day 3–4 tutor build and evaluation
+
+- Added teacher-selected, immutable tutor versions; grounded preview conversations; and persisted six-scenario evaluation runs.
+- Added failure-first report cards with transcript evidence, deterministic checks, and judge findings. Repair recommendations remain inspectable only in this milestone.
+- Extended the deterministic fixture journey through design, compilation, scenario generation, seeded answer-extraction failure inspection, and preview metadata.
+
 ## 2026-07-15 — Day 1–2 milestone verification
 
 - Added a deterministic fixture golden path from project creation through immutable course-model correction.

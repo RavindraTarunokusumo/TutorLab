@@ -5,13 +5,19 @@ import {
   getFixtureProjectRepository,
   isFixtureRuntime,
 } from "@/lib/fixture-runtime";
+import type { TeachingBrief } from "@/lib/schemas/teaching-brief";
 import type { ProjectStage, TeachingBriefPatch } from "@/lib/schemas/project";
+
+export type StoredTeachingBrief =
+  | TeachingBriefPatch
+  | TeachingBrief
+  | Record<string, never>;
 
 export type ProjectRecord = {
   id: string;
   name: string;
   stage: ProjectStage;
-  teachingBrief: TeachingBriefPatch | Record<string, never>;
+  teachingBrief: StoredTeachingBrief;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -20,7 +26,7 @@ export type CreateProjectRecordInput = {
   id: string;
   name: string;
   stage: ProjectStage;
-  teachingBrief: TeachingBriefPatch | Record<string, never>;
+  teachingBrief: StoredTeachingBrief;
   editTokenHash: string;
 };
 
@@ -33,7 +39,7 @@ export interface ProjectRepository {
   ): Promise<ProjectRecord | null>;
   updateTeachingBrief(
     id: string,
-    patch: TeachingBriefPatch,
+    patch: TeachingBriefPatch | TeachingBrief,
   ): Promise<ProjectRecord>;
   findVectorStoreId(projectId: string): Promise<string | null>;
   claimVectorStoreId(projectId: string, candidateId: string): Promise<string>;
@@ -58,7 +64,7 @@ function toProjectRecord(project: PrismaProject): ProjectRecord {
     id: project.id,
     name: project.name,
     stage: project.stage,
-    teachingBrief: project.teachingBrief as TeachingBriefPatch,
+    teachingBrief: project.teachingBrief as StoredTeachingBrief,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
   };

@@ -21,3 +21,6 @@ export const DEFAULT_WORKSPACE_BUDGET = {
   maxWorkspaceBytes: 200 * 1024 * 1024,
 } as const;
 
+export const TUTOR_DESIGN_CANDIDATE_COUNT = 3;
+export const EVALUATION_SCENARIO_COUNT = 6;
+export const EVALUATION_MAX_TRANSCRIPT_TURNS = 6;

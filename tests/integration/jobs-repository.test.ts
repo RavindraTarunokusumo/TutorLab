@@ -13,6 +13,20 @@ const record = {
 };
 
 describe("pipeline job repository", () => {
+  it.each(["design", "compile", "scenario", "evaluation"] as const)("keeps %s starts idempotent", async (stage) => {
+    const stageRecord = { ...record, id: `job-${stage}`, stage, idempotencyKey: `${stage}-key` };
+    db.pipelineJob.findUnique.mockResolvedValue(stageRecord);
+    const { getPipelineJobRepository } = await import("@/lib/jobs/repository");
+    const started = await getPipelineJobRepository().start({
+      id: `new-${stage}`,
+      projectId: "project-alpha",
+      stage,
+      idempotencyKey: `${stage}-key`,
+    });
+
+    expect(started).toMatchObject({ shouldRun: false, job: { id: `job-${stage}`, stage } });
+  });
+
   it("returns the already-created job when concurrent starts collide on the idempotency key", async () => {
     db.pipelineJob.findUnique.mockResolvedValue(null);
     db.pipelineJob.create
