@@ -41,6 +41,8 @@ Rules:
 
 - [x] Task 10 — Recover stale analysis jobs and use a responsive structured-output model (`4a1b458`)
 
+- [x] Task 11 — Separate source uploads from bulk analysis controls (`7632012`)
+
 ### Day 3–4 tutor design and evaluation milestone
 
 - [x] Task 1 — Define tutor and evaluation contracts (`230695e`)
