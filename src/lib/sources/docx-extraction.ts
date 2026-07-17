@@ -23,5 +23,5 @@ export async function extractDocxText(bytes: Uint8Array): Promise<string> {
   ]);
   const properties = await archive.file("docProps/app.xml")?.async("string");
   const pageCount = pageCountFromProperties(properties);
-  return pageCount === undefined ? value : `${value}${"\f".repeat(pageCount)}`;
+  return `${value}${"\f".repeat(pageCount ?? 1)}`;
 }
