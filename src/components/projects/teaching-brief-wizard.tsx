@@ -243,10 +243,11 @@ export function TeachingBriefWizard({ project }: TeachingBriefWizardProps) {
     if (!patch) return;
     setSaveStatus("Saving changes…");
     try {
-      await saveBriefPatch(project.id, patch);
+      await saveBriefPatch(project.id, patch, true);
       clearDraft(project.id);
       setDirty(false);
       setSaveStatus("Saved");
+      window.location.assign(`/projects/${project.id}/sources`);
     } catch {
       saveDraft(project.id, nextBrief);
       setSaveStatus("Couldn't save. Your draft is stored in this browser.");

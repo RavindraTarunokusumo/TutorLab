@@ -41,6 +41,7 @@ export interface ProjectRepository {
     id: string,
     patch: TeachingBriefPatch | TeachingBrief,
   ): Promise<ProjectRecord>;
+  updateStage(id: string, stage: ProjectStage): Promise<ProjectRecord>;
   findVectorStoreId(projectId: string): Promise<string | null>;
   claimVectorStoreId(projectId: string, candidateId: string): Promise<string>;
   acquireVectorStoreProvisioning(
@@ -106,6 +107,11 @@ export function getProjectRepository(): ProjectRepository {
           where: { id },
           data: { teachingBrief },
         }),
+      );
+    },
+    async updateStage(id, stage) {
+      return toProjectRecord(
+        await db.project.update({ where: { id }, data: { stage } }),
       );
     },
     async findVectorStoreId(projectId) {

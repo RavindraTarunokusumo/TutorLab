@@ -26,8 +26,9 @@ export type ClientProjectSnapshot = z.infer<typeof ClientProjectSnapshotSchema>;
 export async function saveBriefPatch(
   projectId: string,
   patch: TeachingBriefPatch,
+  complete = false,
 ): Promise<ClientProjectSnapshot> {
-  const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/brief`, {
+  const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/brief${complete ? "?complete=1" : ""}`, {
     method: "PATCH",
     credentials: "same-origin",
     headers: { "content-type": "application/json" },
