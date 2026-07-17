@@ -98,20 +98,17 @@ export async function saveCourseModelRevision(
   return parseVersion(await response.json());
 }
 
-export async function regenerateCourseModel(
+export async function generateCourseModel(
   projectId: string,
-  discardTeacherEdits: boolean,
   signal?: AbortSignal,
 ): Promise<CourseModelVersion> {
   const response = await fetch(`/api/projects/${projectId}/synthesize`, {
     method: "POST",
     credentials: "same-origin",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ discardTeacherEdits }),
     signal,
   });
   if (!response.ok) {
-    throw new Error(await responseMessage(response, "Could not regenerate the course model."));
+    throw new Error(await responseMessage(response, "Could not generate the course model."));
   }
   return parseVersion(await response.json());
 }

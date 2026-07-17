@@ -154,6 +154,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
     useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const activeProjectId = useRef(projectId);
@@ -224,6 +225,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
     setSources([]);
     setSelectedFiles([]);
     setBusy(false);
+    setNavigating(false);
     setError("");
     setNotice("");
     void loadSources();
@@ -389,7 +391,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
   }
 
   async function continueToCourseModel() {
-    setBusy(true);
+    setNavigating(true);
     setError("");
     try {
       await advanceToCourseModel(projectId);
@@ -400,7 +402,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
           ? cause.message
           : "Could not continue to the course model.",
       );
-      setBusy(false);
+      setNavigating(false);
     }
   }
 
@@ -618,7 +620,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
         aria-live="polite"
         className="text-sm text-muted-foreground"
       >
-        {loading ? "Loading course sources…" : notice}
+        {loading ? "Loading course sources…" : navigating ? "Opening course model…" : notice}
       </p>
 
       <section
@@ -676,7 +678,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
           </div>
           <div className="flex flex-wrap gap-3">
             <button type="button" disabled={busy || analyzableSources.length === 0} onClick={() => void analyzeAll()} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Analyze ready sources</button>
-            <button type="button" disabled={busy || analyzableSources.length === 0 || analyzedSources.length !== analyzableSources.length} onClick={() => void continueToCourseModel()} className="rounded-md border border-primary px-4 py-2 text-sm font-medium text-primary disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Next: Course Model</button>
+            <button type="button" disabled={busy || navigating || analyzableSources.length === 0 || analyzedSources.length !== analyzableSources.length} onClick={() => void continueToCourseModel()} className="rounded-md border border-primary px-4 py-2 text-sm font-medium text-primary disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Next: Course Model</button>
           </div>
         </div>
         <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Source analysis progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={analysisProgress}>

@@ -36,9 +36,10 @@ describe("course model API routes", () => {
     expect(synthesis.findLatest).not.toHaveBeenCalled();
   });
 
-  it("synthesizes, reads, and creates a course-model revision for authorized projects", async () => {
+  it("generates the first model, reads it, and creates a course-model revision for authorized projects", async () => {
     const synthesizeRoute = await import("@/app/api/projects/[projectId]/synthesize/route");
     const courseModelRoute = await import("@/app/api/projects/[projectId]/course-model/route");
+    synthesis.findLatest.mockResolvedValueOnce(null).mockResolvedValue(version);
     const created = await synthesizeRoute.POST(new Request("http://localhost/api/projects/project-alpha/synthesize", { method: "POST" }), { params: Promise.resolve({ projectId: "project-alpha" }) });
     const read = await courseModelRoute.GET(new Request("http://localhost/api/projects/project-alpha/course-model"), { params: Promise.resolve({ projectId: "project-alpha" }) });
     const patch = { schemaVersion: "0.1", projectId: "project-alpha", baseVersion: 1, operations: [{ operation: "update_concept", id: "concept-alpha", name: "Edited" }] };
@@ -46,8 +47,22 @@ describe("course model API routes", () => {
     expect(created.status).toBe(201);
     expect(read.status).toBe(200);
     expect(revised.status).toBe(201);
-    expect(synthesis.synthesizeCourseModel).toHaveBeenCalledWith("project-alpha", { discardTeacherEdits: false });
+    expect(synthesis.synthesizeCourseModel).toHaveBeenCalledWith("project-alpha");
     expect(synthesis.saveTeacherCourseModelRevision).toHaveBeenCalledWith("project-alpha", patch);
+  });
+
+  it("does not regenerate an existing course model", async () => {
+    const route = await import("@/app/api/projects/[projectId]/synthesize/route");
+
+    const response = await route.POST(
+      new Request("http://localhost/api/projects/project-alpha/synthesize", {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ projectId: "project-alpha" }) },
+    );
+
+    expect(response.status).toBe(409);
+    expect(synthesis.synthesizeCourseModel).not.toHaveBeenCalled();
   });
 
   it("maps malformed correction JSON to the canonical 422 response", async () => {
