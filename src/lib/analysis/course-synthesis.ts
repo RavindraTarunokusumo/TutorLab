@@ -506,6 +506,7 @@ export async function synthesizeCourseModel(
       discardTeacherEdits: options?.discardTeacherEdits,
     });
   } catch (error) {
+    console.error("Course-model synthesis failed", { projectId, error });
     if (
       error instanceof CourseModelVersionConflict ||
       (typeof error === "object" &&

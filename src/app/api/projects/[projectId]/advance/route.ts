@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { CourseSynthesisError, synthesizeCourseModel } from "@/lib/analysis/course-synthesis";
 import { getProjectRepository } from "@/lib/projects/repository";
 import { ProjectAccessError, requireProjectAccess } from "@/lib/projects/service";
 import { getSourceRepository } from "@/lib/sources/repository";
@@ -25,6 +26,7 @@ export async function POST(
         { status: 409 },
       );
     }
+    await synthesizeCourseModel(projectId);
     const project = await getProjectRepository().updateStage(
       projectId,
       "course_model",
@@ -36,6 +38,9 @@ export async function POST(
         { error: error.status === 401 ? "Unauthorized" : "Not found" },
         { status: error.status },
       );
+    }
+    if (error instanceof CourseSynthesisError) {
+      return NextResponse.json({ error: error.message }, { status: 422 });
     }
     throw error;
   }
