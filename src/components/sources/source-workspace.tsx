@@ -445,7 +445,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
           label="Extracted tokens"
           value={summary.tokens}
           limit={DEFAULT_WORKSPACE_BUDGET.maxExtractedTokens}
-          detail={`${summary.tokens.toLocaleString()} known of 2,000,000${summary.pendingTokenSources ? ` · ${summary.pendingTokenSources} source${summary.pendingTokenSources === 1 ? "" : "s"} pending measurement` : ""}`}
+          detail={`${summary.tokens.toLocaleString()} known of ${DEFAULT_WORKSPACE_BUDGET.maxExtractedTokens.toLocaleString()}${summary.pendingTokenSources ? ` · ${summary.pendingTokenSources} source${summary.pendingTokenSources === 1 ? "" : "s"} pending measurement` : ""}`}
         />
       </section>
 

@@ -252,6 +252,6 @@ describe("SourceWorkspace", () => {
     render(<SourceWorkspace projectId="project-alpha" />);
 
     expect(await screen.findByText("empty-outline.txt")).toBeInTheDocument();
-    expect(screen.getByText("0 known of 2,000,000 · 1 source pending measurement")).toBeInTheDocument();
+    expect(screen.getByText("0 known of 1,000,000 · 1 source pending measurement")).toBeInTheDocument();
   });
 });
