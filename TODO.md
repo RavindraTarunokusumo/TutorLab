@@ -25,6 +25,8 @@ Rules:
   - [x] Preserve fixture-mode labels for deterministic E2E compatibility (`19bdd18`)
   - [x] Verify the homepage unit test, lint, and typecheck (`19bdd18`)
 
+- [x] Task 3 — Accept successful teaching-brief responses that include server metadata (`8decb3e`)
+
 ### Day 3–4 tutor design and evaluation milestone
 
 - [x] Task 1 — Define tutor and evaluation contracts (`230695e`)
