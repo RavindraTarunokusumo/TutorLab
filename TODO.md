@@ -21,6 +21,10 @@ Rules:
   - [x] Keep refresh/retry metric finalization deterministic and preserve non-PDF ingestion behavior (`8d176bc`)
   - [x] Validate lint, typecheck, and 234 tests; fixture E2E is blocked before upload by its pre-existing source-list loading wait, and build is blocked after compilation by the pre-existing chat route export (`8d176bc`)
 
+- [x] Task 2 — Show the project launcher on the normal homepage
+  - [x] Preserve fixture-mode labels for deterministic E2E compatibility
+  - [x] Verify the homepage unit test, lint, and typecheck
+
 ### Day 3–4 tutor design and evaluation milestone
 
 - [x] Task 1 — Define tutor and evaluation contracts (`230695e`)
