@@ -1,0 +1,1 @@
+PDF and DOCX extraction metrics now come directly from the uploaded bytes, avoiding restricted downloads of assistant-purpose provider files.
