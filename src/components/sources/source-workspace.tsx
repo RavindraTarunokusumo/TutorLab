@@ -141,6 +141,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
   const lifecycleGeneration = useRef(0);
   const sourceRequestSequence = useRef(0);
   const sourceRequestController = useRef<AbortController | null>(null);
+  const sourceRefreshInFlight = useRef(false);
 
   if (activeProjectId.current !== projectId) {
     activeProjectId.current = projectId;
@@ -222,23 +223,29 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
     if (!sources.some(sourceIsActive)) return;
     let cancelled = false;
     const refreshActiveSources = async () => {
+      if (sourceRefreshInFlight.current) return;
+      sourceRefreshInFlight.current = true;
       const activeSources = sources.filter(sourceIsActive);
-      const refreshed = await Promise.all(
-        activeSources.map(async (source) => {
-          try {
-            return await refreshSource(projectId, source.id);
-          } catch {
-            return null;
-          }
-        }),
-      );
-      if (cancelled) return;
-      setSources((current) =>
-        refreshed.reduce(
-          (next, source) => (source ? replaceSource(next, source) : next),
-          current,
-        ),
-      );
+      try {
+        const refreshed = await Promise.all(
+          activeSources.map(async (source) => {
+            try {
+              return await refreshSource(projectId, source.id);
+            } catch {
+              return null;
+            }
+          }),
+        );
+        if (cancelled) return;
+        setSources((current) =>
+          refreshed.reduce(
+            (next, source) => (source ? replaceSource(next, source) : next),
+            current,
+          ),
+        );
+      } finally {
+        sourceRefreshInFlight.current = false;
+      }
     };
     const interval = window.setInterval(() => void refreshActiveSources(), 3_000);
     return () => {
