@@ -1,0 +1,1 @@
+Document analysis now supplies OpenAI strict schemas with required nullable optional fields and strips returned optional nulls before validation.
