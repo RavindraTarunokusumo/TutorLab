@@ -81,7 +81,7 @@ function promptFor(
 async function requestStructuredOutput(prompt: string): Promise<unknown> {
   const client = getOpenAIClient();
   const response = await client.responses.create({
-    model: "gpt-5.6",
+    model: "gpt-4.1-mini",
     input: prompt,
     text: { format: responseFormat() },
   });
