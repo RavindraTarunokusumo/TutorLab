@@ -1,0 +1,1 @@
+Task: PR #2 final review remediation\nSummary: Keeps the report route reachable for an active tutor before the first evaluation exists.\nDocs: N/A\nTODO: Day 3–4 final review\nValidation: npm run lint; npm run typecheck; npm run test:run -- --maxWorkers=1 (232 passing)
