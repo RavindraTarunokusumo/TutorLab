@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check } from "lucide-react";
 import {
   DEFAULT_WORKSPACE_BUDGET,
   type SourceAuthority,
@@ -718,6 +719,9 @@ function SourceRow({
   onRemove: () => void;
 }) {
   const processing = source.processing.uploadStatus === "in_progress" || source.processing.extractionStatus === "in_progress";
+  const finished =
+    source.processing.uploadStatus === "ready" &&
+    source.processing.extractionStatus === "ready";
   return (
     <tr className="border-b last:border-0">
       <td className="px-5 py-4 align-top">
@@ -748,6 +752,10 @@ function SourceRow({
         {processing ? (
           <div className="flex min-h-12 items-center justify-center">
             <span aria-label="Processing" className="processing-ring" />
+          </div>
+        ) : finished ? (
+          <div className="flex min-h-12 items-center justify-center">
+            <Check aria-label="Processing complete" className="size-7 text-primary" strokeWidth={2.5} />
           </div>
         ) : (
           <ul className="space-y-1 text-xs">
