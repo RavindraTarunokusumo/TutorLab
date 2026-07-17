@@ -37,6 +37,8 @@ Rules:
 
 - [x] Task 8 — Prevent source polling from restarting on every status update (`86a0763`)
 
+- [x] Task 9 — Normalize optional document-analysis fields for OpenAI strict schemas (`a212723`)
+
 ### Day 3–4 tutor design and evaluation milestone
 
 - [x] Task 1 — Define tutor and evaluation contracts (`230695e`)
