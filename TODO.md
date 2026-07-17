@@ -15,11 +15,11 @@ Rules:
 
 ### Source ingestion metric correction
 
-- [x] Task 1 — Derive PDF page and extracted-token metrics from the uploaded PDF rather than vector-store parsed-content boundaries
-  - [x] Add a regression test for a small PDF whose provider content contains inflated form-feed/repeated chunks
-  - [x] Extract DOCX text from the original upload and keep its page total explicitly unknown
-  - [x] Keep refresh/retry metric finalization deterministic and preserve non-PDF ingestion behavior
-  - [x] Validate lint, typecheck, and 234 tests; fixture E2E is blocked before upload by its pre-existing source-list loading wait, and build is blocked after compilation by the pre-existing chat route export
+- [x] Task 1 — Derive PDF page and extracted-token metrics from the uploaded PDF rather than vector-store parsed-content boundaries (`8d176bc`)
+  - [x] Add a regression test for a small PDF whose provider content contains inflated form-feed/repeated chunks (`8d176bc`)
+  - [x] Extract DOCX text from the original upload and keep its page total explicitly unknown (`8d176bc`)
+  - [x] Keep refresh/retry metric finalization deterministic and preserve non-PDF ingestion behavior (`8d176bc`)
+  - [x] Validate lint, typecheck, and 234 tests; fixture E2E is blocked before upload by its pre-existing source-list loading wait, and build is blocked after compilation by the pre-existing chat route export (`8d176bc`)
 
 ### Day 3–4 tutor design and evaluation milestone
 
