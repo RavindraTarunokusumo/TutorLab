@@ -1,0 +1,5 @@
+Task: OpenRouter provider configuration
+Summary: Added isolated OpenRouter environment and client configuration while preserving OpenAI ingestion.
+Docs: docs/superpowers/specs/2026-07-17-openrouter-testing-design.md
+TODO: OpenRouter testing branch Task 1
+Validation: focused env/client tests; lint; typecheck; full Vitest suite with one timing-flaky test passing in isolation
