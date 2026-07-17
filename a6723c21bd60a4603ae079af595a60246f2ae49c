@@ -1,0 +1,5 @@
+Task: OpenRouter workload routing
+Summary: Routed generation adapters through approved smart and lightweight OpenRouter models.
+Docs: docs/superpowers/specs/2026-07-17-openrouter-testing-design.md
+TODO: OpenRouter testing branch Task 2
+Validation: focused AI adapter tests; typecheck; lint; full Vitest suite
