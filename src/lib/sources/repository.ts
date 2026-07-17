@@ -387,43 +387,42 @@ export function getSourceRepository(): SourceRepository {
       return sources.map(toSourceDocument);
     },
     async updateIngestion(projectId, sourceId, update) {
-      return inLockedProjectTransaction(projectId, async (transaction) => {
-        const sources = await transaction.sourceDocument.findMany({
-          where: { projectId },
-          select: sourceSelection,
-        });
-        const source = sources.find((item) => item.id === sourceId);
-        if (!source) {
-          throw new Error("Source not found");
-        }
-        const updated = await transaction.sourceDocument.update({
-          where: { id: sourceId },
-          data: {
-            ...(update.openaiFileId === undefined
-              ? {}
-              : { openaiFileId: update.openaiFileId }),
-            ...(update.uploadStatus === undefined
-              ? {}
-              : { uploadStatus: update.uploadStatus }),
-            ...(update.extractionStatus === undefined
-              ? {}
-              : { extractionStatus: update.extractionStatus }),
-            ...(update.analysisStatus === undefined
-              ? {}
-              : { analysisStatus: update.analysisStatus }),
-            ...(update.processingError === undefined
-              ? {}
-              : { processingError: update.processingError }),
-            ...(update.requiresExtractionMetrics === undefined
-              ? {}
-              : {
-                  requiresExtractionMetrics: update.requiresExtractionMetrics,
-                }),
-          },
-          select: sourceSelection,
-        });
-        return toProviderSourceDocument(updated);
+      const updated = await db.sourceDocument.updateMany({
+        where: { id: sourceId, projectId },
+        data: {
+          ...(update.openaiFileId === undefined
+            ? {}
+            : { openaiFileId: update.openaiFileId }),
+          ...(update.uploadStatus === undefined
+            ? {}
+            : { uploadStatus: update.uploadStatus }),
+          ...(update.extractionStatus === undefined
+            ? {}
+            : { extractionStatus: update.extractionStatus }),
+          ...(update.analysisStatus === undefined
+            ? {}
+            : { analysisStatus: update.analysisStatus }),
+          ...(update.processingError === undefined
+            ? {}
+            : { processingError: update.processingError }),
+          ...(update.requiresExtractionMetrics === undefined
+            ? {}
+            : {
+                requiresExtractionMetrics: update.requiresExtractionMetrics,
+              }),
+        },
       });
+      if (updated.count !== 1) {
+        throw new Error("Source not found");
+      }
+      const source = await db.sourceDocument.findFirst({
+        where: { id: sourceId, projectId },
+        select: sourceSelection,
+      });
+      if (!source) {
+        throw new Error("Source not found");
+      }
+      return toProviderSourceDocument(source);
     },
     async delete(projectId, sourceId) {
       await inLockedProjectTransaction(projectId, async (transaction) => {

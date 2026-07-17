@@ -82,14 +82,15 @@ export function getDocumentAnalysisRepository(): DocumentAnalysisRepository {
       return result ? toAnalysis(result) : null;
     },
     async save(input) {
-      const parsed = DocumentAnalysisSchema.parse(input);
+      const { analysisProfile, ...artifact } = input;
+      const parsed = DocumentAnalysisSchema.parse(artifact);
       const record = await db.documentAnalysis.upsert({
         where: {
           projectId_documentHash_schemaVersion_analysisProfile: {
             projectId: parsed.projectId,
             documentHash: parsed.documentHash,
             schemaVersion: parsed.schemaVersion,
-            analysisProfile: input.analysisProfile,
+            analysisProfile,
           },
         },
         create: {
@@ -98,7 +99,7 @@ export function getDocumentAnalysisRepository(): DocumentAnalysisRepository {
           documentId: parsed.documentId,
           documentHash: parsed.documentHash,
           schemaVersion: parsed.schemaVersion,
-          analysisProfile: input.analysisProfile,
+          analysisProfile,
           artifact: parsed as Prisma.InputJsonValue,
         },
         update: {
@@ -266,6 +267,11 @@ async function runStructuredAnalysis(
     );
     return saved;
   } catch (error) {
+    console.error("Document analysis failed", {
+      sourceId: record.source.id,
+      sourceName: record.source.name,
+      error,
+    });
     await deps.sourceRepository.updateIngestion(
       record.source.projectId,
       record.source.id,
