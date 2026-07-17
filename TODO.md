@@ -33,6 +33,8 @@ Rules:
 
 - [x] Task 6 — Poll in-progress source uploads until extraction metrics are finalized (`8441200`)
 
+- [ ] Task 7 — Derive PDF and DOCX metrics from upload bytes before provider indexing
+
 ### Day 3–4 tutor design and evaluation milestone
 
 - [x] Task 1 — Define tutor and evaluation contracts (`230695e`)
