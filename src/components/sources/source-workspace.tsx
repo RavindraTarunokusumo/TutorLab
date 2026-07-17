@@ -746,7 +746,9 @@ function SourceRow({
       </td>
       <td className="px-5 py-4 align-top">
         {processing ? (
-          <span aria-label="Processing" className="processing-ring" />
+          <div className="flex min-h-12 items-center justify-center">
+            <span aria-label="Processing" className="processing-ring" />
+          </div>
         ) : (
           <ul className="space-y-1 text-xs">
             <li>Upload: {formatStatus(source.processing.uploadStatus)}</li>
