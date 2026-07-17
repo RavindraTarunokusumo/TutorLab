@@ -33,7 +33,9 @@ Rules:
 
 - [x] Task 6 — Poll in-progress source uploads until extraction metrics are finalized (`8441200`)
 
-- [ ] Task 7 — Derive PDF and DOCX metrics from upload bytes before provider indexing
+- [x] Task 7 — Derive PDF and DOCX metrics from upload bytes before provider indexing (`7cfd759`)
+
+- [x] Task 8 — Prevent source polling from restarting on every status update (`86a0763`)
 
 ### Day 3–4 tutor design and evaluation milestone
 
