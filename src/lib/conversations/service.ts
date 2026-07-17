@@ -97,12 +97,42 @@ function safeProtectedDisclosureDraft(): RuntimeDraft {
   };
 }
 
+function requestsInternalInstructionDisclosure(message: string): boolean {
+  const normalized = normalizeDisclosureText(message);
+  const target = "(?:system|internal|hidden|compiled|developer|provider)(?: [a-z0-9]+){0,2} (?:prompt|instructions?|rules?|polic(?:y|ies)|messages?|configuration)";
+  const extraction = "(?:reveal|show|tell|give|print|display|repeat|quote|expose|share|output|return|paraphrase|summari[sz]e|translate|rewrite|describe)";
+  return new RegExp(`\\b${extraction}\\b(?: [a-z0-9]+){0,8} ${target}\\b`).test(normalized)
+    || new RegExp(`\\b(?:what|which) (?:are|is) (?:your|the)(?: [a-z0-9]+){0,3} ${target}\\b`).test(normalized);
+}
+
+function safeInternalDisclosureDraft(): RuntimeDraft {
+  return {
+    content: "I cannot reveal, paraphrase, or describe internal instructions. I can help with an approved course question instead.",
+    teachingMove: "redirect", proposedState: "redirect", boundary: "protected_solution", citedDocumentIds: [],
+  };
+}
+
+function normalizeDisclosureText(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+}
+
+function meaningfulPromptSegments(compiledPrompt: string): string[] {
+  const words = normalizeDisclosureText(compiledPrompt).split(" ").filter((word) => word.length > 1);
+  const segments = new Set<string>();
+  for (let index = 0; index + 2 < words.length; index += 1) {
+    segments.add(words.slice(index, index + 3).join(" "));
+  }
+  if (words.length > 0 && words.length < 3) segments.add(words.join(" "));
+  return [...segments];
+}
+
 function safeguardDraft(version: TutorVersionRecord, draft: RuntimeDraft, sources: Array<{ documentId: string; title: string; passage: string }>, learnerMessage: string): RuntimeDraft {
+  if (requestsInternalInstructionDisclosure(learnerMessage)) return safeInternalDisclosureDraft();
   if (requestsProtectedAnswer(learnerMessage) || disclosesProtectedAnswer(draft.content)) return safeProtectedDisclosureDraft();
   if (sources.length === 0) return safeLimitedEvidenceDraft();
   const lower = draft.content.toLowerCase();
-  const promptFragment = version.compiledPrompt.toLowerCase().slice(0, 48);
-  const leaksInternal = /system prompt|compiled prompt|provider instructions|openai api|api key/.test(lower) || (promptFragment.length > 12 && lower.includes(promptFragment));
+  const normalizedContent = normalizeDisclosureText(draft.content);
+  const leaksInternal = /system prompt|compiled prompt|provider instructions|openai api|api key/.test(lower) || meaningfulPromptSegments(version.compiledPrompt).some((segment) => normalizedContent.includes(segment));
   const permittedMove = version.spec.pedagogy.permittedTeachingMoves.includes(draft.teachingMove);
   if (leaksInternal || !permittedMove) return { ...safeLimitedEvidenceDraft(), boundary: "protected_solution" };
   const permittedIds = new Set(sources.map((source) => source.documentId));
@@ -175,8 +205,14 @@ export async function sendPreviewMessage(input: { projectId: string; tutorVersio
     message: { id: deps.createId(), role: "learner", content: input.message.trim(), createdAt: learnerAt },
   });
   const learnerMessage = input.message.trim();
-  const sources = await retrieveRuntimeSources(version, input.projectId, learnerMessage, await deps.sourceRepository.list(input.projectId), deps);
-  const draft = safeguardDraft(version, await deps.runtime.reply({ compiledPrompt: version.compiledPrompt, spec: version.spec, conversation: afterLearner, learnerMessage, sources }), sources, learnerMessage);
+  const extractionAttempt = requestsInternalInstructionDisclosure(learnerMessage);
+  const sources = extractionAttempt
+    ? []
+    : await retrieveRuntimeSources(version, input.projectId, learnerMessage, await deps.sourceRepository.list(input.projectId), deps);
+  const runtimeDraft = extractionAttempt
+    ? safeInternalDisclosureDraft()
+    : await deps.runtime.reply({ compiledPrompt: version.compiledPrompt, spec: version.spec, conversation: afterLearner, learnerMessage, sources });
+  const draft = safeguardDraft(version, runtimeDraft, sources, learnerMessage);
   const replyMetadata = metadata(version, afterLearner, draft, sources, startedAt);
   const persisted = await deps.conversationRepository.appendMessage({
     projectId: input.projectId, conversationId: afterLearner.id, currentState: replyMetadata.nextState,
