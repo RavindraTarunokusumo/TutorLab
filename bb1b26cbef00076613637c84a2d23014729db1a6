@@ -1,0 +1,1 @@
+Task: Day 3–4 final review remediation\nSummary: Blocks prompt-extraction attempts and compiled-instruction fragments before preview persistence or delivery.\nDocs: docs/superpowers/specs/2026-07-16-day-3-day-4-design.md\nTODO: Day 3–4 final review\nValidation: npm run lint; npm run typecheck; npm run test:run -- --maxWorkers=1 (227 passing); fixture E2E 1/1 passing
