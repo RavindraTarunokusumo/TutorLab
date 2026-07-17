@@ -6,7 +6,7 @@ import {
 } from "@/lib/schemas/project";
 import { TeachingBriefSchema } from "@/lib/schemas/teaching-brief";
 
-const ClientProjectSnapshotSchema = z.strictObject({
+const ClientProjectSnapshotSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   stage: ProjectStageSchema,
