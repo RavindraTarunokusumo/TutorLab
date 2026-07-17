@@ -1,0 +1,1 @@
+PDF uploads now load pdfjs-dist as a native server dependency instead of bundling it through the development server.
