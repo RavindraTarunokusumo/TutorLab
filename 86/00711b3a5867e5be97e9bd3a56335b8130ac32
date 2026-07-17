@@ -1,0 +1,1 @@
+Source processing now uses the provided masked circular loader in the application primary color.
