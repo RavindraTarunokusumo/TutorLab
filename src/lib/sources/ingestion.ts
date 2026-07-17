@@ -228,6 +228,19 @@ async function finalizeCompletedIndexing(
   originalContent: string | undefined,
   dependencies: SourceIngestionDependencies,
 ): Promise<SourceDocument> {
+  const stored = await dependencies.sourceRepository.findById(projectId, sourceId);
+  const storedMetrics = stored?.source.processing;
+  if (
+    storedMetrics?.pageCount !== undefined &&
+    storedMetrics.extractedTokenCount !== undefined
+  ) {
+    return dependencies.sourceRepository.recordExtractionMetrics(projectId, sourceId, {
+      pageCount: storedMetrics.pageCount,
+      extractedTokenCount: storedMetrics.extractedTokenCount,
+      finalized: true,
+      requiresExtractionMetrics: false,
+    });
+  }
   const extractedContent = originalContent ?? await dependencies.provider.getExtractedText(
     vectorStoreId,
     openaiFileId,
@@ -291,11 +304,15 @@ async function pollIndexing(
 }
 
 async function extractOriginalContent(file: SourceUploadFile): Promise<string | undefined> {
-  if (file.mimeType === "application/pdf") {
-    return extractPdfText(file.bytes);
-  }
-  if (file.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-    return extractDocxText(file.bytes);
+  try {
+    if (file.mimeType === "application/pdf") {
+      return await extractPdfText(file.bytes);
+    }
+    if (file.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+      return await extractDocxText(file.bytes);
+    }
+  } catch {
+    return undefined;
   }
   return undefined;
 }
@@ -385,6 +402,12 @@ export async function ingestSource(
   const dependencies = withDependencies(overrides);
   const parsedMetadata = parseSourceUploadMetadata(metadata);
   const originalContent = await extractOriginalContent(file);
+  const pageCount = originalContent === undefined
+    ? undefined
+    : extractedPageCountFromContent(originalContent);
+  const extractedTokenCount = originalContent === undefined
+    ? undefined
+    : extractedTokenCountFromContent(originalContent);
   const usage = await dependencies.sourceRepository.getWorkspaceUsage(projectId);
   const source = await createSourceMetadata({
     id: randomUUID(),
@@ -393,6 +416,8 @@ export async function ingestSource(
     mimeType: file.mimeType,
     bytes: file.bytes,
     usage,
+    ...(pageCount === undefined ? {} : { pageCount }),
+    ...(extractedTokenCount === undefined ? {} : { extractedTokenCount }),
     ...parsedMetadata,
   });
   await dependencies.sourceRepository.create(source);
@@ -467,7 +492,23 @@ export async function listSources(
   projectId: string,
   overrides?: Partial<SourceIngestionDependencies>,
 ): Promise<SourceDocument[]> {
-  return withDependencies(overrides).sourceRepository.list(projectId);
+  const dependencies = withDependencies(overrides);
+  const sources = await dependencies.sourceRepository.list(projectId);
+  return Promise.all(
+    sources.map(async (source) => {
+      if (
+        source.processing.uploadStatus !== "ready" ||
+        source.processing.extractionStatus !== "in_progress"
+      ) {
+        return source;
+      }
+      try {
+        return await refreshSourceProcessing(source.id, dependencies);
+      } catch {
+        return source;
+      }
+    }),
+  );
 }
 
 export async function removeSource(
