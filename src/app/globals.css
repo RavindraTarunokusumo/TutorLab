@@ -61,3 +61,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+.processing-indicator {
+  width: 0.75rem;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  background: var(--primary);
+  animation: processing-indicator-pulse 1s infinite ease-in-out;
+}
+
+@keyframes processing-indicator-pulse {
+  50% {
+    opacity: 0.45;
+    transform: scale(0.72);
+  }
+}
