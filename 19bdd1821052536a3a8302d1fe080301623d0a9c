@@ -1,0 +1,5 @@
+Task: Show project launcher in normal mode
+Summary: Remove the fixture-only homepage gate so normal servers always render the real project-creation UI, with regression coverage.
+Docs: docs/changelog.md
+TODO: Source ingestion metric correction / Task 2
+Validation: home-page unit test; npm run lint; npm run typecheck
