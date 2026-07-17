@@ -30,9 +30,8 @@ export function isProjectStageReachable(
         return artifacts.hasCourseModel;
       case "build":
       case "preview":
-        return artifacts.hasActiveTutor;
       case "report":
-        return artifacts.hasActiveTutor && artifacts.hasEvaluation;
+        return artifacts.hasActiveTutor;
     }
   }
 
