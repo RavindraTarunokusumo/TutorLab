@@ -1,0 +1,5 @@
+Task: OpenRouter branch documentation and validation
+Summary: Documented provider responsibilities and environment configuration.
+Docs: .env.example, docs/architecture.md, docs/commands.md
+TODO: OpenRouter testing branch Task 3
+Validation: lint and typecheck passed; 234 Vitest tests passed with one timing retry; fixture browser gate blocked by existing worktree root-resolution issue
