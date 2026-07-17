@@ -1,0 +1,5 @@
+Task: Document source metric correction
+Summary: Record the PDF and DOCX extraction behavior change in the project changelog.
+Docs: docs/changelog.md
+TODO: Source ingestion metric correction / Task 1
+Validation: git diff --cached --check
