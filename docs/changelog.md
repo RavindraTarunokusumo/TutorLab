@@ -2,6 +2,12 @@
 
 Record notable behavior, architecture, API, persistence, or workflow changes.
 
+## 2026-07-17 — Original-document extraction metrics
+
+- PDF page and token totals now come from PDF.js extraction of the original upload rather than vector-store retrieval chunks.
+- DOCX token totals now come from the original document; page totals use saved document metadata when available and otherwise remain unknown.
+- Document analysis uses the same canonical PDF/DOCX text as workspace budgeting.
+
 ## 2026-07-16 — Day 3–4 tutor build and evaluation
 
 - Added teacher-selected, immutable tutor versions; grounded preview conversations; and persisted six-scenario evaluation runs.
