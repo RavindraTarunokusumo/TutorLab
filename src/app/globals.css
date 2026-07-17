@@ -62,17 +62,17 @@
   }
 }
 
-.processing-indicator {
-  width: 0.75rem;
+.processing-ring {
+  display: inline-block;
+  width: 1.5rem;
   aspect-ratio: 1;
   border-radius: 9999px;
-  background: var(--primary);
-  animation: processing-indicator-pulse 1s infinite ease-in-out;
+  border: 3px dashed var(--primary);
+  animation: processing-ring-spin 1s infinite linear;
 }
 
-@keyframes processing-indicator-pulse {
-  50% {
-    opacity: 0.45;
-    transform: scale(0.72);
+@keyframes processing-ring-spin {
+  to {
+    transform: rotate(1turn);
   }
 }

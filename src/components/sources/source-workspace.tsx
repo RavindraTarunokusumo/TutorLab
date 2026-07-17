@@ -745,18 +745,22 @@ function SourceRow({
         )}
       </td>
       <td className="px-5 py-4 align-top">
-        <ul className="space-y-1 text-xs">
-          <li className="flex items-center gap-2">{processing && <span aria-label="Processing" className="processing-indicator" />} Upload: {formatStatus(source.processing.uploadStatus)}</li>
-          <li className="flex items-center gap-2">
-            Extraction: {formatStatus(source.processing.extractionStatus)}
-            {source.processing.pageCount
-              ? ` · ${source.processing.pageCount} pages`
-              : ""}
-          </li>
-          {source.processing.error && (
-            <li className="text-destructive">{source.processing.error}</li>
-          )}
-        </ul>
+        {processing ? (
+          <span aria-label="Processing" className="processing-ring" />
+        ) : (
+          <ul className="space-y-1 text-xs">
+            <li>Upload: {formatStatus(source.processing.uploadStatus)}</li>
+            <li>
+              Extraction: {formatStatus(source.processing.extractionStatus)}
+              {source.processing.pageCount
+                ? ` · ${source.processing.pageCount} pages`
+                : ""}
+            </li>
+            {source.processing.error && (
+              <li className="text-destructive">{source.processing.error}</li>
+            )}
+          </ul>
+        )}
       </td>
       <td className="px-5 py-4 align-top">
         <div>
