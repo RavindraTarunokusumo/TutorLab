@@ -10,10 +10,6 @@ import {
   DEFAULT_DOCUMENT_ANALYSIS_PROFILE,
   DOCUMENT_ANALYSIS_SCHEMA_VERSION,
 } from "@/lib/ai/prompts/document-analyst";
-import {
-  getOpenAIFileProvider,
-  type OpenAIFileProvider,
-} from "@/lib/ai/openai-files";
 import { getDb } from "@/lib/db";
 import {
   getFixtureDocumentAnalysisRepository,
@@ -131,7 +127,6 @@ type Dependencies = {
   sourceRepository: SourceRepository;
   analysisRepository: DocumentAnalysisRepository;
   projectRepository: ProjectRepository;
-  provider: OpenAIFileProvider;
   analyst: DocumentAnalyst;
   jobRepository: PipelineJobRepository;
   now: () => Date;
@@ -143,7 +138,6 @@ function dependencies(overrides?: Partial<Dependencies>): Dependencies {
     analysisRepository:
       overrides?.analysisRepository ?? getDocumentAnalysisRepository(),
     projectRepository: overrides?.projectRepository ?? getProjectRepository(),
-    provider: overrides?.provider ?? getOpenAIFileProvider(),
     analyst: overrides?.analyst ?? getDocumentAnalyst(),
     jobRepository: overrides?.jobRepository ?? getPipelineJobRepository(),
     now: overrides?.now ?? (() => new Date()),
@@ -210,20 +204,6 @@ async function runStructuredAnalysis(
     },
   );
   try {
-    const vectorStoreId = await deps.projectRepository.findVectorStoreId(
-      record.source.projectId,
-    );
-    if (!vectorStoreId) {
-      throw new DocumentAnalysisError("SOURCE_NOT_READY");
-    }
-    const documentText = await deps.provider.getExtractedText(
-      vectorStoreId,
-      record.openaiFileId!,
-      record.source.mimeType,
-    );
-    if (!documentText) {
-      throw new DocumentAnalysisError("SOURCE_NOT_READY");
-    }
     const project = await deps.projectRepository.findById(
       record.source.projectId,
     );
@@ -233,7 +213,7 @@ async function runStructuredAnalysis(
     const input = {
       source: record.source,
       teachingBrief: project.teachingBrief,
-      documentText,
+      openaiFileId: record.openaiFileId!,
       analysisId: randomUUID(),
       analyzedAt: deps.now().toISOString(),
     };

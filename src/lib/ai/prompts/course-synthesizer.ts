@@ -1,7 +1,7 @@
 import type { CourseModel, DocumentAnalysis, SourceDocument, TeachingBriefPatch } from "@/lib/schemas";
 
 export const COURSE_MODEL_SCHEMA_VERSION = "0.2" as const;
-export const COURSE_SYNTHESIS_PROFILE = "course-model-v1";
+export const COURSE_SYNTHESIS_PROFILE = "course-model-v2-vision";
 export const COURSE_SYNTHESIS_DIRECT_INPUT_LIMIT = 100_000;
 export const COURSE_SYNTHESIS_SERIALIZED_PROMPT_BUDGET = 100_000;
 

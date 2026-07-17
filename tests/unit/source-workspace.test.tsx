@@ -79,7 +79,7 @@ describe("SourceWorkspace", () => {
     expect(screen.getByText(/Student excerpts are restricted/i)).toBeInTheDocument();
     expect(screen.getByLabelText("Choose source files")).toHaveAttribute(
       "accept",
-      ".pdf,.docx,.txt,.md,.json",
+      ".pdf",
     );
     expect(screen.queryByText(/worked solution body/i)).not.toBeInTheDocument();
   });
@@ -94,8 +94,8 @@ describe("SourceWorkspace", () => {
 
     render(<SourceWorkspace projectId="project-alpha" />);
     await screen.findByText("No course sources yet.");
-    const file = new File(["course notes"], "notes.md", {
-      type: "text/markdown",
+    const file = new File(["course notes"], "notes.pdf", {
+      type: "application/pdf",
     });
     await user.upload(screen.getByLabelText("Choose source files"), file);
     await user.selectOptions(screen.getByLabelText("Material role"), "lecture");
@@ -144,7 +144,7 @@ describe("SourceWorkspace", () => {
     await screen.findByText("No course sources yet.");
     await user.upload(
       screen.getByLabelText("Choose source files"),
-      new File(["course notes"], "alpha-notes.md", { type: "text/markdown" }),
+      new File(["course notes"], "alpha-notes.pdf", { type: "application/pdf" }),
     );
     await user.click(screen.getByRole("button", { name: "Upload 1 file" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));

@@ -19,14 +19,8 @@ import {
   uploadSourceFile,
 } from "@/lib/sources/client";
 
-const acceptedExtensions = [".pdf", ".docx", ".txt", ".md", ".json"];
-const acceptedTypes = new Set([
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "text/plain",
-  "text/markdown",
-  "application/json",
-]);
+const acceptedExtensions = [".pdf"];
+const acceptedTypes = new Set(["application/pdf"]);
 
 const roleOptions: ReadonlyArray<{ value: SourceRole; label: string }> = [
   { value: "syllabus", label: "Syllabus or learning objectives" },
@@ -458,8 +452,8 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
             Upload course material
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            PDF, DOCX, TXT, Markdown, or JSON. Up to 50 MB each; page totals are
-            measured after extraction.
+            PDF only. Up to 50 MB each; text and rendered page images are used
+            during analysis.
           </p>
         </div>
         <label className="grid gap-2 text-sm font-medium">
@@ -662,7 +656,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
             <p className="mt-1 text-sm text-muted-foreground">Analyze ready course materials after uploads and extraction finish.</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button type="button" disabled={busy || analyzableSources.length === 0 || analyzedSources.length === analyzableSources.length} onClick={() => void analyzeAll()} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Analyze ready sources</button>
+            <button type="button" disabled={busy || analyzableSources.length === 0} onClick={() => void analyzeAll()} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Analyze ready sources</button>
             <button type="button" disabled={busy || analyzableSources.length === 0 || analyzedSources.length !== analyzableSources.length} onClick={() => void continueToCourseModel()} className="rounded-md border border-primary px-4 py-2 text-sm font-medium text-primary disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Next: Course Model</button>
           </div>
         </div>

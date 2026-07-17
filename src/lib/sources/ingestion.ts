@@ -25,7 +25,6 @@ import {
   extractedPageCountFromContent,
   extractedTokenCountFromContent,
 } from "./extraction-metrics";
-import { extractDocxText } from "./docx-extraction";
 import { extractPdfText } from "./pdf-extraction";
 import { createSourceMetadata, SourceValidationError } from "./validation";
 
@@ -308,9 +307,6 @@ async function extractOriginalContent(file: SourceUploadFile): Promise<string | 
     if (file.mimeType === "application/pdf") {
       return await extractPdfText(file.bytes);
     }
-    if (file.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-      return await extractDocxText(file.bytes);
-    }
   } catch {
     return undefined;
   }
@@ -424,7 +420,6 @@ export async function ingestSource(
 
   let uploadedId: string | undefined;
   try {
-    const vectorStoreId = await ensureVectorStore(projectId, dependencies);
     const uploaded = await dependencies.provider.uploadFile(file);
     uploadedId = uploaded.id;
     await dependencies.sourceRepository.updateIngestion(projectId, source.id, {
@@ -433,6 +428,25 @@ export async function ingestSource(
       extractionStatus: "in_progress",
       processingError: null,
     });
+    if (
+      file.mimeType === "application/pdf" &&
+      !parsedMetadata.permissions.useForRuntimeRetrieval
+    ) {
+      if (pageCount === undefined || extractedTokenCount === undefined) {
+        return markIndexingFailure(projectId, source.id, dependencies);
+      }
+      return dependencies.sourceRepository.recordExtractionMetrics(
+        projectId,
+        source.id,
+        {
+          pageCount,
+          extractedTokenCount,
+          finalized: true,
+          requiresExtractionMetrics: false,
+        },
+      );
+    }
+    const vectorStoreId = await ensureVectorStore(projectId, dependencies);
     await dependencies.provider.attachFile(vectorStoreId, uploadedId);
     return await pollIndexing(
       projectId,

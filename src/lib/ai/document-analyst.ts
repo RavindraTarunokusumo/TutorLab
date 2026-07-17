@@ -16,7 +16,7 @@ import {
 type DocumentAnalysisInput = {
   source: SourceDocument;
   teachingBrief: TeachingBriefPatch | Record<string, never>;
-  documentText: string;
+  openaiFileId: string;
   analysisId: string;
   analyzedAt: string;
 };
@@ -78,11 +78,22 @@ function promptFor(
   return `${instructions}\n\nRequired immutable envelope: ${JSON.stringify(requiredEnvelope)}${repairOutput === undefined ? "" : `\nPrevious invalid JSON (repair it without retaining unsupported content): ${JSON.stringify(repairOutput)}`}`;
 }
 
-async function requestStructuredOutput(prompt: string): Promise<unknown> {
+async function requestStructuredOutput(
+  prompt: string,
+  fileId: string,
+): Promise<unknown> {
   const client = getOpenAIClient();
   const response = await client.responses.create({
     model: "gpt-5.6-luna",
-    input: prompt,
+    input: [
+      {
+        role: "user",
+        content: [
+          { type: "input_file", file_id: fileId, detail: "high" },
+          { type: "input_text", text: prompt },
+        ],
+      },
+    ],
     text: { format: responseFormat() },
   });
   const stripOptionalNulls = (value: unknown): unknown => {
@@ -101,10 +112,13 @@ export function getDocumentAnalyst(): DocumentAnalyst {
   if (isFixtureRuntime()) return getFixtureDocumentAnalyst();
   return {
     analyze(input) {
-      return requestStructuredOutput(promptFor(input));
+      return requestStructuredOutput(promptFor(input), input.openaiFileId);
     },
     repair(input, invalidOutput) {
-      return requestStructuredOutput(promptFor(input, invalidOutput));
+      return requestStructuredOutput(
+        promptFor(input, invalidOutput),
+        input.openaiFileId,
+      );
     },
   };
 }

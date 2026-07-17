@@ -65,7 +65,7 @@ function setup() {
     }),
   };
   const sourceRepository = { list: vi.fn(async () => sources) } as unknown as SourceRepository;
-  const analysisRepository = { listForProject: vi.fn(async () => [{ analysis: analysis(), analysisProfile: "course-model-v1", createdAt: new Date("2026-07-15T12:00:00.000Z") }]) };
+  const analysisRepository = { listForProject: vi.fn(async () => [{ analysis: analysis(), analysisProfile: "course-model-v2-vision", createdAt: new Date("2026-07-15T12:00:00.000Z") }]) };
   const projectRepository = { findById: vi.fn(async () => ({ id: "project-alpha", teachingBrief: {} })) } as unknown as ProjectRepository;
   const synthesizer: CourseSynthesizer = { synthesize: vi.fn(async (input) => modelFor(input)), repair: vi.fn(async (input) => modelFor(input)) };
   return { sources, versions, courseModelRepository, sourceRepository, analysisRepository, projectRepository, synthesizer };
@@ -108,8 +108,8 @@ describe("compact course synthesis", () => {
     const current = analysis();
     const older = { ...analysis(), id: "analysis-older", summary: "older" };
     const selected = selectCurrentDocumentAnalyses([
-      { analysis: older, analysisProfile: "course-model-v1", createdAt: new Date("2026-07-15T11:00:00.000Z") },
-      { analysis: current, analysisProfile: "course-model-v1", createdAt: new Date("2026-07-15T12:00:00.000Z") },
+      { analysis: older, analysisProfile: "course-model-v2-vision", createdAt: new Date("2026-07-15T11:00:00.000Z") },
+      { analysis: current, analysisProfile: "course-model-v2-vision", createdAt: new Date("2026-07-15T12:00:00.000Z") },
       { analysis: { ...analysis(), id: "analysis-other" }, analysisProfile: "other-profile", createdAt: new Date("2026-07-15T13:00:00.000Z") },
     ]);
     expect(selected).toEqual([current]);

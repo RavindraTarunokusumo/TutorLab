@@ -450,7 +450,6 @@ describe("Day 1–2 fixture golden path", () => {
       sourceRepository: sources.repository,
       analysisRepository,
       projectRepository: projects,
-      provider,
       analyst,
       jobRepository: jobs,
       now: () => new Date("2026-07-15T12:02:00.000Z"),
@@ -511,7 +510,7 @@ describe("Day 1–2 fixture golden path", () => {
         listForProject: vi.fn(async () =>
           [...analyses.values()].map((analysis) => ({
             analysis,
-            analysisProfile: "course-model-v1",
+            analysisProfile: "course-model-v2-vision",
             createdAt: new Date("2026-07-15T12:03:00.000Z"),
           })),
         ),

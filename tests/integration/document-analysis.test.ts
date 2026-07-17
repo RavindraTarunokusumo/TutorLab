@@ -30,13 +30,13 @@ function source(id: string, hash?: string): ProviderSourceDocument {
     source: {
       id,
       projectId: "project-alpha",
-      name: `${id}.md`,
+      name: `${id}.pdf`,
       role: "lecture",
       authority: "course_authoritative",
       permissions,
       containsProtectedSolutions: false,
       contentHash,
-      mimeType: "text/markdown",
+      mimeType: "application/pdf",
       sizeBytes: 5,
       processing: { uploadStatus: "ready", extractionStatus: "ready", analysisStatus: "pending" },
     },
@@ -133,16 +133,15 @@ describe("per-document material analysis", () => {
     });
   });
 
-  it("reuses a content-hash and profile cache without sending source text to the model", async () => {
+  it("reuses a content-hash and profile cache without sending the file to the model", async () => {
     const record = source("source-cache");
     const deps = setup([record]);
-    const cached = analysisFor({ source: record.source, teachingBrief: {}, documentText: "", analysisId: "analysis-cache", analyzedAt: "2026-07-15T12:00:00.000Z" });
-    deps.cached.set(`${record.source.contentHash}:course-model-v1`, cached);
+    const cached = analysisFor({ source: record.source, teachingBrief: {}, openaiFileId: "file-source-cache", analysisId: "analysis-cache", analyzedAt: "2026-07-15T12:00:00.000Z" });
+    deps.cached.set(`${record.source.contentHash}:course-model-v2-vision`, cached);
 
     const result = await analyzeDocument("source-cache", undefined, deps);
 
     expect(result).toEqual(cached);
-    expect(deps.provider.getExtractedText).not.toHaveBeenCalled();
     expect(deps.analyst.analyze).not.toHaveBeenCalled();
     expect(record.source.processing.analysisStatus).toBe("ready");
   });

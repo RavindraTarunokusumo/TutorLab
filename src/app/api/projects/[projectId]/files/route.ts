@@ -77,6 +77,12 @@ export async function POST(
     ) {
       throw new TypeError("Missing source file");
     }
+    if (file.type !== "application/pdf" || !file.name.toLowerCase().endsWith(".pdf")) {
+      throw new SourceValidationError(
+        "UNSUPPORTED_FILE_TYPE",
+        "Only PDF files are supported.",
+      );
+    }
     if (file.size > DEFAULT_WORKSPACE_BUDGET.maxBytesPerFile) {
       throw new SourceValidationError(
         "FILE_SIZE_LIMIT_EXCEEDED",

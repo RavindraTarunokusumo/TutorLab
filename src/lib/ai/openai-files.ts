@@ -64,7 +64,7 @@ export function getOpenAIFileProvider(): OpenAIFileProvider {
       const file = new File([contents], name, { type: mimeType });
       const uploaded = await client.files.create({
         file,
-        purpose: "assistants",
+        purpose: "user_data",
       });
       return { id: uploaded.id };
     },
@@ -79,7 +79,7 @@ export function getOpenAIFileProvider(): OpenAIFileProvider {
       });
       return { status: normalizeFileStatus(file.status) };
     },
-    async getExtractedText(vectorStoreId, fileId, mimeType) {
+    async getExtractedText(vectorStoreId, fileId) {
       const content = client.vectorStores.files.content(fileId, {
         vector_store_id: vectorStoreId,
       });
