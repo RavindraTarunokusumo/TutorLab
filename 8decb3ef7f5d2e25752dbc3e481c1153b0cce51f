@@ -1,0 +1,1 @@
+Teaching brief client now tolerates metadata returned by the successful save endpoint.
