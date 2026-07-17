@@ -746,9 +746,9 @@ function SourceRow({
       </td>
       <td className="px-5 py-4 align-top">
         <ul className="space-y-1 text-xs">
-          {processing && <li><span aria-label="Processing" className="processing-loader" /></li>}
-          <li>Upload: {formatStatus(source.processing.uploadStatus)}</li>
+          <li className="flex items-center gap-2">{processing && <span aria-label="Processing" className="size-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />} Upload: {formatStatus(source.processing.uploadStatus)}</li>
           <li className="flex items-center gap-2">
+            {processing && <span aria-hidden="true" className="size-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />}
             Extraction: {formatStatus(source.processing.extractionStatus)}
             {source.processing.pageCount
               ? ` · ${source.processing.pageCount} pages`
