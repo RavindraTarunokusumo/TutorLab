@@ -3,6 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SourceWorkspace } from "@/components/sources/source-workspace";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 const source = {
   id: "source-alpha",
   projectId: "project-alpha",
