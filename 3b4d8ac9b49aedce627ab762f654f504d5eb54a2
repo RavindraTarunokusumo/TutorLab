@@ -1,0 +1,5 @@
+Task: Record source metric fix
+Summary: Attach the implementation commit hash to each completed TODO item.
+Docs: N/A
+TODO: Source ingestion metric correction / Task 1
+Validation: git diff --cached --check
