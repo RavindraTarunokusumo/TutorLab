@@ -1,0 +1,1 @@
+Active source refreshes are now serialized to avoid overlapping database transactions.
