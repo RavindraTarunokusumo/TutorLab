@@ -12,9 +12,7 @@ import {
 import {
   analyzeReadySources,
   fetchSources,
-  refreshSource,
   removeSource,
-  retrySourceAnalysis,
   uploadSourceFile,
 } from "@/lib/sources/client";
 
@@ -141,7 +139,6 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
   const lifecycleGeneration = useRef(0);
   const sourceRequestSequence = useRef(0);
   const sourceRequestController = useRef<AbortController | null>(null);
-  const sourceRefreshInFlight = useRef(false);
 
   if (activeProjectId.current !== projectId) {
     activeProjectId.current = projectId;
@@ -221,38 +218,9 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     if (!sources.some(sourceIsActive)) return;
-    let cancelled = false;
-    const refreshActiveSources = async () => {
-      if (sourceRefreshInFlight.current) return;
-      sourceRefreshInFlight.current = true;
-      const activeSources = sources.filter(sourceIsActive);
-      try {
-        const refreshed = await Promise.all(
-          activeSources.map(async (source) => {
-            try {
-              return await refreshSource(projectId, source.id);
-            } catch {
-              return null;
-            }
-          }),
-        );
-        if (cancelled) return;
-        setSources((current) =>
-          refreshed.reduce(
-            (next, source) => (source ? replaceSource(next, source) : next),
-            current,
-          ),
-        );
-      } finally {
-        sourceRefreshInFlight.current = false;
-      }
-    };
-    const interval = window.setInterval(() => void refreshActiveSources(), 3_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
-  }, [projectId, sources]);
+    const interval = window.setInterval(() => void loadSources(true), 10_000);
+    return () => window.clearInterval(interval);
+  }, [loadSources, sources]);
 
   const summary = useMemo(() => budgetSummary(sources), [sources]);
   const queuedBytes = selectedFiles.reduce(
@@ -344,57 +312,6 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
     }
   }
 
-  async function refreshProcessing(source: SourceDocument) {
-    const mutationGeneration = lifecycleGeneration.current;
-    const mutationIsCurrent = () =>
-      lifecycleGeneration.current === mutationGeneration &&
-      activeProjectId.current === projectId;
-    cancelSourceRequest();
-    setBusy(true);
-    setError("");
-    try {
-      const next = await refreshSource(projectId, source.id);
-      if (!mutationIsCurrent()) return;
-      setSources((current) => replaceSource(current, next));
-      setNotice(`Refreshed processing for ${source.name}.`);
-    } catch (cause) {
-      if (!mutationIsCurrent()) return;
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not refresh source processing.",
-      );
-    } finally {
-      if (mutationIsCurrent()) setBusy(false);
-    }
-  }
-
-  async function retryAnalysis(source: SourceDocument) {
-    const mutationGeneration = lifecycleGeneration.current;
-    const mutationIsCurrent = () =>
-      lifecycleGeneration.current === mutationGeneration &&
-      activeProjectId.current === projectId;
-    cancelSourceRequest();
-    setBusy(true);
-    setError("");
-    try {
-      const job = await retrySourceAnalysis(projectId, source.id);
-      if (!mutationIsCurrent()) return;
-      const refreshed = await loadSources(true);
-      if (!mutationIsCurrent()) return;
-      showAnalysisJobResult(job, source.name, refreshed, setNotice, setError);
-    } catch (cause) {
-      if (!mutationIsCurrent()) return;
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not retry document analysis.",
-      );
-    } finally {
-      if (mutationIsCurrent()) setBusy(false);
-    }
-  }
-
   async function analyzeAll() {
     const mutationGeneration = lifecycleGeneration.current;
     const mutationIsCurrent = () =>
@@ -449,6 +366,18 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
       if (mutationIsCurrent()) setBusy(false);
     }
   }
+
+  const analyzableSources = sources.filter(
+    (source) =>
+      source.processing.extractionStatus === "ready" &&
+      source.permissions.useForCourseModel,
+  );
+  const analyzedSources = analyzableSources.filter(
+    (source) => source.processing.analysisStatus === "ready",
+  );
+  const analysisProgress = analyzableSources.length
+    ? Math.round((analyzedSources.length / analyzableSources.length) * 100)
+    : 0;
 
   return (
     <section className="space-y-8" aria-labelledby="sources-heading">
@@ -640,21 +569,6 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
             Upload {selectedFiles.length} file
             {selectedFiles.length === 1 ? "" : "s"}
           </button>
-          <button
-            type="button"
-            disabled={
-              busy ||
-              !sources.some(
-                (source) =>
-                  source.processing.extractionStatus === "ready" &&
-                  source.permissions.useForCourseModel,
-              )
-            }
-            onClick={() => void analyzeAll()}
-            className="rounded-md border px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            Analyze ready sources
-          </button>
         </div>
       </section>
 
@@ -688,14 +602,6 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
               intentionally unavailable in this workspace.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void loadSources()}
-            disabled={busy}
-            className="rounded-md border px-3 py-2 text-sm font-medium disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            Refresh list
-          </button>
         </div>
         {loading ? (
           <p className="px-5 py-6 text-sm text-muted-foreground">
@@ -721,14 +627,26 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
                   key={source.id}
                   source={source}
                   busy={busy}
-                  onRefresh={() => void refreshProcessing(source)}
-                  onRetryAnalysis={() => void retryAnalysis(source)}
                   onRemove={() => void remove(source)}
                 />
               ))}
             </tbody>
           </table>
         )}
+      </section>
+
+      <section className="rounded-xl border bg-card p-5 shadow-sm" aria-labelledby="analysis-heading">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 id="analysis-heading" className="text-xl font-semibold">Analyze sources</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Analyze ready course materials after uploads and extraction finish.</p>
+          </div>
+          <button type="button" disabled={busy || analyzableSources.length === 0 || analyzedSources.length === analyzableSources.length} onClick={() => void analyzeAll()} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Analyze ready sources</button>
+        </div>
+        <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Source analysis progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={analysisProgress}>
+          <div className="h-full bg-primary transition-[width]" style={{ width: `${busy ? Math.max(analysisProgress, 10) : analysisProgress}%` }} />
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">{busy ? "Analysis is running…" : `${analyzedSources.length} of ${analyzableSources.length} ready sources analyzed`}</p>
       </section>
     </section>
   );
@@ -793,20 +711,13 @@ function PermissionCheckbox({
 function SourceRow({
   source,
   busy,
-  onRefresh,
-  onRetryAnalysis,
   onRemove,
 }: {
   source: SourceDocument;
   busy: boolean;
-  onRefresh: () => void;
-  onRetryAnalysis: () => void;
   onRemove: () => void;
 }) {
-  const retryAnalysis =
-    source.processing.extractionStatus === "ready" &&
-    source.permissions.useForCourseModel &&
-    source.processing.analysisStatus !== "ready";
+  const processing = source.processing.uploadStatus === "in_progress" || source.processing.extractionStatus === "in_progress";
   return (
     <tr className="border-b last:border-0">
       <td className="px-5 py-4 align-top">
@@ -835,41 +746,21 @@ function SourceRow({
       </td>
       <td className="px-5 py-4 align-top">
         <ul className="space-y-1 text-xs">
-          <li>Upload: {formatStatus(source.processing.uploadStatus)}</li>
-          <li>
+          <li className="flex items-center gap-2">{processing && <span aria-label="Processing" className="size-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />} Upload: {formatStatus(source.processing.uploadStatus)}</li>
+          <li className="flex items-center gap-2">
+            {processing && <span aria-hidden="true" className="size-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />}
             Extraction: {formatStatus(source.processing.extractionStatus)}
             {source.processing.pageCount
               ? ` · ${source.processing.pageCount} pages`
               : ""}
           </li>
-          <li>Analysis: {formatStatus(source.processing.analysisStatus)}</li>
           {source.processing.error && (
             <li className="text-destructive">{source.processing.error}</li>
           )}
         </ul>
       </td>
       <td className="px-5 py-4 align-top">
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onRefresh}
-            aria-label={`Refresh processing for ${source.name}`}
-            className="rounded-md border px-3 py-1.5 text-xs font-medium disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            Refresh
-          </button>
-          {retryAnalysis && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onRetryAnalysis}
-              aria-label={`Retry analysis for ${source.name}`}
-              className="rounded-md border px-3 py-1.5 text-xs font-medium disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              Retry analysis
-            </button>
-          )}
+        <div>
           <button
             type="button"
             disabled={busy}
