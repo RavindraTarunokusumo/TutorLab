@@ -1,0 +1,1 @@
+The Sources workspace now re-polls active provider uploads so finalized page and token metrics reach the UI.
