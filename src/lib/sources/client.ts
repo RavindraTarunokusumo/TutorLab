@@ -96,6 +96,10 @@ export async function analyzeReadySources(projectId: string): Promise<PipelineJo
   return parsePipelineJob(await requestJson(`/api/projects/${projectId}/analyze`, { method: "POST" }));
 }
 
+export async function advanceToCourseModel(projectId: string): Promise<void> {
+  await requestJson(`/api/projects/${projectId}/advance`, { method: "POST" });
+}
+
 export async function removeSource(projectId: string, sourceId: string): Promise<void> {
   const response = await fetch(`/api/projects/${projectId}/files/${sourceId}`, {
     method: "DELETE",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import {
   DEFAULT_WORKSPACE_BUDGET,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/schemas";
 import {
   analyzeReadySources,
+  advanceToCourseModel,
   fetchSources,
   removeSource,
   uploadSourceFile,
@@ -122,6 +124,7 @@ function showAnalysisJobResult(
 }
 
 export function SourceWorkspace({ projectId }: { projectId: string }) {
+  const router = useRouter();
   const [sources, setSources] = useState<SourceDocument[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [role, setRole] = useState<SourceRole>("lecture");
@@ -365,6 +368,22 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
       );
     } finally {
       if (mutationIsCurrent()) setBusy(false);
+    }
+  }
+
+  async function continueToCourseModel() {
+    setBusy(true);
+    setError("");
+    try {
+      await advanceToCourseModel(projectId);
+      router.push(`/projects/${projectId}/course-model`);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Could not continue to the course model.",
+      );
+      setBusy(false);
     }
   }
 
@@ -642,7 +661,10 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
             <h2 id="analysis-heading" className="text-xl font-semibold">Analyze sources</h2>
             <p className="mt-1 text-sm text-muted-foreground">Analyze ready course materials after uploads and extraction finish.</p>
           </div>
-          <button type="button" disabled={busy || analyzableSources.length === 0 || analyzedSources.length === analyzableSources.length} onClick={() => void analyzeAll()} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Analyze ready sources</button>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" disabled={busy || analyzableSources.length === 0 || analyzedSources.length === analyzableSources.length} onClick={() => void analyzeAll()} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Analyze ready sources</button>
+            <button type="button" disabled={busy || analyzableSources.length === 0 || analyzedSources.length !== analyzableSources.length} onClick={() => void continueToCourseModel()} className="rounded-md border border-primary px-4 py-2 text-sm font-medium text-primary disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Next: Course Model</button>
+          </div>
         </div>
         <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Source analysis progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={analysisProgress}>
           <div className="h-full bg-primary transition-[width]" style={{ width: `${busy ? Math.max(analysisProgress, 10) : analysisProgress}%` }} />
