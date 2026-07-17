@@ -39,6 +39,8 @@ Rules:
 
 - [x] Task 9 — Normalize optional document-analysis fields for OpenAI strict schemas (`a212723`)
 
+- [x] Task 10 — Recover stale analysis jobs and use a responsive structured-output model (`4a1b458`)
+
 ### Day 3–4 tutor design and evaluation milestone
 
 - [x] Task 1 — Define tutor and evaluation contracts (`230695e`)
