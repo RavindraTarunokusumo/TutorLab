@@ -1,0 +1,1 @@
+Source polling no longer restarts immediately after each returned status update.
