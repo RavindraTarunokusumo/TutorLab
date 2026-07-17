@@ -240,7 +240,6 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
         ),
       );
     };
-    void refreshActiveSources();
     const interval = window.setInterval(() => void refreshActiveSources(), 3_000);
     return () => {
       cancelled = true;
