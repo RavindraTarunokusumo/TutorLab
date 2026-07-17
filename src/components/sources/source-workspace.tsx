@@ -220,9 +220,33 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     if (!sources.some(sourceIsActive)) return;
-    const interval = window.setInterval(() => void loadSources(true), 10_000);
-    return () => window.clearInterval(interval);
-  }, [loadSources, sources]);
+    let cancelled = false;
+    const refreshActiveSources = async () => {
+      const activeSources = sources.filter(sourceIsActive);
+      const refreshed = await Promise.all(
+        activeSources.map(async (source) => {
+          try {
+            return await refreshSource(projectId, source.id);
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (cancelled) return;
+      setSources((current) =>
+        refreshed.reduce(
+          (next, source) => (source ? replaceSource(next, source) : next),
+          current,
+        ),
+      );
+    };
+    void refreshActiveSources();
+    const interval = window.setInterval(() => void refreshActiveSources(), 3_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [projectId, sources]);
 
   const summary = useMemo(() => budgetSummary(sources), [sources]);
   const queuedBytes = selectedFiles.reduce(
