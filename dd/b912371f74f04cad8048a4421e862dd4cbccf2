@@ -1,0 +1,5 @@
+Task: Specify analysis TPM retry behavior
+Summary: Documented approved three-attempt in-request retry behavior for transient TPM limits.
+Docs: docs/superpowers/specs/2026-07-18-analysis-tpm-retry-design.md
+TODO: OpenRouter testing branch / Task 6
+Validation: Spec self-review; no tests run.
