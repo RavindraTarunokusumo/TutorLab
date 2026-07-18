@@ -344,7 +344,7 @@ export async function analyzePendingDocuments(
   try {
     let completed = 0;
     let failures = 0;
-    await runWithConcurrency(pending, 3, async (record) => {
+    await runWithConcurrency(pending, 1, async (record) => {
       try {
         await runStructuredAnalysis(record, profile, deps);
       } catch {

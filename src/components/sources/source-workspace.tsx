@@ -154,6 +154,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
     useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [analysisRunning, setAnalysisRunning] = useState(false);
   const [navigating, setNavigating] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -225,6 +226,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
     setSources([]);
     setSelectedFiles([]);
     setBusy(false);
+    setAnalysisRunning(false);
     setNavigating(false);
     setError("");
     setNotice("");
@@ -244,6 +246,13 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
     const interval = window.setInterval(() => void loadSources(true), 10_000);
     return () => window.clearInterval(interval);
   }, [loadSources, sources]);
+
+  useEffect(() => {
+    if (!analysisRunning) return;
+    void loadSources(true);
+    const interval = window.setInterval(() => void loadSources(true), 3_000);
+    return () => window.clearInterval(interval);
+  }, [analysisRunning, loadSources]);
 
   const summary = useMemo(() => budgetSummary(sources), [sources]);
   const queuedBytes = selectedFiles.reduce(
@@ -342,6 +351,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
       activeProjectId.current === projectId;
     cancelSourceRequest();
     setBusy(true);
+    setAnalysisRunning(true);
     setError("");
     try {
       const job = await analyzeReadySources(projectId);
@@ -363,7 +373,10 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
           : "Could not start source analysis.",
       );
     } finally {
-      if (mutationIsCurrent()) setBusy(false);
+      if (mutationIsCurrent()) {
+        setBusy(false);
+        setAnalysisRunning(false);
+      }
     }
   }
 
@@ -682,9 +695,9 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
           </div>
         </div>
         <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Source analysis progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={analysisProgress}>
-          <div className="h-full bg-primary transition-[width]" style={{ width: `${busy ? Math.max(analysisProgress, 10) : analysisProgress}%` }} />
+          <div className="h-full bg-primary transition-[width]" style={{ width: `${analysisRunning ? Math.max(analysisProgress, 10) : analysisProgress}%` }} />
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">{busy ? "Analysis is running…" : `${analyzedSources.length} of ${analyzableSources.length} ready sources analyzed`}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{`${analyzedSources.length} of ${analyzableSources.length} ready sources analyzed`}</p>
       </section>
     </section>
   );

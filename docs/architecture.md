@@ -17,7 +17,7 @@ TutorLab is a Next.js App Router application. Day 1–2 covers project setup thr
 
 1. A teacher supplies up to 30 course documents and declares role, authority, permissions, and protected-solution status.
 2. The server enforces file/workspace budgets, hashes and persists source metadata, then uploads and indexes the file in that project’s OpenAI vector store.
-3. Ready, course-model-permitted sources are independently analyzed with a concurrency limit of three. Each result is cached by content hash, schema version, and analysis profile.
+3. Ready, course-model-permitted sources are independently analyzed one at a time. Each result is cached by content hash, schema version, and analysis profile.
 4. Synthesis consumes structured analyses—not raw source text—to create an immutable compact `CourseModelVersion` with source references, coverage, warnings, and pedagogical evidence.
 5. Teacher corrections create a new immutable version; they never mutate earlier versions.
 

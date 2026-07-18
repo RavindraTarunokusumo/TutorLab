@@ -217,6 +217,39 @@ describe("SourceWorkspace", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it("refreshes source status while bulk analysis is running so progress advances per document", async () => {
+    let resolveAnalysis: ((response: Response) => void) | undefined;
+    const analysisResponse = new Promise<Response>((resolve) => {
+      resolveAnalysis = resolve;
+    });
+    const analyzedSource = {
+      ...source,
+      processing: {
+        uploadStatus: "ready",
+        extractionStatus: "ready",
+        analysisStatus: "ready",
+      },
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(json({ sources: [source] }))
+      .mockImplementationOnce(() => analysisResponse)
+      .mockResolvedValueOnce(json({ sources: [analyzedSource] }))
+      .mockResolvedValueOnce(json({ sources: [analyzedSource] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+
+    render(<SourceWorkspace projectId="project-alpha" />);
+    await screen.findByText("mark-scheme.pdf");
+    await user.click(screen.getByRole("button", { name: "Analyze ready sources" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    expect(screen.getByLabelText("Source analysis progress")).toHaveAttribute("aria-valuenow", "100");
+    expect(screen.getByText("1 of 1 ready sources analyzed")).toBeInTheDocument();
+
+    await act(async () => resolveAnalysis?.(json({ job: analysisJob("completed") }, 202)));
+  });
+
   it("does not allow a stale source-list response to overwrite a newer refresh", async () => {
     let resolveStale: ((response: Response) => void) | undefined;
     const staleResponse = new Promise<Response>((resolve) => {

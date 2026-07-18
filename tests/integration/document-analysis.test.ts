@@ -103,7 +103,7 @@ function setup(records: ProviderSourceDocument[]) {
 }
 
 describe("per-document material analysis", () => {
-  it("limits batch work to three concurrent documents and records partial failure without losing successful analyses", async () => {
+  it("processes one document at a time and records partial failure without losing successful analyses", async () => {
     const records = ["source-a", "source-b", "source-c", "source-d"].map((id) => source(id));
     const deps = setup(records);
     let active = 0;
@@ -123,7 +123,7 @@ describe("per-document material analysis", () => {
 
     const job = await analyzePendingDocuments("project-alpha", undefined, deps);
 
-    expect(maxActive).toBe(3);
+    expect(maxActive).toBe(1);
     expect(job.status).toBe("failed");
     expect(deps.analysisRepository.save).toHaveBeenCalledTimes(3);
     expect(records.find((record) => record.source.id === "source-d")?.source.processing).toMatchObject({ analysisStatus: "failed" });
