@@ -1,0 +1,5 @@
+Task: Plan analysis TPM retries
+Summary: Added the lightweight implementation contract for bounded in-request retries.
+Docs: docs/superpowers/plans/2026-07-18-analysis-tpm-retry.md
+TODO: OpenRouter testing branch / Task 6
+Validation: Plan self-review; no tests run.
