@@ -1,0 +1,5 @@
+Task: Specify sequential source analysis
+Summary: Documented approved serialized analysis and live progress polling behavior.
+Docs: docs/superpowers/specs/2026-07-18-sequential-analysis-design.md
+TODO: OpenRouter testing branch / Task 6
+Validation: Spec self-review; no tests run.
