@@ -353,6 +353,14 @@ export function getFixtureProjectRepository(): ProjectRepository {
       persistState();
       return project;
     },
+    async updateStage(id, stage) {
+      const project = projects.get(id);
+      if (!project) throw new Error("Project not found");
+      project.stage = stage;
+      project.updatedAt = new Date();
+      persistState();
+      return project;
+    },
     async findVectorStoreId(id) {
       return projects.get(id)?.vectorStoreId ?? null;
     },

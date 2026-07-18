@@ -1,4 +1,4 @@
-import { FixtureProjectLauncher } from "@/components/projects/fixture-project-launcher";
+import { ProjectLauncher } from "@/components/projects/fixture-project-launcher";
 
 export default function Home() {
   return (
@@ -14,9 +14,7 @@ export default function Home() {
           Build an evidence-grounded tutor from the course materials and
           teaching decisions you trust.
         </p>
-        {process.env.TUTORLAB_FIXTURE_MODE === "1" ? (
-          <FixtureProjectLauncher />
-        ) : null}
+        <ProjectLauncher fixtureMode={process.env.TUTORLAB_FIXTURE_MODE === "1"} />
       </section>
     </main>
   );

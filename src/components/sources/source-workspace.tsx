@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Check, CircleHelp } from "lucide-react";
 import {
   DEFAULT_WORKSPACE_BUDGET,
   type SourceAuthority,
@@ -11,21 +13,14 @@ import {
 } from "@/lib/schemas";
 import {
   analyzeReadySources,
+  advanceToCourseModel,
   fetchSources,
-  refreshSource,
   removeSource,
-  retrySourceAnalysis,
   uploadSourceFile,
 } from "@/lib/sources/client";
 
-const acceptedExtensions = [".pdf", ".docx", ".txt", ".md", ".json"];
-const acceptedTypes = new Set([
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "text/plain",
-  "text/markdown",
-  "application/json",
-]);
+const acceptedExtensions = [".pdf"];
+const acceptedTypes = new Set(["application/pdf"]);
 
 const roleOptions: ReadonlyArray<{ value: SourceRole; label: string }> = [
   { value: "syllabus", label: "Syllabus or learning objectives" },
@@ -55,6 +50,29 @@ const defaultPermissions: SourcePermissions = {
   useForEvaluation: true,
   revealExcerptsToStudents: false,
 };
+
+const permissionHelp = {
+  useForPedagogyDrafting: {
+    description:
+      "Lets this source guide lesson structure, explanations, hints, and teaching approaches.",
+    suggestedRoles: "Lecture notes, syllabus, or teacher note",
+  },
+  useForRuntimeRetrieval: {
+    description:
+      "Lets the tutor retrieve relevant material while answering student questions. Protected sources cannot use this option.",
+    suggestedRoles: "Lecture notes or textbook excerpt",
+  },
+  useForEvaluation: {
+    description:
+      "Lets this source inform assessment criteria, feedback, and evaluation design.",
+    suggestedRoles: "Exercises, sample assessments, or rubrics",
+  },
+  revealExcerptsToStudents: {
+    description:
+      "Lets the tutor show short excerpts from this source to students. Protected sources cannot use this option.",
+    suggestedRoles: "Lecture notes or textbook excerpt approved for sharing",
+  },
+} as const;
 
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -123,6 +141,7 @@ function showAnalysisJobResult(
 }
 
 export function SourceWorkspace({ projectId }: { projectId: string }) {
+  const router = useRouter();
   const [sources, setSources] = useState<SourceDocument[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [role, setRole] = useState<SourceRole>("lecture");
@@ -135,6 +154,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
     useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const activeProjectId = useRef(projectId);
@@ -205,6 +225,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
     setSources([]);
     setSelectedFiles([]);
     setBusy(false);
+    setNavigating(false);
     setError("");
     setNotice("");
     void loadSources();
@@ -314,57 +335,6 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
     }
   }
 
-  async function refreshProcessing(source: SourceDocument) {
-    const mutationGeneration = lifecycleGeneration.current;
-    const mutationIsCurrent = () =>
-      lifecycleGeneration.current === mutationGeneration &&
-      activeProjectId.current === projectId;
-    cancelSourceRequest();
-    setBusy(true);
-    setError("");
-    try {
-      const next = await refreshSource(projectId, source.id);
-      if (!mutationIsCurrent()) return;
-      setSources((current) => replaceSource(current, next));
-      setNotice(`Refreshed processing for ${source.name}.`);
-    } catch (cause) {
-      if (!mutationIsCurrent()) return;
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not refresh source processing.",
-      );
-    } finally {
-      if (mutationIsCurrent()) setBusy(false);
-    }
-  }
-
-  async function retryAnalysis(source: SourceDocument) {
-    const mutationGeneration = lifecycleGeneration.current;
-    const mutationIsCurrent = () =>
-      lifecycleGeneration.current === mutationGeneration &&
-      activeProjectId.current === projectId;
-    cancelSourceRequest();
-    setBusy(true);
-    setError("");
-    try {
-      const job = await retrySourceAnalysis(projectId, source.id);
-      if (!mutationIsCurrent()) return;
-      const refreshed = await loadSources(true);
-      if (!mutationIsCurrent()) return;
-      showAnalysisJobResult(job, source.name, refreshed, setNotice, setError);
-    } catch (cause) {
-      if (!mutationIsCurrent()) return;
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not retry document analysis.",
-      );
-    } finally {
-      if (mutationIsCurrent()) setBusy(false);
-    }
-  }
-
   async function analyzeAll() {
     const mutationGeneration = lifecycleGeneration.current;
     const mutationIsCurrent = () =>
@@ -420,6 +390,32 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
     }
   }
 
+  async function continueToCourseModel() {
+    setNavigating(true);
+    setError("");
+    try {
+      await advanceToCourseModel(projectId);
+      router.push(`/projects/${projectId}/course-model`);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Could not continue to the course model.",
+      );
+      setNavigating(false);
+    }
+  }
+
+  const analyzableSources = sources.filter(
+    (source) => source.processing.extractionStatus === "ready",
+  );
+  const analyzedSources = analyzableSources.filter(
+    (source) => source.processing.analysisStatus === "ready",
+  );
+  const analysisProgress = analyzableSources.length
+    ? Math.round((analyzedSources.length / analyzableSources.length) * 100)
+    : 0;
+
   return (
     <section className="space-y-8" aria-labelledby="sources-heading">
       <div className="space-y-2">
@@ -434,9 +430,9 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
         </h1>
         <p className="max-w-3xl text-muted-foreground">
           Add the material that grounds this tutor. Upload course documents and
-          set how each source may influence the course model. Protected answers
-          are used only under the permissions you choose and are never shown
-          here as excerpts.
+          use every source to build the course model, and choose which optional
+          tutor features each source can support. Protected answers are never
+          shown here as excerpts.
         </p>
       </div>
 
@@ -466,7 +462,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
           label="Extracted tokens"
           value={summary.tokens}
           limit={DEFAULT_WORKSPACE_BUDGET.maxExtractedTokens}
-          detail={`${summary.tokens.toLocaleString()} known of 2,000,000${summary.pendingTokenSources ? ` · ${summary.pendingTokenSources} source${summary.pendingTokenSources === 1 ? "" : "s"} pending measurement` : ""}`}
+          detail={`${summary.tokens.toLocaleString("en-US")} known of ${DEFAULT_WORKSPACE_BUDGET.maxExtractedTokens.toLocaleString("en-US")}${summary.pendingTokenSources ? ` · ${summary.pendingTokenSources} source${summary.pendingTokenSources === 1 ? "" : "s"} pending measurement` : ""}`}
         />
       </section>
 
@@ -479,8 +475,8 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
             Upload course material
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            PDF, DOCX, TXT, Markdown, or JSON. Up to 50 MB each; page totals are
-            measured after extraction.
+            PDF only. Up to 50 MB each; text and rendered page images are used
+            during analysis.
           </p>
         </div>
         <label className="grid gap-2 text-sm font-medium">
@@ -540,30 +536,27 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
           </label>
         </div>
         <fieldset className="grid gap-2 rounded-lg border p-4">
-          <legend className="px-1 text-sm font-medium">Allowed uses</legend>
-          <PermissionCheckbox
-            label="Use in the course model"
-            checked={permissions.useForCourseModel}
-            onChange={(value) => setPermission("useForCourseModel", value)}
-            disabled={busy}
-          />
+          <legend className="px-1 text-sm font-medium">Optional uses</legend>
           <PermissionCheckbox
             label="Use for pedagogy drafting"
             checked={permissions.useForPedagogyDrafting}
             onChange={(value) => setPermission("useForPedagogyDrafting", value)}
             disabled={busy}
+            help={permissionHelp.useForPedagogyDrafting}
           />
           <PermissionCheckbox
             label="Allow runtime retrieval"
             checked={permissions.useForRuntimeRetrieval}
             onChange={(value) => setPermission("useForRuntimeRetrieval", value)}
             disabled={busy}
+            help={permissionHelp.useForRuntimeRetrieval}
           />
           <PermissionCheckbox
             label="Use for evaluation"
             checked={permissions.useForEvaluation}
             onChange={(value) => setPermission("useForEvaluation", value)}
             disabled={busy}
+            help={permissionHelp.useForEvaluation}
           />
           <PermissionCheckbox
             label="Allow student excerpts"
@@ -572,6 +565,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
               setPermission("revealExcerptsToStudents", value)
             }
             disabled={busy}
+            help={permissionHelp.revealExcerptsToStudents}
           />
         </fieldset>
         <label className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
@@ -610,21 +604,6 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
             Upload {selectedFiles.length} file
             {selectedFiles.length === 1 ? "" : "s"}
           </button>
-          <button
-            type="button"
-            disabled={
-              busy ||
-              !sources.some(
-                (source) =>
-                  source.processing.extractionStatus === "ready" &&
-                  source.permissions.useForCourseModel,
-              )
-            }
-            onClick={() => void analyzeAll()}
-            className="rounded-md border px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            Analyze ready sources
-          </button>
         </div>
       </section>
 
@@ -641,7 +620,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
         aria-live="polite"
         className="text-sm text-muted-foreground"
       >
-        {loading ? "Loading course sources…" : notice}
+        {loading ? "Loading course sources…" : navigating ? "Opening course model…" : notice}
       </p>
 
       <section
@@ -658,14 +637,6 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
               intentionally unavailable in this workspace.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void loadSources()}
-            disabled={busy}
-            className="rounded-md border px-3 py-2 text-sm font-medium disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            Refresh list
-          </button>
         </div>
         {loading ? (
           <p className="px-5 py-6 text-sm text-muted-foreground">
@@ -691,14 +662,29 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
                   key={source.id}
                   source={source}
                   busy={busy}
-                  onRefresh={() => void refreshProcessing(source)}
-                  onRetryAnalysis={() => void retryAnalysis(source)}
                   onRemove={() => void remove(source)}
                 />
               ))}
             </tbody>
           </table>
         )}
+      </section>
+
+      <section className="rounded-xl border bg-card p-5 shadow-sm" aria-labelledby="analysis-heading">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 id="analysis-heading" className="text-xl font-semibold">Analyze sources</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Analyze ready course materials after uploads and extraction finish.</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" disabled={busy || analyzableSources.length === 0} onClick={() => void analyzeAll()} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Analyze ready sources</button>
+            <button type="button" disabled={busy || navigating || analyzableSources.length === 0 || analyzedSources.length !== analyzableSources.length} onClick={() => void continueToCourseModel()} className="rounded-md border border-primary px-4 py-2 text-sm font-medium text-primary disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Next: Course Model</button>
+          </div>
+        </div>
+        <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Source analysis progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={analysisProgress}>
+          <div className="h-full bg-primary transition-[width]" style={{ width: `${busy ? Math.max(analysisProgress, 10) : analysisProgress}%` }} />
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">{busy ? "Analysis is running…" : `${analyzedSources.length} of ${analyzableSources.length} ready sources analyzed`}</p>
       </section>
     </section>
   );
@@ -741,42 +727,62 @@ function PermissionCheckbox({
   checked,
   disabled,
   onChange,
+  help,
 }: {
   label: string;
   checked: boolean;
   disabled: boolean;
   onChange: (value: boolean) => void;
+  help: { description: string; suggestedRoles: string };
 }) {
+  const [showHelp, setShowHelp] = useState(false);
   return (
-    <label className="flex items-center gap-2 text-sm">
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-      {label}
-    </label>
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={checked}
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.checked)}
+          />
+          {label}
+        </label>
+        <button
+          type="button"
+          aria-label={`About ${label}`}
+          aria-expanded={showHelp}
+          onClick={() => setShowHelp((current) => !current)}
+          className="rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <CircleHelp className="size-4" />
+        </button>
+      </div>
+      {showHelp && (
+        <div role="tooltip" className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          <p>{help.description}</p>
+          <p className="mt-1 font-medium text-foreground">
+            Suggested material role: {help.suggestedRoles}.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
 function SourceRow({
   source,
   busy,
-  onRefresh,
-  onRetryAnalysis,
   onRemove,
 }: {
   source: SourceDocument;
   busy: boolean;
-  onRefresh: () => void;
-  onRetryAnalysis: () => void;
   onRemove: () => void;
 }) {
-  const retryAnalysis =
-    source.processing.extractionStatus === "ready" &&
-    source.permissions.useForCourseModel &&
-    source.processing.analysisStatus !== "ready";
+  const processing = source.processing.uploadStatus === "in_progress" || source.processing.extractionStatus === "in_progress";
+  const finished =
+    source.processing.uploadStatus === "ready" &&
+    source.processing.extractionStatus === "ready";
   return (
     <tr className="border-b last:border-0">
       <td className="px-5 py-4 align-top">
@@ -792,11 +798,6 @@ function SourceRow({
       </td>
       <td className="px-5 py-4 align-top">
         <p>{source.authority.replaceAll("_", " ")}</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {source.permissions.useForCourseModel
-            ? "Course model enabled"
-            : "Excluded from course model"}
-        </p>
         {!source.permissions.revealExcerptsToStudents && (
           <p className="mt-1 text-xs text-muted-foreground">
             Student excerpts are restricted
@@ -804,42 +805,31 @@ function SourceRow({
         )}
       </td>
       <td className="px-5 py-4 align-top">
-        <ul className="space-y-1 text-xs">
-          <li>Upload: {formatStatus(source.processing.uploadStatus)}</li>
-          <li>
-            Extraction: {formatStatus(source.processing.extractionStatus)}
-            {source.processing.pageCount
-              ? ` · ${source.processing.pageCount} pages`
-              : ""}
-          </li>
-          <li>Analysis: {formatStatus(source.processing.analysisStatus)}</li>
-          {source.processing.error && (
-            <li className="text-destructive">{source.processing.error}</li>
-          )}
-        </ul>
+        {processing ? (
+          <div className="flex min-h-12 items-center justify-center">
+            <span aria-label="Processing" className="processing-ring" />
+          </div>
+        ) : finished ? (
+          <div className="flex min-h-12 items-center justify-center">
+            <Check aria-label="Processing complete" className="size-7 text-primary" strokeWidth={2.5} />
+          </div>
+        ) : (
+          <ul className="space-y-1 text-xs">
+            <li>Upload: {formatStatus(source.processing.uploadStatus)}</li>
+            <li>
+              Extraction: {formatStatus(source.processing.extractionStatus)}
+              {source.processing.pageCount
+                ? ` · ${source.processing.pageCount} pages`
+                : ""}
+            </li>
+            {source.processing.error && (
+              <li className="text-destructive">{source.processing.error}</li>
+            )}
+          </ul>
+        )}
       </td>
       <td className="px-5 py-4 align-top">
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onRefresh}
-            aria-label={`Refresh processing for ${source.name}`}
-            className="rounded-md border px-3 py-1.5 text-xs font-medium disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            Refresh
-          </button>
-          {retryAnalysis && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onRetryAnalysis}
-              aria-label={`Retry analysis for ${source.name}`}
-              className="rounded-md border px-3 py-1.5 text-xs font-medium disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              Retry analysis
-            </button>
-          )}
+        <div>
           <button
             type="button"
             disabled={busy}

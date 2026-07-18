@@ -65,23 +65,23 @@ function setup() {
     }),
   };
   const sourceRepository = { list: vi.fn(async () => sources) } as unknown as SourceRepository;
-  const analysisRepository = { listForProject: vi.fn(async () => [{ analysis: analysis(), analysisProfile: "course-model-v1", createdAt: new Date("2026-07-15T12:00:00.000Z") }]) };
+  const analysisRepository = { listForProject: vi.fn(async () => [{ analysis: analysis(), analysisProfile: "course-model-v2-vision", createdAt: new Date("2026-07-15T12:00:00.000Z") }]) };
   const projectRepository = { findById: vi.fn(async () => ({ id: "project-alpha", teachingBrief: {} })) } as unknown as ProjectRepository;
   const synthesizer: CourseSynthesizer = { synthesize: vi.fn(async (input) => modelFor(input)), repair: vi.fn(async (input) => modelFor(input)) };
   return { sources, versions, courseModelRepository, sourceRepository, analysisRepository, projectRepository, synthesizer };
 }
 
 describe("compact course synthesis", () => {
-  it("synthesizes only enabled document analyses with explicit partial coverage and safe warnings", async () => {
+  it("synthesizes every document analysis with explicit partial coverage and safe warnings", async () => {
     const deps = setup();
     const version = await synthesizeCourseModel("project-alpha", undefined, { ...deps, now: () => new Date("2026-07-15T12:30:00.000Z") });
 
     expect(version.teacherEdited).toBe(false);
-    expect(version.artifact.coverage).toMatchObject({ documentCount: 2, analyzedCount: 1, failedCount: 1, analysisCompleteness: "partial", missingMaterialTypes: ["syllabus", "solution"] });
+    expect(version.artifact.coverage).toMatchObject({ documentCount: 3, analyzedCount: 1, failedCount: 1, analysisCompleteness: "partial", missingMaterialTypes: ["syllabus"] });
     expect(version.artifact.sourceManifest).toHaveLength(1);
-    expect(version.artifact.warnings.map(({ code }) => code)).toEqual(expect.arrayContaining(["partial_analysis", "missing-syllabus", "missing-solution"]));
+    expect(version.artifact.warnings.map(({ code }) => code)).toEqual(expect.arrayContaining(["partial_analysis", "missing-syllabus"]));
     expect(deps.synthesizer.synthesize).toHaveBeenCalledWith(expect.objectContaining({ mode: "direct", analyses: [expect.objectContaining({ summary: "Structured probability findings only." })] }));
-    expect(JSON.stringify((deps.synthesizer.synthesize as ReturnType<typeof vi.fn>).mock.calls[0][0])).not.toContain("private-alpha");
+    expect(JSON.stringify((deps.synthesizer.synthesize as ReturnType<typeof vi.fn>).mock.calls[0][0])).toContain("private-alpha");
   });
 
   it("repairs one invalid synthesis while enforcing the trusted envelope", async () => {
@@ -108,8 +108,8 @@ describe("compact course synthesis", () => {
     const current = analysis();
     const older = { ...analysis(), id: "analysis-older", summary: "older" };
     const selected = selectCurrentDocumentAnalyses([
-      { analysis: older, analysisProfile: "course-model-v1", createdAt: new Date("2026-07-15T11:00:00.000Z") },
-      { analysis: current, analysisProfile: "course-model-v1", createdAt: new Date("2026-07-15T12:00:00.000Z") },
+      { analysis: older, analysisProfile: "course-model-v2-vision", createdAt: new Date("2026-07-15T11:00:00.000Z") },
+      { analysis: current, analysisProfile: "course-model-v2-vision", createdAt: new Date("2026-07-15T12:00:00.000Z") },
       { analysis: { ...analysis(), id: "analysis-other" }, analysisProfile: "other-profile", createdAt: new Date("2026-07-15T13:00:00.000Z") },
     ]);
     expect(selected).toEqual([current]);

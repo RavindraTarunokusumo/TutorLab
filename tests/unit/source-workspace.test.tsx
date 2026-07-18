@@ -3,6 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SourceWorkspace } from "@/components/sources/source-workspace";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 const source = {
   id: "source-alpha",
   projectId: "project-alpha",
@@ -75,9 +79,25 @@ describe("SourceWorkspace", () => {
     expect(screen.getByText(/Student excerpts are restricted/i)).toBeInTheDocument();
     expect(screen.getByLabelText("Choose source files")).toHaveAttribute(
       "accept",
-      ".pdf,.docx,.txt,.md,.json",
+      ".pdf",
     );
     expect(screen.queryByText(/worked solution body/i)).not.toBeInTheDocument();
+  });
+
+  it("uses every source for the course model and explains optional uses", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(json({ sources: [] })));
+    const user = userEvent.setup();
+
+    render(<SourceWorkspace projectId="project-alpha" />);
+
+    await screen.findByText("No course sources yet.");
+    expect(screen.queryByLabelText("Use in the course model")).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "About Allow runtime retrieval" }),
+    );
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
+      "Suggested material role: Lecture notes or textbook excerpt.",
+    );
   });
 
   it("uploads selected files with the chosen metadata through the authorized API", async () => {
@@ -90,8 +110,8 @@ describe("SourceWorkspace", () => {
 
     render(<SourceWorkspace projectId="project-alpha" />);
     await screen.findByText("No course sources yet.");
-    const file = new File(["course notes"], "notes.md", {
-      type: "text/markdown",
+    const file = new File(["course notes"], "notes.pdf", {
+      type: "application/pdf",
     });
     await user.upload(screen.getByLabelText("Choose source files"), file);
     await user.selectOptions(screen.getByLabelText("Material role"), "lecture");
@@ -140,7 +160,7 @@ describe("SourceWorkspace", () => {
     await screen.findByText("No course sources yet.");
     await user.upload(
       screen.getByLabelText("Choose source files"),
-      new File(["course notes"], "alpha-notes.md", { type: "text/markdown" }),
+      new File(["course notes"], "alpha-notes.pdf", { type: "application/pdf" }),
     );
     await user.click(screen.getByRole("button", { name: "Upload 1 file" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
@@ -252,6 +272,6 @@ describe("SourceWorkspace", () => {
     render(<SourceWorkspace projectId="project-alpha" />);
 
     expect(await screen.findByText("empty-outline.txt")).toBeInTheDocument();
-    expect(screen.getByText("0 known of 2,000,000 · 1 source pending measurement")).toBeInTheDocument();
+    expect(screen.getByText("0 known of 1,000,000 · 1 source pending measurement")).toBeInTheDocument();
   });
 });

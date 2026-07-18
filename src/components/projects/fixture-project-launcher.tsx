@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export function FixtureProjectLauncher() {
+export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
   const [name, setName] = useState("Probability workshop");
   const [error, setError] = useState("");
 
@@ -15,7 +15,7 @@ export function FixtureProjectLauncher() {
     });
     const body = await response.json().catch(() => null);
     if (!response.ok || !body?.project?.id) {
-      setError("Fixture project could not be created.");
+      setError("Project could not be created.");
       return;
     }
     window.location.assign(`/projects/${body.project.id}/setup`);
@@ -23,7 +23,9 @@ export function FixtureProjectLauncher() {
 
   return (
     <section className="mt-8 space-y-3 rounded-xl border bg-card p-5">
-      <h2 className="font-semibold">Fixture-mode project</h2>
+      <h2 className="font-semibold">
+        {fixtureMode ? "Fixture-mode project" : "Create a tutor project"}
+      </h2>
       <label className="grid max-w-sm gap-2 text-sm font-medium">
         Project name
         <input
@@ -38,7 +40,7 @@ export function FixtureProjectLauncher() {
         onClick={() => void createProject()}
         className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
       >
-        Create fixture project
+        {fixtureMode ? "Create fixture project" : "Create project"}
       </button>
       {error ? <p role="alert">{error}</p> : null}
     </section>

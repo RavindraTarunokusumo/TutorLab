@@ -10,10 +10,6 @@ import {
   DEFAULT_DOCUMENT_ANALYSIS_PROFILE,
   DOCUMENT_ANALYSIS_SCHEMA_VERSION,
 } from "@/lib/ai/prompts/document-analyst";
-import {
-  getOpenAIFileProvider,
-  type OpenAIFileProvider,
-} from "@/lib/ai/openai-files";
 import { getDb } from "@/lib/db";
 import {
   getFixtureDocumentAnalysisRepository,
@@ -82,14 +78,15 @@ export function getDocumentAnalysisRepository(): DocumentAnalysisRepository {
       return result ? toAnalysis(result) : null;
     },
     async save(input) {
-      const parsed = DocumentAnalysisSchema.parse(input);
+      const { analysisProfile, ...artifact } = input;
+      const parsed = DocumentAnalysisSchema.parse(artifact);
       const record = await db.documentAnalysis.upsert({
         where: {
           projectId_documentHash_schemaVersion_analysisProfile: {
             projectId: parsed.projectId,
             documentHash: parsed.documentHash,
             schemaVersion: parsed.schemaVersion,
-            analysisProfile: input.analysisProfile,
+            analysisProfile,
           },
         },
         create: {
@@ -98,7 +95,7 @@ export function getDocumentAnalysisRepository(): DocumentAnalysisRepository {
           documentId: parsed.documentId,
           documentHash: parsed.documentHash,
           schemaVersion: parsed.schemaVersion,
-          analysisProfile: input.analysisProfile,
+          analysisProfile,
           artifact: parsed as Prisma.InputJsonValue,
         },
         update: {
@@ -113,15 +110,12 @@ export function getDocumentAnalysisRepository(): DocumentAnalysisRepository {
 
 export class DocumentAnalysisError extends Error {
   constructor(
-    readonly code:
-      "SOURCE_NOT_READY" | "SOURCE_NOT_ANALYZABLE" | "ANALYSIS_FAILED",
+    readonly code: "SOURCE_NOT_READY" | "ANALYSIS_FAILED",
   ) {
     super(
       code === "SOURCE_NOT_READY"
         ? "This source is not ready for analysis."
-        : code === "SOURCE_NOT_ANALYZABLE"
-          ? "This source is not enabled for course-model analysis."
-          : "Document analysis could not be completed. Please retry.",
+        : "Document analysis could not be completed. Please retry.",
     );
   }
 }
@@ -130,7 +124,6 @@ type Dependencies = {
   sourceRepository: SourceRepository;
   analysisRepository: DocumentAnalysisRepository;
   projectRepository: ProjectRepository;
-  provider: OpenAIFileProvider;
   analyst: DocumentAnalyst;
   jobRepository: PipelineJobRepository;
   now: () => Date;
@@ -142,7 +135,6 @@ function dependencies(overrides?: Partial<Dependencies>): Dependencies {
     analysisRepository:
       overrides?.analysisRepository ?? getDocumentAnalysisRepository(),
     projectRepository: overrides?.projectRepository ?? getProjectRepository(),
-    provider: overrides?.provider ?? getOpenAIFileProvider(),
     analyst: overrides?.analyst ?? getDocumentAnalyst(),
     jobRepository: overrides?.jobRepository ?? getPipelineJobRepository(),
     now: overrides?.now ?? (() => new Date()),
@@ -159,9 +151,6 @@ function assertReadyForAnalysis(record: ProviderSourceDocument) {
     !record.openaiFileId
   ) {
     throw new DocumentAnalysisError("SOURCE_NOT_READY");
-  }
-  if (!record.source.permissions.useForCourseModel) {
-    throw new DocumentAnalysisError("SOURCE_NOT_ANALYZABLE");
   }
 }
 
@@ -209,19 +198,6 @@ async function runStructuredAnalysis(
     },
   );
   try {
-    const vectorStoreId = await deps.projectRepository.findVectorStoreId(
-      record.source.projectId,
-    );
-    if (!vectorStoreId) {
-      throw new DocumentAnalysisError("SOURCE_NOT_READY");
-    }
-    const documentText = await deps.provider.getExtractedText(
-      vectorStoreId,
-      record.openaiFileId!,
-    );
-    if (!documentText) {
-      throw new DocumentAnalysisError("SOURCE_NOT_READY");
-    }
     const project = await deps.projectRepository.findById(
       record.source.projectId,
     );
@@ -231,7 +207,7 @@ async function runStructuredAnalysis(
     const input = {
       source: record.source,
       teachingBrief: project.teachingBrief,
-      documentText,
+      openaiFileId: record.openaiFileId!,
       analysisId: randomUUID(),
       analyzedAt: deps.now().toISOString(),
     };
@@ -265,6 +241,11 @@ async function runStructuredAnalysis(
     );
     return saved;
   } catch (error) {
+    console.error("Document analysis failed", {
+      sourceId: record.source.id,
+      sourceName: record.source.name,
+      error,
+    });
     await deps.sourceRepository.updateIngestion(
       record.source.projectId,
       record.source.id,
@@ -321,9 +302,7 @@ export async function analyzePendingDocuments(
   const deps = dependencies(overrides);
   const profile = options?.analysisProfile ?? DEFAULT_DOCUMENT_ANALYSIS_PROFILE;
   const eligible = (await deps.sourceRepository.list(projectId)).filter(
-    (source) =>
-      source.processing.extractionStatus === "ready" &&
-      source.permissions.useForCourseModel,
+    (source) => source.processing.extractionStatus === "ready",
   );
   const records = (
     await Promise.all(

@@ -25,6 +25,7 @@ import {
   extractedPageCountFromContent,
   extractedTokenCountFromContent,
 } from "./extraction-metrics";
+import { extractPdfText } from "./pdf-extraction";
 import { createSourceMetadata, SourceValidationError } from "./validation";
 
 const SourceUploadMetadataSchema = z.strictObject({
@@ -32,7 +33,10 @@ const SourceUploadMetadataSchema = z.strictObject({
   authority: SourceAuthoritySchema,
   permissions: SourcePermissionsSchema,
   containsProtectedSolutions: z.boolean(),
-});
+}).transform(({ permissions, ...metadata }) => ({
+  ...metadata,
+  permissions: { ...permissions, useForCourseModel: true },
+}));
 
 export type SourceUploadMetadata = z.infer<typeof SourceUploadMetadataSchema>;
 
@@ -222,11 +226,27 @@ async function finalizeCompletedIndexing(
   sourceId: string,
   vectorStoreId: string,
   openaiFileId: string,
+  mimeType: string,
+  originalContent: string | undefined,
   dependencies: SourceIngestionDependencies,
 ): Promise<SourceDocument> {
-  const extractedContent = await dependencies.provider.getExtractedText(
+  const stored = await dependencies.sourceRepository.findById(projectId, sourceId);
+  const storedMetrics = stored?.source.processing;
+  if (
+    storedMetrics?.pageCount !== undefined &&
+    storedMetrics.extractedTokenCount !== undefined
+  ) {
+    return dependencies.sourceRepository.recordExtractionMetrics(projectId, sourceId, {
+      pageCount: storedMetrics.pageCount,
+      extractedTokenCount: storedMetrics.extractedTokenCount,
+      finalized: true,
+      requiresExtractionMetrics: false,
+    });
+  }
+  const extractedContent = originalContent ?? await dependencies.provider.getExtractedText(
     vectorStoreId,
     openaiFileId,
+    mimeType,
   );
   const extractedTokenCount = extractedTokenCountFromContent(extractedContent);
   const pageCount = extractedPageCountFromContent(extractedContent);
@@ -253,6 +273,8 @@ async function pollIndexing(
   sourceId: string,
   vectorStoreId: string,
   openaiFileId: string,
+  mimeType: string,
+  originalContent: string | undefined,
   dependencies: SourceIngestionDependencies,
 ): Promise<SourceDocument> {
   for (let attempt = 0; attempt < dependencies.maxPollAttempts; attempt += 1) {
@@ -267,6 +289,8 @@ async function pollIndexing(
             sourceId,
             vectorStoreId,
             openaiFileId,
+            mimeType,
+            originalContent,
             dependencies,
           )
         : await persistProviderStatus(projectId, sourceId, progress, dependencies);
@@ -279,6 +303,17 @@ async function pollIndexing(
     await dependencies.wait(dependencies.pollDelayMs * (attempt + 1));
   }
   throw new Error("Polling did not run");
+}
+
+async function extractOriginalContent(file: SourceUploadFile): Promise<string | undefined> {
+  try {
+    if (file.mimeType === "application/pdf") {
+      return await extractPdfText(file.bytes);
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
 }
 
 async function sourceOrThrow(
@@ -365,6 +400,13 @@ export async function ingestSource(
 ): Promise<SourceDocument> {
   const dependencies = withDependencies(overrides);
   const parsedMetadata = parseSourceUploadMetadata(metadata);
+  const originalContent = await extractOriginalContent(file);
+  const pageCount = originalContent === undefined
+    ? undefined
+    : extractedPageCountFromContent(originalContent);
+  const extractedTokenCount = originalContent === undefined
+    ? undefined
+    : extractedTokenCountFromContent(originalContent);
   const usage = await dependencies.sourceRepository.getWorkspaceUsage(projectId);
   const source = await createSourceMetadata({
     id: randomUUID(),
@@ -373,13 +415,14 @@ export async function ingestSource(
     mimeType: file.mimeType,
     bytes: file.bytes,
     usage,
+    ...(pageCount === undefined ? {} : { pageCount }),
+    ...(extractedTokenCount === undefined ? {} : { extractedTokenCount }),
     ...parsedMetadata,
   });
   await dependencies.sourceRepository.create(source);
 
   let uploadedId: string | undefined;
   try {
-    const vectorStoreId = await ensureVectorStore(projectId, dependencies);
     const uploaded = await dependencies.provider.uploadFile(file);
     uploadedId = uploaded.id;
     await dependencies.sourceRepository.updateIngestion(projectId, source.id, {
@@ -388,12 +431,33 @@ export async function ingestSource(
       extractionStatus: "in_progress",
       processingError: null,
     });
+    if (
+      file.mimeType === "application/pdf" &&
+      !parsedMetadata.permissions.useForRuntimeRetrieval
+    ) {
+      if (pageCount === undefined || extractedTokenCount === undefined) {
+        return markIndexingFailure(projectId, source.id, dependencies);
+      }
+      return dependencies.sourceRepository.recordExtractionMetrics(
+        projectId,
+        source.id,
+        {
+          pageCount,
+          extractedTokenCount,
+          finalized: true,
+          requiresExtractionMetrics: false,
+        },
+      );
+    }
+    const vectorStoreId = await ensureVectorStore(projectId, dependencies);
     await dependencies.provider.attachFile(vectorStoreId, uploadedId);
     return await pollIndexing(
       projectId,
       source.id,
       vectorStoreId,
       uploadedId,
+      source.mimeType,
+      originalContent,
       dependencies,
     );
   } catch (error) {
@@ -432,6 +496,8 @@ export async function refreshSourceProcessing(
       sourceId,
       vectorStoreId,
       current.openaiFileId,
+      current.source.mimeType,
+      undefined,
       dependencies,
     );
   } catch {
@@ -443,7 +509,23 @@ export async function listSources(
   projectId: string,
   overrides?: Partial<SourceIngestionDependencies>,
 ): Promise<SourceDocument[]> {
-  return withDependencies(overrides).sourceRepository.list(projectId);
+  const dependencies = withDependencies(overrides);
+  const sources = await dependencies.sourceRepository.list(projectId);
+  return Promise.all(
+    sources.map(async (source) => {
+      if (
+        source.processing.uploadStatus !== "ready" ||
+        source.processing.extractionStatus !== "in_progress"
+      ) {
+        return source;
+      }
+      try {
+        return await refreshSourceProcessing(source.id, dependencies);
+      } catch {
+        return source;
+      }
+    }),
+  );
 }
 
 export async function removeSource(

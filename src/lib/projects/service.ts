@@ -83,3 +83,13 @@ export async function saveTeachingBrief(
     candidate.success ? candidate.data : patch,
   );
 }
+
+export async function completeTeachingBrief(
+  projectId: string,
+  patch: TeachingBriefPatch,
+  repository: ProjectRepository = getProjectRepository(),
+): Promise<ProjectRecord> {
+  const project = await saveTeachingBrief(projectId, patch, repository);
+  TeachingBriefSchema.parse(project.teachingBrief);
+  return repository.updateStage(projectId, "sources");
+}

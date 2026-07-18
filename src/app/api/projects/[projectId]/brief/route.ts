@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import { TeachingBriefPatchSchema } from "@/lib/schemas/project";
 import {
   ProjectAccessError,
+  completeTeachingBrief,
   requireProjectAccess,
   saveTeachingBrief,
 } from "@/lib/projects/service";
@@ -19,7 +20,9 @@ export async function PATCH(
     const { projectId } = await params;
     await requireProjectAccess(request, projectId);
     const patch = TeachingBriefPatchSchema.parse(await request.json());
-    const project = await saveTeachingBrief(projectId, patch);
+    const project = request.url.includes("complete=1")
+      ? await completeTeachingBrief(projectId, patch)
+      : await saveTeachingBrief(projectId, patch);
     return NextResponse.json({ project });
   } catch (error) {
     if (error instanceof ProjectAccessError) {

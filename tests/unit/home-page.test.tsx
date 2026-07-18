@@ -12,5 +12,8 @@ describe("Home page", () => {
     expect(
       screen.getByText(/build an evidence-grounded tutor/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Create project" }),
+    ).toBeInTheDocument();
   });
 });

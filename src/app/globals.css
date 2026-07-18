@@ -61,3 +61,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+.processing-ring {
+  display: inline-block;
+  width: 1.5rem;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  border: 3px dashed var(--primary);
+  animation: processing-ring-spin 1s infinite linear;
+}
+
+@keyframes processing-ring-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}

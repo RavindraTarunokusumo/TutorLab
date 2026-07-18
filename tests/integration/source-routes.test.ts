@@ -58,8 +58,8 @@ const source = {
 
 function multipartRequest(metadata: string): Request {
   const file = {
-    name: "notes.md",
-    type: "text/markdown",
+    name: "notes.pdf",
+    type: "application/pdf",
     size: 5,
     arrayBuffer: vi.fn().mockResolvedValue(new TextEncoder().encode("notes").buffer),
   };
@@ -101,7 +101,7 @@ describe("source API routes", () => {
     expect(auth.requireProjectAccess).toHaveBeenCalled();
     expect(ingestion.ingestSource).toHaveBeenCalledWith(
       "project-alpha",
-      expect.objectContaining({ name: "notes.md", mimeType: "text/markdown" }),
+      expect.objectContaining({ name: "notes.pdf", mimeType: "application/pdf" }),
       expect.objectContaining({ role: "lecture" }),
     );
     expect(body).toEqual({ source });
@@ -121,6 +121,35 @@ describe("source API routes", () => {
     );
 
     expect(response.status).toBe(400);
+    expect(ingestion.ingestSource).not.toHaveBeenCalled();
+  });
+
+  it("rejects DOCX uploads before source ingestion", async () => {
+    const request = {
+      headers: new Headers(),
+      formData: vi.fn().mockResolvedValue({
+        get: (name: string) =>
+          name === "file"
+            ? {
+                name: "notes.docx",
+                type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                size: 5,
+                arrayBuffer: vi.fn(),
+              }
+            : JSON.stringify({ role: "lecture" }),
+      }),
+    } as unknown as Request;
+    const { POST } = await import("@/app/api/projects/[projectId]/files/route");
+
+    const response = await POST(request, {
+      params: Promise.resolve({ projectId: "project-alpha" }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      code: "UNSUPPORTED_FILE_TYPE",
+      error: "Only PDF files are supported.",
+    });
     expect(ingestion.ingestSource).not.toHaveBeenCalled();
   });
 

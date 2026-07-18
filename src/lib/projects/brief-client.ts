@@ -6,7 +6,7 @@ import {
 } from "@/lib/schemas/project";
 import { TeachingBriefSchema } from "@/lib/schemas/teaching-brief";
 
-const ClientProjectSnapshotSchema = z.strictObject({
+const ClientProjectSnapshotSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   stage: ProjectStageSchema,
@@ -26,8 +26,9 @@ export type ClientProjectSnapshot = z.infer<typeof ClientProjectSnapshotSchema>;
 export async function saveBriefPatch(
   projectId: string,
   patch: TeachingBriefPatch,
+  complete = false,
 ): Promise<ClientProjectSnapshot> {
-  const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/brief`, {
+  const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/brief${complete ? "?complete=1" : ""}`, {
     method: "PATCH",
     credentials: "same-origin",
     headers: { "content-type": "application/json" },

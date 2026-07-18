@@ -245,7 +245,11 @@ describe("OpenAI source ingestion", () => {
     });
     expect(openAI.attachFile).toHaveBeenCalledWith("vs-alpha", "file-alpha");
     expect(openAI.getFileStatus).toHaveBeenCalledTimes(2);
-    expect(openAI.getExtractedText).toHaveBeenCalledWith("vs-alpha", "file-alpha");
+    expect(openAI.getExtractedText).toHaveBeenCalledWith(
+      "vs-alpha",
+      "file-alpha",
+      "text/markdown",
+    );
     expect(sources.repository.recordExtractionMetrics).toHaveBeenCalledWith(
       "project-alpha",
       result.id,
@@ -299,7 +303,7 @@ describe("OpenAI source ingestion", () => {
 
     const result = await ingestSource(
       "project-alpha",
-      { name: "too-many-pages.pdf", mimeType: "application/pdf", bytes: new TextEncoder().encode("pdf") },
+      { name: "too-many-pages.md", mimeType: "text/markdown", bytes: new TextEncoder().encode("notes") },
       { role: "lecture", authority: "course_authoritative", permissions, containsProtectedSolutions: false },
       dependencies(sources.repository, projectRepository(), openAI),
     );

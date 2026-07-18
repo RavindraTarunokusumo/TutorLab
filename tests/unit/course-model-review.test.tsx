@@ -23,6 +23,34 @@ function version(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function readySource() {
+  return {
+    id: "source-probability",
+    projectId: "project-empty",
+    name: "probability-notes.pdf",
+    role: "lecture",
+    authority: "course_authoritative",
+    permissions: {
+      useForCourseModel: true,
+      useForPedagogyDrafting: true,
+      useForRuntimeRetrieval: false,
+      useForEvaluation: true,
+      revealExcerptsToStudents: false,
+    },
+    containsProtectedSolutions: false,
+    contentHash: "a".repeat(64),
+    mimeType: "application/pdf",
+    sizeBytes: 1024,
+    processing: {
+      uploadStatus: "ready",
+      extractionStatus: "ready",
+      analysisStatus: "ready",
+      pageCount: 1,
+      extractedTokenCount: 10,
+    },
+  };
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -91,6 +119,7 @@ describe("CourseModelReview", () => {
   it("communicates absent and partial model states without substituting fixture data", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(json({ error: "Not found" }, 404))
+      .mockResolvedValueOnce(json({ sources: [] }))
       .mockResolvedValueOnce(json({
         version: version({
           artifact: {
@@ -107,7 +136,7 @@ describe("CourseModelReview", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const view = render(<CourseModelReview projectId="project-empty" />);
-    expect(await screen.findByRole("heading", { name: "Course model not ready" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Create course model" })).toBeInTheDocument();
     expect(screen.queryByText("Introductory Probability")).not.toBeInTheDocument();
 
     view.unmount();
@@ -115,19 +144,20 @@ describe("CourseModelReview", () => {
     expect(await screen.findByText(/Reviewing a partial model/i)).toBeInTheDocument();
   });
 
-  it("requires confirmation before regeneration discards teacher edits", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(json({ version: version({ teacherEdited: true }) }));
+  it("generates the first model only from the empty course-model page", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(json({ error: "Not found" }, 404))
+      .mockResolvedValueOnce(json({ sources: [readySource()] }))
+      .mockResolvedValueOnce(json({ version: version() }, 201));
     vi.stubGlobal("fetch", fetchMock);
-    const confirm = vi.fn(() => false);
-    vi.stubGlobal("confirm", confirm);
     const user = userEvent.setup();
 
-    render(<CourseModelReview projectId="project-probability" />);
-    await screen.findByRole("heading", { name: "Introductory Probability" });
-    await user.click(screen.getByRole("button", { name: "Regenerate model" }));
+    render(<CourseModelReview projectId="project-empty" />);
+    await screen.findByRole("heading", { name: "Create course model" });
+    await user.click(screen.getByRole("button", { name: "Generate course model" }));
 
-    expect(confirm).toHaveBeenCalledOnce();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("heading", { name: "Introductory Probability" })).toBeInTheDocument();
+    expect(fetchMock.mock.calls[2]?.[0]).toBe("/api/projects/project-empty/synthesize");
   });
 
   it("marks only fields with a matching immutable teacher decision", async () => {
@@ -174,11 +204,9 @@ describe("CourseModelReview", () => {
     await screen.findByRole("heading", { name: "Introductory Probability" });
     await user.click(screen.getByRole("button", { name: "Independence" }));
     await user.click(screen.getByRole("button", { name: "Save teacher revision" }));
-    expect(screen.getByRole("button", { name: "Regenerate model" })).toBeDisabled();
 
     view.rerender(<CourseModelReview projectId="project-beta" />);
     expect(await screen.findByRole("heading", { name: "Beta probability" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Regenerate model" })).not.toBeDisabled();
     resolveSave?.(json({ version: version({ version: 2 }) }, 201));
   });
 });

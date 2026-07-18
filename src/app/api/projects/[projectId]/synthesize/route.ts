@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { CourseSynthesisError, synthesizeCourseModel } from "@/lib/analysis/course-synthesis";
+import {
+  CourseSynthesisError,
+  getCourseModelRepository,
+  synthesizeCourseModel,
+} from "@/lib/analysis/course-synthesis";
 import { ProjectAccessError, requireProjectAccess } from "@/lib/projects/service";
 
 function errorResponse(error: unknown) {
@@ -16,9 +20,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   try {
     const { projectId } = await params;
     await requireProjectAccess(request, projectId);
-    const body = await request.json().catch(() => ({}));
-    const discardTeacherEdits = body !== null && typeof body === "object" && "discardTeacherEdits" in body && body.discardTeacherEdits === true;
-    const version = await synthesizeCourseModel(projectId, { discardTeacherEdits });
+    if (await getCourseModelRepository().findLatest(projectId)) {
+      return NextResponse.json(
+        { error: "A course model already exists for this project." },
+        { status: 409 },
+      );
+    }
+    const version = await synthesizeCourseModel(projectId);
     return NextResponse.json({ version }, { status: 201 });
   } catch (error) {
     return errorResponse(error);

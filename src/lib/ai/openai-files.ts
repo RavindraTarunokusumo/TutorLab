@@ -29,6 +29,7 @@ export interface OpenAIFileProvider {
   getExtractedText(
     vectorStoreId: string,
     fileId: string,
+    mimeType?: string,
   ): Promise<string | undefined>;
   searchPassages?(input: { vectorStoreId: string; query: string; fileIds: string[]; limit: number }): Promise<VectorStorePassage[]>;
   detachFile(vectorStoreId: string, fileId: string): Promise<void>;
@@ -63,7 +64,7 @@ export function getOpenAIFileProvider(): OpenAIFileProvider {
       const file = new File([contents], name, { type: mimeType });
       const uploaded = await client.files.create({
         file,
-        purpose: "assistants",
+        purpose: "user_data",
       });
       return { id: uploaded.id };
     },

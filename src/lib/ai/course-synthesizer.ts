@@ -20,11 +20,39 @@ export interface CourseSynthesizer {
 }
 
 function responseFormat() {
+  const schema = z.toJSONSchema(CourseModelSchema) as Record<string, unknown>;
+  const normalize = (value: unknown): void => {
+    if (!value || typeof value !== "object") return;
+    const node = value as Record<string, unknown>;
+    if ("propertyNames" in node) {
+      for (const key of Object.keys(node)) delete node[key];
+      node.type = "string";
+      return;
+    }
+    const properties = node.properties;
+    if (properties && typeof properties === "object") {
+      const fields = properties as Record<string, unknown>;
+      const required = new Set(Array.isArray(node.required) ? node.required : []);
+      for (const [key, field] of Object.entries(fields)) {
+        if (!required.has(key)) {
+          fields[key] = { anyOf: [field, { type: "null" }] };
+        }
+        normalize(fields[key]);
+      }
+      node.required = Object.keys(fields);
+    }
+    if (Array.isArray(node.anyOf)) node.anyOf.forEach(normalize);
+    if (node.items) normalize(node.items);
+    if (node.$defs && typeof node.$defs === "object") {
+      Object.values(node.$defs).forEach(normalize);
+    }
+  };
+  normalize(schema);
   return {
     type: "json_schema" as const,
     name: "course_model",
     strict: true,
-    schema: z.toJSONSchema(CourseModelSchema),
+    schema,
   };
 }
 
@@ -34,7 +62,16 @@ async function requestStructuredOutput(prompt: string): Promise<unknown> {
     input: prompt,
     text: { format: responseFormat() },
   });
-  return JSON.parse(response.output_text);
+  const stripOptionalNulls = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(stripOptionalNulls);
+    if (!value || typeof value !== "object") return value;
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, nested]) => nested !== null)
+        .map(([key, nested]) => [key, stripOptionalNulls(nested)]),
+    );
+  };
+  return stripOptionalNulls(JSON.parse(response.output_text));
 }
 
 export function getCourseSynthesizer(): CourseSynthesizer {

@@ -21,7 +21,6 @@ export function extractedPageCountFromContent(
 ): number | undefined {
   if (
     content === undefined ||
-    !content.trim() ||
     !content.includes("\f")
   ) {
     return undefined;

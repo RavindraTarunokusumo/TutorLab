@@ -1,13 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CourseModel, CourseModelPatchOperation } from "@/lib/schemas";
+import type {
+  CourseModel,
+  CourseModelPatchOperation,
+  SourceDocument,
+} from "@/lib/schemas";
 import {
   fetchCourseModel,
-  regenerateCourseModel,
+  generateCourseModel,
   saveCourseModelRevision,
   type CourseModelVersion,
 } from "@/lib/course-model/client";
+import { fetchSources } from "@/lib/sources/client";
 
 type ReviewSection =
   | "coverage"
@@ -154,10 +159,12 @@ function SourceDrawer({ model, evidence, onClose }: { model: CourseModel; eviden
 
 export function CourseModelReview({ projectId }: { projectId: string }) {
   const [version, setVersion] = useState<CourseModelVersion | null>(null);
+  const [sources, setSources] = useState<SourceDocument[]>([]);
   const [selection, setSelection] = useState<Selection>({ section: "coverage" });
   const [evidence, setEvidence] = useState<Evidence[number] | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const activeProject = useRef(projectId);
@@ -172,7 +179,12 @@ export function CourseModelReview({ projectId }: { projectId: string }) {
     try {
       const next = await fetchCourseModel(projectId, controller.signal);
       if (controller.signal.aborted || activeProject.current !== requestedProject) return;
+      const nextSources = next
+        ? []
+        : await fetchSources(projectId, controller.signal);
+      if (controller.signal.aborted || activeProject.current !== requestedProject) return;
       setVersion(next);
+      setSources(nextSources);
       setSelection(next ? initialSelection(next.artifact) : { section: "coverage" });
       setError("");
     } catch (cause) {
@@ -185,9 +197,11 @@ export function CourseModelReview({ projectId }: { projectId: string }) {
   useEffect(() => {
     activeProject.current = projectId;
     setVersion(null);
+    setSources([]);
     setEvidence(null);
     setNotice("");
     setBusy(false);
+    setGenerating(false);
     setError("");
     void load();
     return () => request.current?.abort();
@@ -209,29 +223,37 @@ export function CourseModelReview({ projectId }: { projectId: string }) {
     }
   }, [projectId, version]);
 
-  const regenerate = useCallback(async () => {
-    if (!version) return;
-    if (version.teacherEdited && !window.confirm("Regeneration will discard teacher-edited fields and create a new version. Continue?")) return;
-    setBusy(true);
+  const generate = useCallback(async () => {
+    if (version) return;
+    setGenerating(true);
     setError("");
     try {
-      const next = await regenerateCourseModel(projectId, version.teacherEdited);
+      const next = await generateCourseModel(projectId);
       if (activeProject.current !== projectId) return;
       setVersion(next);
+      setSources([]);
       setSelection(initialSelection(next.artifact));
-      setNotice(`Regenerated version ${next.version}.`);
+      setNotice(`Generated course model version ${next.version}.`);
     } catch (cause) {
-      if (activeProject.current === projectId) setError(cause instanceof Error ? cause.message : "Could not regenerate the course model.");
+      if (activeProject.current === projectId) setError(cause instanceof Error ? cause.message : "Could not generate the course model.");
     } finally {
-      if (activeProject.current === projectId) setBusy(false);
+      if (activeProject.current === projectId) setGenerating(false);
     }
   }, [projectId, version]);
 
   const model = version?.artifact;
   const incompleteWarning = useMemo(() => model?.coverage.analysisCompleteness === "partial", [model]);
+  const sourcesReadyForGeneration =
+    sources.length > 0 &&
+    sources.every(
+      (source) =>
+        source.processing.extractionStatus === "ready" &&
+        source.processing.analysisStatus === "ready",
+    );
   if (loading) return <section aria-busy="true" className="rounded-xl border bg-card p-6"><h1 className="text-2xl font-semibold">Course model</h1><p className="mt-2 text-muted-foreground">Loading course model…</p></section>;
+  if (generating) return <section aria-busy="true" className="flex min-h-72 flex-col items-center justify-center rounded-xl border bg-card p-6 text-center"><span aria-label="Generating course model" className="processing-ring size-10" /><h1 className="mt-5 text-2xl font-semibold">Generating course model</h1><p className="mt-2 max-w-md text-muted-foreground">Combining the saved source analyses into one course model.</p></section>;
   if (error) return <section className="space-y-3 rounded-xl border bg-card p-6"><p role="alert">{error}</p><button type="button" onClick={() => void load()} className="rounded-md border px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Try again</button></section>;
-  if (!model) return <section className="max-w-2xl space-y-3 rounded-xl border bg-card p-6"><h1 className="text-2xl font-semibold">Course model not ready</h1><p className="text-muted-foreground">Analyze eligible sources to create the first compact course model. This page will never substitute fixture content for a missing live model.</p></section>;
+  if (!model) return <section className="max-w-3xl space-y-6 rounded-xl border bg-card p-6"><div><h1 className="text-2xl font-semibold">Create course model</h1><p className="mt-2 text-muted-foreground">Review the analyzed source set, then generate the first course model. This is the only action on this page that calls the model.</p></div><section className="rounded-lg border"><div className="border-b px-4 py-3"><h2 className="font-medium">Sources for this course model</h2></div>{sources.length === 0 ? <p className="px-4 py-5 text-sm text-muted-foreground">No course sources are available yet.</p> : <ul className="divide-y">{sources.map((source) => <li key={source.id} className="flex items-center justify-between gap-4 px-4 py-3 text-sm"><div><p className="font-medium">{source.name}</p><p className="mt-1 text-xs text-muted-foreground">{displayName(source.role)} · {source.processing.analysisStatus.replaceAll("_", " ")}</p></div><span className={source.processing.analysisStatus === "ready" ? "text-primary" : "text-muted-foreground"}>{source.processing.analysisStatus === "ready" ? "Ready" : "Waiting"}</span></li>)}</ul>}</section><div className="flex flex-wrap items-center gap-3"><button type="button" disabled={!sourcesReadyForGeneration} onClick={() => void generate()} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Generate course model</button>{!sourcesReadyForGeneration && <p className="text-sm text-muted-foreground">All sources must finish analysis before the course model can be generated.</p>}</div></section>;
 
-  return <section className="space-y-5"><header className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-5"><div><p className="text-sm text-muted-foreground">Course model version {version.version}{version.teacherEdited ? " · teacher edited" : ""}</p><h1 className="text-2xl font-semibold">{model.courseIdentity.title}</h1></div><button type="button" disabled={busy} onClick={() => void regenerate()} className="rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Regenerate model</button></header>{incompleteWarning && <p role="status" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">Reviewing a partial model: some source analyses are missing or failed.</p>}{notice && <p role="status" aria-live="polite" className="text-sm text-muted-foreground">{notice}</p>}<div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]"><aside className="rounded-xl border bg-card p-4"><ReviewNavigation model={model} selection={selection} onSelect={setSelection} /></aside><article className="min-w-0 rounded-xl border bg-card p-6"><Detail model={model} selection={selection} busy={busy} onSave={save} onEvidence={setEvidence} /></article></div>{evidence && <SourceDrawer model={model} evidence={evidence} onClose={() => setEvidence(null)} />}</section>;
+  return <section className="space-y-5"><header className="rounded-xl border bg-card p-5"><p className="text-sm text-muted-foreground">Course model version {version.version}{version.teacherEdited ? " · teacher edited" : ""}</p><h1 className="text-2xl font-semibold">{model.courseIdentity.title}</h1></header>{incompleteWarning && <p role="status" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">Reviewing a partial model: some source analyses are missing or failed.</p>}{notice && <p role="status" aria-live="polite" className="text-sm text-muted-foreground">{notice}</p>}<div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]"><aside className="rounded-xl border bg-card p-4"><ReviewNavigation model={model} selection={selection} onSelect={setSelection} /></aside><article className="min-w-0 rounded-xl border bg-card p-6"><Detail model={model} selection={selection} busy={busy} onSave={save} onEvidence={setEvidence} /></article></div>{evidence && <SourceDrawer model={model} evidence={evidence} onClose={() => setEvidence(null)} />}</section>;
 }

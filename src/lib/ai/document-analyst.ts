@@ -16,7 +16,7 @@ import {
 type DocumentAnalysisInput = {
   source: SourceDocument;
   teachingBrief: TeachingBriefPatch | Record<string, never>;
-  documentText: string;
+  openaiFileId: string;
   analysisId: string;
   analyzedAt: string;
 };
@@ -29,12 +29,36 @@ export interface DocumentAnalyst {
   ): Promise<unknown>;
 }
 
+function strictResponseSchema() {
+  const schema = z.toJSONSchema(DocumentAnalysisSchema) as Record<string, unknown>;
+  const normalize = (value: unknown): void => {
+    if (!value || typeof value !== "object") return;
+    const node = value as Record<string, unknown>;
+    const properties = node.properties;
+    if (properties && typeof properties === "object") {
+      const fields = properties as Record<string, unknown>;
+      const required = new Set(Array.isArray(node.required) ? node.required : []);
+      for (const [key, field] of Object.entries(fields)) {
+        if (!required.has(key)) {
+          fields[key] = { anyOf: [field, { type: "null" }] };
+        }
+        normalize(fields[key]);
+      }
+      node.required = Object.keys(fields);
+    }
+    if (Array.isArray(node.anyOf)) node.anyOf.forEach(normalize);
+    if (node.items) normalize(node.items);
+  };
+  normalize(schema);
+  return schema;
+}
+
 function responseFormat() {
   return {
     type: "json_schema" as const,
     name: "document_analysis",
     strict: true,
-    schema: z.toJSONSchema(DocumentAnalysisSchema),
+    schema: strictResponseSchema(),
   };
 }
 
@@ -54,24 +78,47 @@ function promptFor(
   return `${instructions}\n\nRequired immutable envelope: ${JSON.stringify(requiredEnvelope)}${repairOutput === undefined ? "" : `\nPrevious invalid JSON (repair it without retaining unsupported content): ${JSON.stringify(repairOutput)}`}`;
 }
 
-async function requestStructuredOutput(prompt: string): Promise<unknown> {
+async function requestStructuredOutput(
+  prompt: string,
+  fileId: string,
+): Promise<unknown> {
   const client = getOpenAIClient();
   const response = await client.responses.create({
-    model: "gpt-5.6",
-    input: prompt,
+    model: "gpt-5.6-luna",
+    input: [
+      {
+        role: "user",
+        content: [
+          { type: "input_file", file_id: fileId, detail: "high" },
+          { type: "input_text", text: prompt },
+        ],
+      },
+    ],
     text: { format: responseFormat() },
   });
-  return JSON.parse(response.output_text);
+  const stripOptionalNulls = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(stripOptionalNulls);
+    if (!value || typeof value !== "object") return value;
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, nested]) => nested !== null)
+        .map(([key, nested]) => [key, stripOptionalNulls(nested)]),
+    );
+  };
+  return stripOptionalNulls(JSON.parse(response.output_text));
 }
 
 export function getDocumentAnalyst(): DocumentAnalyst {
   if (isFixtureRuntime()) return getFixtureDocumentAnalyst();
   return {
     analyze(input) {
-      return requestStructuredOutput(promptFor(input));
+      return requestStructuredOutput(promptFor(input), input.openaiFileId);
     },
     repair(input, invalidOutput) {
-      return requestStructuredOutput(promptFor(input, invalidOutput));
+      return requestStructuredOutput(
+        promptFor(input, invalidOutput),
+        input.openaiFileId,
+      );
     },
   };
 }
