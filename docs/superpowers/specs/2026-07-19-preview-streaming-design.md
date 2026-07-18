@@ -18,6 +18,13 @@ Make the tutor preview feel like a live chat: the learner's message appears imme
 - The server-side conversation, streaming protocol, citation metadata, and safety rules remain unchanged.
 - The inspector continues to update only after the final response metadata arrives.
 - Existing Markdown and KaTeX dependencies and styling are reused; no new renderer protocol is introduced.
+
+## Inspector history
+
+- Remove the state-fallback field from the Tutor inspector.
+- Show a scrollable, chronological entry for every completed tutor reply rather than only the latest reply.
+- Each entry presents its teaching move, state transition, boundary, and cited sources as compact pills.
+- Convert internal identifiers to title case for display: for example, `explain_concept` becomes `Explain Concept` and `diagnose` becomes `Diagnose`.
 - No persisted schema or API contract changes are required.
 
 ## Success criteria
@@ -25,6 +32,7 @@ Make the tutor preview feel like a live chat: the learner's message appears imme
 - A submitted question is visible before the first tutor token.
 - Tutor text grows incrementally as server-sent deltas arrive.
 - Markdown lists, emphasis, code, and mathematical notation are readable in both streamed and completed messages.
+- The inspector shows normalized, per-message metadata without exposing internal fallback diagnostics.
 - Long conversations remain inside a fixed-height, scrollable transcript panel.
 - Existing reset, presets, metadata, and error behavior remain functional.
 
