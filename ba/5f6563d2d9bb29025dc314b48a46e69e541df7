@@ -1,0 +1,2 @@
+Task: Align the course-model generation indicator with source processing.
+Validation: git diff --check.
