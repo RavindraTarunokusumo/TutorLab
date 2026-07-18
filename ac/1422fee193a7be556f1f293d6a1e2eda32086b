@@ -1,0 +1,2 @@
+Task: Simplify source analysis failure messaging.
+Validation: npm run lint; focused analysis and workspace tests.
