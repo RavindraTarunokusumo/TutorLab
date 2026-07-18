@@ -361,7 +361,7 @@ export async function analyzePendingDocuments(
       return deps.jobRepository.fail(job.id, {
         code: "analysis_failed",
         message:
-          "One or more documents could not be analyzed. Retry those documents individually.",
+          "One or more documents could not be analyzed.",
         retryable: true,
       });
     }
