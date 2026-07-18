@@ -1,0 +1,3 @@
+Task: Reduce document-analysis PDF input detail.
+Summary: Use OpenAI automatic PDF visual detail instead of forcing high detail.
+Validation: npm run lint; git diff --check.
