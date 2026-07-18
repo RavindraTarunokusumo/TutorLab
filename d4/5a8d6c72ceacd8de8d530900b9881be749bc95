@@ -1,0 +1,2 @@
+Task: Serialize document analysis and surface per-document progress.
+Validation: npm run lint; focused analysis and workspace tests.
