@@ -1,0 +1,5 @@
+Task: Simplify source-analysis failure messaging
+Summary: Removed the individual-retry instruction from aggregate analysis failures.
+Docs: N/A
+TODO: OpenRouter testing branch / Task 5
+Validation: Not run at user request.
