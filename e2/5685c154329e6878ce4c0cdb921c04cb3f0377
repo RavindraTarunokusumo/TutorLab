@@ -1,0 +1,5 @@
+Task: Update OpenRouter testing branch from main
+Summary: Merged origin/main, retained OpenAI file-input document analysis, and normalized OpenRouter Responses output parsing for its current output-item shape.
+Docs: docs/architecture.md
+TODO: OpenRouter testing branch / Task 4
+Validation: git diff --cached --check; focused response-text unit test and lint passed during review; full suite skipped at user request.
