@@ -1,0 +1,3 @@
+Task: Serialize source analysis and surface persisted per-document progress.
+Summary: Analyze one document at a time; refresh the source list every three seconds while bulk analysis is active; document existing sequential ingestion/indexing behavior.
+Validation: Focused document analysis and source workspace tests passed; lint passed; typecheck remains blocked by pre-existing missing updateStage mocks in two unrelated integration tests.
