@@ -1,0 +1,5 @@
+Task: Private OpenAI API key session prompt
+Summary: Prompt project creators only when no server key exists; retain user keys in bounded server memory behind an opaque HttpOnly session and scope them to OpenAI requests.
+Docs: docs/architecture.md, docs/commands.md
+TODO: Landing page brand polish / Task 6
+Validation: npm run lint; 40 focused tests passed; live /api/openai-key returned configured=true; npm run typecheck reached only two pre-existing ProjectRepository mock errors; full suite 229 passed and 23 unrelated tests failed
