@@ -175,7 +175,12 @@ function applyTeachingBriefSafeguards(
   const requiresDiagnosis =
     brief.assistanceBoundaries.requireReasoningBeforeAnswer ||
     brief.style.questioningPreference === "questions_first";
-  if (!requiresDiagnosis) return parsed.data;
+  const answerPolicy =
+    ANSWER_POLICY_RANK[brief.assistanceBoundaries.defaultDisclosure] <=
+    ANSWER_POLICY_RANK[brief.assistanceBoundaries.assessedWorkDisclosure]
+      ? brief.assistanceBoundaries.defaultDisclosure
+      : brief.assistanceBoundaries.assessedWorkDisclosure;
+  const maxWords = MAX_WORDS_BY_BRIEF_LENGTH[brief.style.responseLength];
 
   return {
     ...parsed.data,
@@ -183,7 +188,11 @@ function applyTeachingBriefSafeguards(
       ...candidate,
       controls: {
         ...candidate.controls,
-        diagnoseBeforeExplain: true,
+        diagnoseBeforeExplain:
+          candidate.controls.diagnoseBeforeExplain || requiresDiagnosis,
+        tone: brief.style.tone,
+        answerPolicy,
+        maxWords: Math.min(candidate.controls.maxWords, maxWords),
       },
     })),
   };

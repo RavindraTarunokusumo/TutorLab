@@ -352,6 +352,50 @@ describe("tutor design generation", () => {
     expect(repairCalls).toBe(1);
   });
 
+  it("enforces global brief controls before validating an otherwise valid design set", async () => {
+    const deps = inMemoryDependencies();
+    const fixture = getFixtureTutorArchitect();
+    let repairCalls = 0;
+    deps.architect = {
+      generate: async (input) => {
+        const set = await fixture.generate(input) as TutorDesignSet;
+        return {
+          ...set,
+          candidates: set.candidates.map((candidate) => ({
+            ...candidate,
+            controls: {
+              ...candidate.controls,
+              diagnoseBeforeExplain: false,
+              tone: "neutral",
+              answerPolicy: "reveal_after_sufficient_attempts",
+              maxWords: 500,
+            },
+          })),
+        };
+      },
+      repair: async () => {
+        repairCalls += 1;
+        throw new Error("Brief controls should be normalized without repair");
+      },
+    };
+
+    const result = await generateTutorDesigns(
+      { project, idempotencyKey: "design-request-normalized-brief-controls" },
+      deps,
+    );
+
+    expect(repairCalls).toBe(0);
+    expect(result.designs.every(({ artifact }) =>
+      isTeachingBriefCompatible(artifact, brief),
+    )).toBe(true);
+    expect(result.designs.every(({ artifact }) =>
+      artifact.controls.tone === "encouraging" &&
+      artifact.controls.answerPolicy === "never_reveal" &&
+      artifact.controls.diagnoseBeforeExplain &&
+      artifact.controls.maxWords <= 160,
+    )).toBe(true);
+  });
+
   it("replays the original completed generation after the latest course model changes", async () => {
     const deps = inMemoryDependencies();
     const first = await generateTutorDesigns(
