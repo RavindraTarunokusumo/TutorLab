@@ -1,3 +1,5 @@
+![TutorLab Logo](public/tutorlab-logo.png)
+
 # TutorLab
 
 TutorLab is an evidence-grounded tutor builder for teachers and instructional designers. It turns course materials and teaching decisions into an inspectable tutor, evaluates that tutor against simulated learners, and exports a portable standalone chatbot package.
