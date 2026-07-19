@@ -1,0 +1,5 @@
+Task: Add hover feedback to Brief next action
+Summary: Adds a subtle lift, color, and shadow transition to the teaching brief primary action.
+Docs: N/A
+TODO: N/A
+Validation: Focused Vitest (6 passed), focused ESLint
