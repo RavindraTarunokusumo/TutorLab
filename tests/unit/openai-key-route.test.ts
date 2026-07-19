@@ -11,10 +11,17 @@ describe("OpenAI key session API", () => {
   beforeEach(() => {
     delete process.env.OPENAI_API_KEY;
     globalThis.tutorLabOpenAIKeySessions?.clear();
-    globalThis.tutorLabOpenAIKeyEnrollmentWindow = undefined;
+    globalThis.tutorLabOpenAIKeySessionFingerprints?.clear();
+    globalThis.tutorLabOpenAIKeyEnrollmentWindows?.clear();
+    globalThis.tutorLabOpenAIKeyGlobalEnrollmentWindow = undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 200 })),
+    );
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     if (originalOpenAIKey === undefined) delete process.env.OPENAI_API_KEY;
     else process.env.OPENAI_API_KEY = originalOpenAIKey;
@@ -85,7 +92,7 @@ describe("OpenAI key session API", () => {
     expect(response.status).toBe(403);
   });
 
-  it("enforces the process-wide enrollment budget", async () => {
+  it("enforces the trusted-client enrollment budget", async () => {
     const { POST } = await import("@/app/api/openai-key/route");
     const enroll = () =>
       POST(
@@ -99,12 +106,33 @@ describe("OpenAI key session API", () => {
         }),
       );
 
-    for (let attempt = 0; attempt < 10; attempt += 1) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
       expect((await enroll()).status).toBe(200);
     }
     const limited = await enroll();
     expect(limited.status).toBe(429);
     expect(limited.headers.get("retry-after")).toBe("600");
+  });
+
+  it("does not allocate a session for a rejected key", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 401 })),
+    );
+    const { POST } = await import("@/app/api/openai-key/route");
+    const response = await POST(
+      new Request("http://localhost/api/openai-key", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://localhost",
+        },
+        body: JSON.stringify({ apiKey: testKey }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(globalThis.tutorLabOpenAIKeySessions?.size).toBe(0);
   });
 
   it("fails closed in production without the single-instance opt-in", async () => {

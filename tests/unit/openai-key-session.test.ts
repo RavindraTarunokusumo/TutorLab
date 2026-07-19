@@ -11,7 +11,9 @@ describe("private OpenAI key sessions", () => {
   beforeEach(() => {
     delete process.env.OPENAI_API_KEY;
     globalThis.tutorLabOpenAIKeySessions?.clear();
-    globalThis.tutorLabOpenAIKeyEnrollmentWindow = undefined;
+    globalThis.tutorLabOpenAIKeySessionFingerprints?.clear();
+    globalThis.tutorLabOpenAIKeyEnrollmentWindows?.clear();
+    globalThis.tutorLabOpenAIKeyGlobalEnrollmentWindow = undefined;
   });
 
   afterEach(() => {
@@ -95,10 +97,21 @@ describe("private OpenAI key sessions", () => {
       await import("@/lib/ai/session-key");
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS", "0");
+    vi.stubEnv("TUTORLAB_TRUST_PROXY_IP_HEADERS", "0");
     expect(canUseInMemoryOpenAIKeySessions()).toBe(false);
 
     vi.stubEnv("TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS", "1");
+    expect(canUseInMemoryOpenAIKeySessions()).toBe(false);
+    vi.stubEnv("TUTORLAB_TRUST_PROXY_IP_HEADERS", "1");
     expect(canUseInMemoryOpenAIKeySessions()).toBe(true);
     vi.unstubAllEnvs();
+  });
+
+  it("deduplicates repeated enrollment of the same valid key", async () => {
+    const { createOpenAIKeySession } = await import("@/lib/ai/session-key");
+    expect(createOpenAIKeySession(testKey)).toBe(
+      createOpenAIKeySession(testKey),
+    );
+    expect(globalThis.tutorLabOpenAIKeySessions?.size).toBe(1);
   });
 });

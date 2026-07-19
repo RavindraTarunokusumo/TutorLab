@@ -42,9 +42,9 @@ OpenAI Files/vector stores supply retrieval text for ingestion and analysis. PDF
 
 The deployment-level `OPENAI_API_KEY` remains the preferred credential. When it is absent, project creation asks the teacher for a key and sends it to a same-origin server route over HTTPS. The key is held only in a bounded, eight-hour in-memory server session and is made available to OpenAI adapters through request-scoped async context. The browser receives only a random, HTTP-only, same-site session identifier; neither the plaintext key nor an encrypted copy is written to cookies, application logs, files, or the database. Restarting the server invalidates these sessions and prompts the teacher again.
 
-Because user-supplied key sessions deliberately have no shared persistence, production disables them unless `TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS=1` explicitly confirms a single long-lived Node process with request affinity. Serverless, multi-instance, or rolling deployments must configure `OPENAI_API_KEY` on every instance instead. Reverse proxies and observability tooling must not record request bodies for `/api/openai-key`.
+Because user-supplied key sessions deliberately have no shared persistence, production disables them unless `TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS=1` explicitly confirms a single long-lived Node process with request affinity and `TUTORLAB_TRUST_PROXY_IP_HEADERS=1` confirms that a trusted edge replaces client-supplied forwarding headers. Serverless, multi-instance, or rolling deployments must configure `OPENAI_API_KEY` on every instance instead. Reverse proxies and observability tooling must not record request bodies for `/api/openai-key`.
 
-Credential enrollment requires a same-origin browser request, uses a process-wide budget of ten new sessions per ten minutes, and refuses new sessions at capacity rather than evicting active users. Combined with the eight-hour TTL, public enrollment cannot exhaust the 1,000-slot pool.
+Credential enrollment requires a same-origin browser request, uses trusted-client and global enrollment budgets, and verifies the key directly with OpenAI before allocating memory. Repeated use of the same valid key resolves to one session, and capacity refusal never evicts active users.
 
 ## Invariants
 

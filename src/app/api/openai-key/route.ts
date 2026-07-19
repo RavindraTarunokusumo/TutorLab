@@ -7,6 +7,7 @@ import {
   hasEnvironmentOpenAIKey,
   isValidOpenAIKey,
   OPENAI_KEY_COOKIE,
+  verifyOpenAIKey,
 } from "@/lib/ai/session-key";
 
 const NO_STORE_HEADERS = { "cache-control": "no-store" };
@@ -59,13 +60,27 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!consumeOpenAIKeyEnrollment()) {
+  if (!consumeOpenAIKeyEnrollment(request)) {
     return NextResponse.json(
       { error: "Too many key connection attempts. Try again later." },
       {
         status: 429,
         headers: { ...NO_STORE_HEADERS, "retry-after": "600" },
       },
+    );
+  }
+
+  const verification = await verifyOpenAIKey(body.apiKey);
+  if (verification === "invalid") {
+    return NextResponse.json(
+      { error: "OpenAI did not accept this API key." },
+      { status: 400, headers: NO_STORE_HEADERS },
+    );
+  }
+  if (verification === "unavailable") {
+    return NextResponse.json(
+      { error: "OpenAI key verification is temporarily unavailable." },
+      { status: 503, headers: NO_STORE_HEADERS },
     );
   }
 
