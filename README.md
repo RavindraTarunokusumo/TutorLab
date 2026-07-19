@@ -58,8 +58,6 @@ The MVP accepts PDF and DOCX course materials within these workspace limits:
 
 - Up to 30 files
 - Up to 10 MB per file
-- Up to 200 MB per course workspace
-- Up to 500 pages and approximately 2 million extracted tokens
 
 Teachers declare each source’s role, authority, and allowed uses. Sources containing protected solutions are excluded from student-visible excerpts and runtime retrieval.
 
