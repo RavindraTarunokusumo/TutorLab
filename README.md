@@ -63,7 +63,7 @@ Teachers declare each source’s role, authority, and allowed uses. Sources cont
 
 ## Standalone export
 
-The final Export stage packages the active tutor policy plus student-permitted course context for implementation by a developer or coding agent. It includes a lightweight local relevance selector, not a provider vector database, embeddings, authentication, rate limiting, session management, memory, or tool use. See the generated `README.md` inside each exported ZIP for integration guidance.
+The final Export stage packages the active tutor policy plus student-permitted course context for implementation by a developer or coding agent. It includes a lightweight local relevance selector, **not** a provider vector database, embeddings, authentication, rate limiting, session management, memory, or tool use. See the generated `README.md` inside each exported ZIP for integration guidance.
 
 ## Quality checks
 
@@ -78,7 +78,6 @@ Use `npm run build` before a release check. Run `npm run db:down` to stop the lo
 
 ## Documentation
 
-- [Product specification](SPEC.md)
 - [Architecture](docs/architecture.md)
 - [Database and persistence](docs/database.md)
 - [Commands](docs/commands.md)
