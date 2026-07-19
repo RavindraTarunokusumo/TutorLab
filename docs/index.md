@@ -4,7 +4,6 @@ Use this file as the second layer after `AGENTS.md` and `CLAUDE.md`. It points t
 
 ## Core Docs
 
-- [agent-harness.md](agent-harness.md): agent-facing documentation structure and harness rules
 - [architecture.md](architecture.md): system design, module boundaries, entry points, request/data flow
 - [database.md](database.md): schema, persistence model, migration rules
 - [patterns.md](patterns.md): durable coding and state-management rules

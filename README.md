@@ -60,14 +60,12 @@ The MVP accepts PDF and DOCX course materials within these workspace limits:
 
 - Up to 30 files
 - Up to 10 MB per file
-- Up to 200 MB per course workspace
-- Up to 500 pages and approximately 2 million extracted tokens
 
 Teachers declare each source’s role, authority, and allowed uses. Sources containing protected solutions are excluded from student-visible excerpts and runtime retrieval.
 
 ## Standalone export
 
-The final Export stage packages the active tutor policy plus student-permitted course context for implementation by a developer or coding agent. It includes a lightweight local relevance selector, not a provider vector database, embeddings, authentication, rate limiting, session management, memory, or tool use. See the generated `README.md` inside each exported ZIP for integration guidance.
+The final Export stage packages the active tutor policy plus student-permitted course context for implementation by a developer or coding agent. It includes a lightweight local relevance selector, **not** a provider vector database, embeddings, authentication, rate limiting, session management, memory, or tool use. See the generated `README.md` inside each exported ZIP for integration guidance.
 
 ## Quality checks
 
@@ -82,7 +80,6 @@ Use `npm run build` before a release check. Run `npm run db:down` to stop the lo
 
 ## Documentation
 
-- [Product specification](SPEC.md)
 - [Architecture](docs/architecture.md)
 - [Database and persistence](docs/database.md)
 - [Commands](docs/commands.md)
