@@ -26,6 +26,10 @@ Rules:
   - [x] Add height-aware density rules for short portrait screens (`3318517`)
   - [x] Use a side-by-side composition for short landscape screens (`3318517`)
   - [x] Verify visible bounds across the expanded viewport matrix (`3318517`)
+- [x] Task 4 — Apply the TutorLab design system across every project stage from Brief through Export (`ad3ec32`)
+  - [x] Create a branded, accessible eight-stage workspace header and progress system (`ad3ec32`)
+  - [x] Unify the responsive content canvas, cards, controls, and interaction states (`ad3ec32`)
+  - [x] Validate Brief, Sources, Model, Design, Build, Report, Preview, and Export states (`ad3ec32`)
 
 ### Source ingestion metric correction
 
