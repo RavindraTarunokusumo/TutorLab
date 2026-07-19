@@ -1,0 +1,5 @@
+Task: Record checkbox alignment completion
+Summary: Mark the focused Teaching Brief alignment adjustment complete with implementation commit cb3e643.
+Docs: N/A
+TODO: TODO.md - Landing page brand polish Task 5
+Validation: git diff --check
