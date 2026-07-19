@@ -1,0 +1,5 @@
+Task: Highlight active workspace stage
+Summary: Separates the open route highlight from the persisted workflow milestone in the stage header.
+Docs: N/A
+TODO: TODO.md - Resume in-progress project from the landing page
+Validation: Focused Vitest (2 passed), focused ESLint
