@@ -1,0 +1,5 @@
+Task: Record restricted-key review fix
+Summary: Linked the final key-verification compatibility fix to the completed PR 5 review task.
+Docs: N/A
+TODO: Landing page brand polish / Task 7
+Validation: git diff --check
