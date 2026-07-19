@@ -1,0 +1,5 @@
+Task: Record PR 5 review completion
+Summary: Marked the reviewed credential-session and dialog accessibility follow-ups complete with their implementation commit.
+Docs: N/A
+TODO: Landing page brand polish / Task 7
+Validation: git diff --check
