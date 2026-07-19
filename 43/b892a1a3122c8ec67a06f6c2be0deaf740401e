@@ -1,0 +1,5 @@
+Task: Close PR 5 enrollment exhaustion finding
+Summary: Replaced spoofable per-address buckets with a process-wide enrollment budget whose maximum active-session rate stays below the fixed pool capacity.
+Docs: docs/architecture.md, docs/commands.md
+TODO: Landing page brand polish / Task 7
+Validation: npm run lint; 21 focused tests passed
