@@ -60,6 +60,22 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  button:not(:disabled) {
+    transition:
+      background-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+
+  button:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px -16px oklch(0.31 0.09 284.8 / 0.55);
+  }
+
+  button:not(:disabled):active {
+    transform: translateY(0);
+  }
 }
 
 .processing-ring {
