@@ -1,0 +1,5 @@
+Task: Apply TutorLab design system from Brief through Export
+Summary: Add a branded responsive workspace header, accessible eight-stage progress rail, unified stage canvas and controls, and corrected Build viewport sizing across every project route.
+Docs: N/A
+TODO: TODO.md - Landing page brand polish Task 4
+Validation: npm run lint; 10 scoped UI tests passed; desktop and mobile Brief visual check with zero horizontal overflow; full suite 225 passed and 18 pre-existing failures; typecheck blocked by two pre-existing ProjectRepository mocks
