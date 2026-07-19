@@ -13,6 +13,7 @@ import {
 } from "@/lib/tutor/compiler";
 import { getProjectRepository } from "@/lib/projects/repository";
 import { getEvaluationRepository } from "@/lib/evaluation/repository";
+import { withOpenAIRequestKey } from "@/lib/ai/session-key";
 
 const CompileRequestSchema = z.strictObject({
   idempotencyKey: z.string().trim().min(1).max(160),
@@ -21,7 +22,9 @@ const CompileRequestSchema = z.strictObject({
   courseModelVersionId: z.string().trim().min(1).max(96).optional(),
 });
 
-function serializableVersion(version: Awaited<ReturnType<typeof findActiveTutorVersion>>) {
+function serializableVersion(
+  version: Awaited<ReturnType<typeof findActiveTutorVersion>>,
+) {
   if (!version) return null;
   return {
     id: version.id,
@@ -65,7 +68,10 @@ function errorResponse(error: unknown) {
     );
   }
   if (error instanceof z.ZodError || error instanceof SyntaxError) {
-    return NextResponse.json({ error: "Invalid compile request" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid compile request" },
+      { status: 400 },
+    );
   }
   throw error;
 }
@@ -74,47 +80,50 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ projectId: string }> },
 ) {
-  try {
-    const { projectId } = await params;
-    const project = await requireProjectAccess(request, projectId);
-    const body = CompileRequestSchema.parse(await request.json());
-    const previousTutorVersion = await findActiveTutorVersion(projectId);
-    const result = await compileTutor({ project, ...body });
-    if (result.job.status === "completed") {
-      if (
-        previousTutorVersion &&
-        result.tutorVersion &&
-        previousTutorVersion.id !== result.tutorVersion.id &&
-        previousTutorVersion.courseModelVersionId === result.tutorVersion.courseModelVersionId
-      ) {
-        const evaluations = getEvaluationRepository();
-        const scenarios = await evaluations.listScenarios(
-          projectId,
-          previousTutorVersion.id,
-        );
-        if (scenarios.length === 6) {
-          await evaluations.saveScenarios(
-            scenarios.map((scenario) => ({
-              ...scenario,
-              id: randomUUID(),
-              tutorVersionId: result.tutorVersion!.id,
-              createdAt: new Date().toISOString(),
-            })),
+  return withOpenAIRequestKey(request, async () => {
+    try {
+      const { projectId } = await params;
+      const project = await requireProjectAccess(request, projectId);
+      const body = CompileRequestSchema.parse(await request.json());
+      const previousTutorVersion = await findActiveTutorVersion(projectId);
+      const result = await compileTutor({ project, ...body });
+      if (result.job.status === "completed") {
+        if (
+          previousTutorVersion &&
+          result.tutorVersion &&
+          previousTutorVersion.id !== result.tutorVersion.id &&
+          previousTutorVersion.courseModelVersionId ===
+            result.tutorVersion.courseModelVersionId
+        ) {
+          const evaluations = getEvaluationRepository();
+          const scenarios = await evaluations.listScenarios(
+            projectId,
+            previousTutorVersion.id,
           );
+          if (scenarios.length === 6) {
+            await evaluations.saveScenarios(
+              scenarios.map((scenario) => ({
+                ...scenario,
+                id: randomUUID(),
+                tutorVersionId: result.tutorVersion!.id,
+                createdAt: new Date().toISOString(),
+              })),
+            );
+          }
         }
+        await getProjectRepository().updateStage(projectId, "build");
       }
-      await getProjectRepository().updateStage(projectId, "build");
+      return NextResponse.json(
+        {
+          job: result.job,
+          tutorVersion: serializableVersion(result.tutorVersion),
+        },
+        { status: result.job.status === "completed" ? 201 : 202 },
+      );
+    } catch (error) {
+      return errorResponse(error);
     }
-    return NextResponse.json(
-      {
-        job: result.job,
-        tutorVersion: serializableVersion(result.tutorVersion),
-      },
-      { status: result.job.status === "completed" ? 201 : 202 },
-    );
-  } catch (error) {
-    return errorResponse(error);
-  }
+  });
 }
 
 export async function GET(
@@ -125,7 +134,9 @@ export async function GET(
     const { projectId } = await params;
     await requireProjectAccess(request, projectId);
     return NextResponse.json({
-      tutorVersion: serializableVersion(await findActiveTutorVersion(projectId)),
+      tutorVersion: serializableVersion(
+        await findActiveTutorVersion(projectId),
+      ),
     });
   } catch (error) {
     return errorResponse(error);

@@ -13,6 +13,34 @@ Rules:
 
 ## Backlog
 
+### Landing page brand polish
+
+- [x] Task 1 — Add the TutorLab logo and a branded, responsive stage summary to the landing page (`277fcd8`)
+  - [x] Integrate the official transparent logo without layout shift (`277fcd8`)
+  - [x] Present the full tutor-building journey in a right-side brand panel (`277fcd8`)
+  - [x] Polish the project launcher and validate responsive, accessible behavior (`277fcd8`)
+- [x] Task 2 — Fit the complete branded landing experience inside the viewport without page scrolling (`4920d18`)
+  - [x] Compact the hero and stage summary responsively without losing the workflow overview (`4920d18`)
+  - [x] Verify zero page overflow at desktop and mobile viewport sizes (`4920d18`)
+- [x] Task 3 — Extend viewport fitting to short phones, landscape phones, tablets, and large displays (`3318517`)
+  - [x] Add height-aware density rules for short portrait screens (`3318517`)
+  - [x] Use a side-by-side composition for short landscape screens (`3318517`)
+  - [x] Verify visible bounds across the expanded viewport matrix (`3318517`)
+- [x] Task 4 — Apply the TutorLab design system across every project stage from Brief through Export (`ad3ec32`)
+  - [x] Create a branded, accessible eight-stage workspace header and progress system (`ad3ec32`)
+  - [x] Unify the responsive content canvas, cards, controls, and interaction states (`ad3ec32`)
+  - [x] Validate Brief, Sources, Model, Design, Build, Report, Preview, and Export states (`ad3ec32`)
+- [x] Task 5 — Center the "Ask for reasoning first" checkbox against its label copy (`cb3e643`)
+- [x] Task 6 — Prompt for a private OpenAI API key when the server has no configured key (`632d6ec`)
+  - [x] Keep user-supplied keys memory-only, session-scoped, and out of logs and persistence (`632d6ec`)
+  - [x] Make project creation request a key only when neither server configuration nor a valid session key exists (`632d6ec`)
+  - [x] Provide the request-scoped key to every server route that calls OpenAI (`632d6ec`)
+  - [x] Cover the credential boundary and launcher flow with focused tests and production configuration docs (`632d6ec`)
+- [x] Task 7 — Address PR #5 credential-session and dialog accessibility review findings (`cb15d39`, `43b892a`, `5bcc087`, `f2cbc1b`)
+  - [x] Prevent anonymous enrollment from evicting or exhausting active key sessions and rate-limit new sessions (`cb15d39`, `43b892a`, `5bcc087`, `f2cbc1b`)
+  - [x] Require an explicit single-instance production opt-in for process-local key sessions (`cb15d39`)
+  - [x] Use a focus-contained modal and restore focus to the Create project action (`cb15d39`)
+
 ### Source ingestion metric correction
 
 - [x] Task 1 — Derive PDF page and extracted-token metrics from the uploaded PDF rather than vector-store parsed-content boundaries (`8d176bc`)

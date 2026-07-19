@@ -11,7 +11,9 @@ npm run db:migrate
 npm run dev
 ```
 
-Set `DATABASE_URL` and `OPENAI_API_KEY` in `.env.local`. The OpenAI key is needed only for live ingestion/analysis; fixture tests mock that boundary.
+Set `DATABASE_URL` in `.env.local`. Setting `OPENAI_API_KEY` is recommended for server-managed deployments and avoids an in-app prompt; when it is omitted, the Create project flow accepts a user key into an ephemeral server-memory session. The OpenAI key is needed only for live AI workflows; fixture tests mock that boundary.
+
+Production must use HTTPS. User-supplied keys are disabled by default in production; set `TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS=1` only for a single long-lived Node process with request affinity, and set `TUTORLAB_TRUST_PROXY_IP_HEADERS=1` only when a trusted edge strips inbound forwarding headers and supplies the real client address. Serverless and multi-instance deployments must use the deployment-level `OPENAI_API_KEY`. Disable request-body capture for `/api/openai-key`. Enrollment is limited per trusted client and globally, and a key must pass OpenAI authentication before it consumes a session slot.
 
 ## Common commands
 

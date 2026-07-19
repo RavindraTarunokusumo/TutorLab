@@ -6,12 +6,17 @@ describe("Home page", () => {
   it("introduces the TutorLab workspace", () => {
     render(<Home />);
 
+    expect(screen.getByRole("img", { name: "TutorLab" })).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 1, name: "TutorLab" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Build a tutor your course can trust.",
+      }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/build an evidence-grounded tutor/i),
+      screen.getByRole("list", { name: "Tutor building stages" }),
     ).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(8);
     expect(
       screen.getByRole("button", { name: "Create project" }),
     ).toBeInTheDocument();

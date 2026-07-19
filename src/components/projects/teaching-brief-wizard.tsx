@@ -349,7 +349,7 @@ export function TeachingBriefWizard({ project }: TeachingBriefWizardProps) {
               ))}
             </fieldset>
           ))}
-          <label className="flex items-start gap-3 rounded-lg border p-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
+          <label className="flex items-center gap-3 rounded-lg border p-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
             <input type="checkbox" checked={brief.assistanceBoundaries?.requireReasoningBeforeAnswer ?? false} onChange={(event) => updateBrief((current) => ({ ...current, assistanceBoundaries: { ...current.assistanceBoundaries, requireReasoningBeforeAnswer: event.target.checked } }))} />
             <span><span className="font-medium">Ask for reasoning first</span><span className="block text-sm text-muted-foreground">Encourage students to explain their thinking before direct help.</span></span>
           </label>

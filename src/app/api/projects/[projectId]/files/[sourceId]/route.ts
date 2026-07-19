@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
-import { ProjectAccessError, requireProjectAccess } from "@/lib/projects/service";
+import {
+  ProjectAccessError,
+  requireProjectAccess,
+} from "@/lib/projects/service";
 import {
   listSources,
   refreshSourceProcessing,
   removeSource,
   SourceNotFoundError,
 } from "@/lib/sources/ingestion";
+import { withOpenAIRequestKey } from "@/lib/ai/session-key";
 
 function errorResponse(error: unknown) {
   if (error instanceof ProjectAccessError) {
@@ -31,26 +35,32 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ projectId: string; sourceId: string }> },
 ) {
-  try {
-    const { projectId, sourceId } = await params;
-    await requireProjectAccess(request, projectId);
-    await requireSourceInProject(projectId, sourceId);
-    return NextResponse.json({ source: await refreshSourceProcessing(sourceId) });
-  } catch (error) {
-    return errorResponse(error);
-  }
+  return withOpenAIRequestKey(request, async () => {
+    try {
+      const { projectId, sourceId } = await params;
+      await requireProjectAccess(request, projectId);
+      await requireSourceInProject(projectId, sourceId);
+      return NextResponse.json({
+        source: await refreshSourceProcessing(sourceId),
+      });
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
 }
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ projectId: string; sourceId: string }> },
 ) {
-  try {
-    const { projectId, sourceId } = await params;
-    await requireProjectAccess(request, projectId);
-    await removeSource(projectId, sourceId);
-    return new NextResponse(null, { status: 204 });
-  } catch (error) {
-    return errorResponse(error);
-  }
+  return withOpenAIRequestKey(request, async () => {
+    try {
+      const { projectId, sourceId } = await params;
+      await requireProjectAccess(request, projectId);
+      await removeSource(projectId, sourceId);
+      return new NextResponse(null, { status: 204 });
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
 }

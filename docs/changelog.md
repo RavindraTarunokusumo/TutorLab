@@ -2,6 +2,14 @@
 
 Record notable behavior, architecture, API, persistence, or workflow changes.
 
+## 2026-07-19 — Branded workspace and private API-key sessions
+
+- Added the TutorLab logo, responsive stage summary, and viewport-fitted landing experience across desktop, tablet, and mobile layouts.
+- Unified the Brief through Export workspace with branded navigation, content surfaces, controls, and progress states.
+- When no deployment-level OpenAI key exists, project creation now requests a user key and holds it only in bounded server memory behind an opaque HTTP-only session identifier.
+- OpenAI-backed routes use the user key only within the originating server request; the key is not written to browser storage, application logs, files, or the database.
+- Review hardening prevents anonymous enrollment from evicting active sessions, validates and deduplicates keys before allocation, explicitly gates process-local sessions behind a trusted production edge, and uses a native focus-contained key dialog.
+
 ## 2026-07-17 — Original-document extraction metrics
 
 - PDF page and token totals now come from PDF.js extraction of the original upload rather than vector-store retrieval chunks.

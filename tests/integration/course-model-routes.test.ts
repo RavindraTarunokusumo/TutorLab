@@ -2,6 +2,8 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
 const auth = vi.hoisted(() => ({ requireProjectAccess: vi.fn() }));
 const synthesis = vi.hoisted(() => ({ synthesizeCourseModel: vi.fn(), saveTeacherCourseModelRevision: vi.fn(), findLatest: vi.fn() }));
 
