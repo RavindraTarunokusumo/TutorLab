@@ -144,9 +144,7 @@ export async function verifyOpenAIKey(
       signal: AbortSignal.timeout(10_000),
     });
     if (response.ok) return "valid";
-    return response.status === 401 || response.status === 403
-      ? "invalid"
-      : "unavailable";
+    return response.status === 401 ? "invalid" : "unavailable";
   } catch {
     return "unavailable";
   }

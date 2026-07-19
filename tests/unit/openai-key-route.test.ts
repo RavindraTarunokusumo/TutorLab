@@ -135,6 +135,31 @@ describe("OpenAI key session API", () => {
     expect(globalThis.tutorLabOpenAIKeySessions?.size).toBe(0);
   });
 
+  it("does not label a permission-restricted key as invalid", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 403 })),
+    );
+    const { POST } = await import("@/app/api/openai-key/route");
+    const response = await POST(
+      new Request("http://localhost/api/openai-key", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://localhost",
+        },
+        body: JSON.stringify({ apiKey: testKey }),
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error:
+        "OpenAI could not verify this key. Check its permissions or try again.",
+    });
+    expect(globalThis.tutorLabOpenAIKeySessions?.size).toBe(0);
+  });
+
   it("fails closed in production without the single-instance opt-in", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS", "0");

@@ -79,7 +79,10 @@ export async function POST(request: Request) {
   }
   if (verification === "unavailable") {
     return NextResponse.json(
-      { error: "OpenAI key verification is temporarily unavailable." },
+      {
+        error:
+          "OpenAI could not verify this key. Check its permissions or try again.",
+      },
       { status: 503, headers: NO_STORE_HEADERS },
     );
   }
