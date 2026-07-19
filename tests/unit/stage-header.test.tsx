@@ -31,4 +31,22 @@ describe("StageHeader", () => {
       screen.getByRole("link", { name: /Design.*Current stage/i }).className,
     ).toContain("focus-visible");
   });
+
+  it("highlights the open page without changing the saved progress", () => {
+    render(
+      <StageHeader
+        projectId="project-alpha"
+        currentStage="preview"
+        activeStage="brief"
+        lastCompletedStage="report"
+      />,
+    );
+
+    expect(
+      screen.getByRole("link", { name: /Brief.*Current stage/i }),
+    ).toHaveAttribute("aria-current", "step");
+    expect(
+      screen.getByRole("link", { name: /Preview.*In progress/i }),
+    ).toBeInTheDocument();
+  });
 });

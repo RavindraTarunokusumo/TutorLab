@@ -7,6 +7,7 @@ import type { ProjectStage } from "@/lib/schemas/project";
 type StageHeaderProps = {
   projectId: string;
   currentStage: ProjectStage;
+  activeStage?: ProjectStage;
   lastCompletedStage?: ProjectStage;
   projectName?: string;
 };
@@ -14,6 +15,7 @@ type StageHeaderProps = {
 export function StageHeader({
   projectId,
   currentStage,
+  activeStage = currentStage,
   lastCompletedStage,
   projectName,
 }: StageHeaderProps) {
@@ -55,13 +57,16 @@ export function StageHeader({
       >
         <ol className="scrollbar-hidden mx-auto flex max-w-[90rem] gap-1 overflow-x-auto px-3 py-2 sm:px-7 lg:grid lg:grid-cols-8 lg:overflow-visible">
           {projectStages.map((item, index) => {
-            const isCurrent = item.stage === currentStage;
+            const isCurrent = item.stage === activeStage;
+            const isProgressCurrent = item.stage === currentStage;
             const isCompleted = index <= completedIndex;
-            const isReachable = isCompleted || isCurrent;
+            const isReachable = isCompleted || isProgressCurrent;
             const accessibleLabel =
               item.stage === "course_model" ? "Course Model" : item.label;
             const stageStatus = isCurrent
               ? "Current stage"
+              : isProgressCurrent
+                ? "In progress"
               : isCompleted
                 ? "Completed"
                 : "Locked";
