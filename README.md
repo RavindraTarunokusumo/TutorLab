@@ -38,6 +38,17 @@ Run the following from the repository root in PowerShell:
 ```powershell
 npm install
 Copy-Item .env.example .env.local
+# Edit .env.local
+npm run db:up
+npm run prisma:generate
+npm run db:migrate
+npm run dev
+```
+In bash
+```bash
+npm install
+cp .env.example .env.local
+# Edit .env.local
 npm run db:up
 npm run prisma:generate
 npm run db:migrate
