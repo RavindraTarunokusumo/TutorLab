@@ -6,10 +6,10 @@ import { projectStages } from "@/lib/projects/stages";
 
 export function ProjectLauncher({
   fixtureMode,
-  resumableProject,
+  resumableProjects = [],
 }: {
   fixtureMode: boolean;
-  resumableProject?: ProjectSnapshot | null;
+  resumableProjects?: ProjectSnapshot[];
 }) {
   const [name, setName] = useState("Probability workshop");
   const [error, setError] = useState("");
@@ -20,9 +20,6 @@ export function ProjectLauncher({
   const [savingKey, setSavingKey] = useState(false);
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const keyDialogRef = useRef<HTMLDialogElement>(null);
-  const resumeStage = resumableProject
-    ? projectStages.find((stage) => stage.stage === resumableProject.stage)
-    : undefined;
 
   useEffect(() => {
     const dialog = keyDialogRef.current;
@@ -30,6 +27,14 @@ export function ProjectLauncher({
     if (typeof dialog.showModal === "function") dialog.showModal();
     else dialog.setAttribute("open", "");
   }, [showKeyPrompt]);
+
+  useEffect(() => {
+    for (const project of resumableProjects) {
+      void fetch(`/api/projects/${project.id}/session`, {
+        method: "POST",
+      }).catch(() => undefined);
+    }
+  }, [resumableProjects]);
 
   function closeKeyPrompt({
     restoreFocus = true,
@@ -108,26 +113,40 @@ export function ProjectLauncher({
 
   return (
     <section className="landing-launcher mt-5 max-w-xl rounded-2xl border bg-background/70 p-2 shadow-[0_16px_44px_-28px_oklch(0.31_0.09_284.8/0.4)] sm:mt-6">
-      {resumableProject && resumeStage ? (
+      {resumableProjects.length ? (
         <div className="mx-2 mt-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-3 sm:mx-3">
           <p className="text-xs font-semibold tracking-wide text-primary uppercase">
-            Continue your project
+            Continue your projects
           </p>
-          <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                {resumableProject.name}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Current stage: {resumeStage.label}
-              </p>
-            </div>
-            <a
-              href={`/projects/${resumableProject.id}/${resumeStage.href}`}
-              className="inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              Continue
-            </a>
+          <div className="mt-2 space-y-2">
+            {resumableProjects.map((project) => {
+              const resumeStage = projectStages.find(
+                (stage) => stage.stage === project.stage,
+              );
+              if (!resumeStage) return null;
+
+              return (
+                <div
+                  key={project.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background/60 px-2 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {project.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Current stage: {resumeStage.label}
+                    </p>
+                  </div>
+                  <a
+                    href={`/projects/${project.id}/${resumeStage.href}`}
+                    className="inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    Continue
+                  </a>
+                </div>
+              );
+            })}
           </div>
         </div>
       ) : null}

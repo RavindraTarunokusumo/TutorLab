@@ -2,7 +2,7 @@
 
 ## 2026-07-20
 
-- The landing page now offers a secure continue action for the browser-authorized project, returning the teacher to its saved workflow stage.
+- The landing page now offers secure continue actions for browser-authorized projects, returning each teacher to its saved workflow stage.
 
 Record notable behavior, architecture, API, persistence, or workflow changes.
 

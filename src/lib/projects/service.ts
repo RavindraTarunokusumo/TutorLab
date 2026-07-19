@@ -50,7 +50,7 @@ export async function requireProjectAccess(
   projectId: string,
   repository: ProjectRepository = getProjectRepository(),
 ): Promise<ProjectRecord> {
-  const editToken = getProjectEditToken(request);
+  const editToken = getProjectEditToken(request, projectId);
   if (!editToken || !verifyProjectEditToken(editToken)) {
     throw new ProjectAccessError(401);
   }

@@ -69,6 +69,7 @@ describe("project APIs", () => {
     expect(JSON.stringify(body)).not.toContain("token");
     const setCookie = response.headers.get("set-cookie");
     expect(setCookie).toContain("HttpOnly");
+    expect(setCookie).toContain(`tutorlab_project_edit_${body.project.id}`);
     expect(setCookie).toContain("Path=/");
     expect(setCookie).toContain("SameSite=lax");
     expect(repository.create).toHaveBeenCalledWith(
@@ -196,6 +197,30 @@ describe("project APIs", () => {
         teachingBrief: { purpose: "guided_practice" },
       }),
     });
+  });
+
+  it("promotes an authorized legacy session to a project-specific cookie", async () => {
+    const { createProject } = await import("@/lib/projects/service");
+    repository.create.mockResolvedValue(project());
+    const created = await createProject({ name: "Probability tutor" });
+    repository.findByIdAndEditTokenHash.mockResolvedValue(project());
+    const { POST } = await import(
+      "@/app/api/projects/[projectId]/session/route"
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/projects/project-alpha/session", {
+        method: "POST",
+        headers: { cookie: `tutorlab_project_edit=${created.editToken}` },
+      }),
+      { params: Promise.resolve({ projectId: "project-alpha" }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain(
+      "tutorlab_project_edit_project-alpha",
+    );
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
   });
 
   it("uses non-revealing authorization semantics for absent and cross-project edit sessions", async () => {

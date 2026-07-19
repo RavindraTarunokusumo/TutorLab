@@ -27,12 +27,14 @@ describe("Home page", () => {
   it("shows the current browser-authorized project as resumable work", () => {
     render(
       <LandingPage
-        resumableProject={{
-          id: "fd87c251-f620-4bc1-aba5-d58104f80724",
-          name: "Probability Course",
-          stage: "preview",
-          teachingBrief: {},
-        }}
+        resumableProjects={[
+          {
+            id: "fd87c251-f620-4bc1-aba5-d58104f80724",
+            name: "Probability Course",
+            stage: "preview",
+            teachingBrief: {},
+          },
+        ]}
       />,
     );
 

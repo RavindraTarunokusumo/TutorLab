@@ -49,4 +49,23 @@ describe("current authorized project snapshot", () => {
     ).resolves.toBeNull();
     expect(repository.findByEditTokenHash).not.toHaveBeenCalled();
   });
+
+  it("keeps each authorized project once when its token is repeated", async () => {
+    const { createProjectEditToken } = await import("@/lib/projects/auth");
+    const { loadAuthorizedProjectSnapshots } = await import(
+      "@/lib/projects/project-snapshot"
+    );
+    const editToken = createProjectEditToken();
+    repository.findByEditTokenHash.mockResolvedValue({
+      id: "project-preview",
+      name: "Probability Course",
+      stage: "preview",
+      teachingBrief: {},
+    });
+
+    await expect(
+      loadAuthorizedProjectSnapshots([editToken, editToken]),
+    ).resolves.toHaveLength(1);
+    expect(repository.findByEditTokenHash).toHaveBeenCalledOnce();
+  });
 });

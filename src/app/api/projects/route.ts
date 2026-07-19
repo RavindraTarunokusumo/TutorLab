@@ -3,6 +3,10 @@ import { ZodError } from "zod";
 import { CreateProjectInputSchema } from "@/lib/schemas/project";
 import { createProject } from "@/lib/projects/service";
 import {
+  PROJECT_EDIT_COOKIE,
+  projectEditCookieName,
+} from "@/lib/projects/auth";
+import {
   hasOpenAIKeyForRequest,
   OPENAI_KEY_REQUIRED,
 } from "@/lib/ai/session-key";
@@ -30,13 +34,17 @@ export async function POST(request: Request) {
     const { project, editToken } = await createProject(input);
     const response = NextResponse.json({ project }, { status: 201 });
 
-    response.cookies.set({
-      name: "tutorlab_project_edit",
+    const cookieOptions = {
       value: editToken,
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: "lax" as const,
       secure: process.env.NODE_ENV === "production",
       path: "/",
+    };
+    response.cookies.set({ name: PROJECT_EDIT_COOKIE, ...cookieOptions });
+    response.cookies.set({
+      name: projectEditCookieName(project.id),
+      ...cookieOptions,
     });
     return response;
   } catch (error) {

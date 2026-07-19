@@ -14,9 +14,10 @@ import {
 } from "lucide-react";
 import { ProjectLauncher } from "@/components/projects/fixture-project-launcher";
 import {
-  loadCurrentAuthorizedProjectSnapshot,
+  loadAuthorizedProjectSnapshots,
   type ProjectSnapshot,
 } from "@/lib/projects/project-snapshot";
+import { getProjectEditTokens } from "@/lib/projects/auth";
 
 const stages = [
   {
@@ -62,9 +63,9 @@ const stages = [
 ] as const;
 
 export function LandingPage({
-  resumableProject,
+  resumableProjects = [],
 }: {
-  resumableProject?: ProjectSnapshot | null;
+  resumableProjects?: ProjectSnapshot[];
 }) {
   return (
     <main className="h-dvh overflow-hidden bg-background p-2 sm:p-4 lg:p-6">
@@ -96,7 +97,7 @@ export function LandingPage({
             </p>
             <ProjectLauncher
               fixtureMode={process.env.TUTORLAB_FIXTURE_MODE === "1"}
-              resumableProject={resumableProject}
+              resumableProjects={resumableProjects}
             />
           </div>
 
@@ -174,8 +175,8 @@ export function LandingPage({
 }
 
 export default async function Home() {
-  const editToken = (await cookies()).get("tutorlab_project_edit")?.value;
-  const resumableProject = await loadCurrentAuthorizedProjectSnapshot(editToken);
+  const editTokens = getProjectEditTokens((await cookies()).getAll());
+  const resumableProjects = await loadAuthorizedProjectSnapshots(editTokens);
 
-  return <LandingPage resumableProject={resumableProject} />;
+  return <LandingPage resumableProjects={resumableProjects} />;
 }
