@@ -1,0 +1,5 @@
+Task: Reflect on PR closeout workflow
+Summary: Recorded reusable reviewer fallback, remote merge-state, worktree cleanup, and blocking-format-gate lessons without feature-specific detail.
+Docs: docs/insights.md
+TODO: N/A
+Validation: npx prettier --check docs/insights.md; git diff --check
