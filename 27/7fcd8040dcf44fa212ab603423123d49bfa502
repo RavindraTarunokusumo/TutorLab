@@ -1,0 +1,5 @@
+Task: Branded landing page polish
+Summary: Add the official TutorLab logo, a responsive eight-stage journey panel, and a polished accessible project launcher.
+Docs: N/A
+TODO: TODO.md - Landing page brand polish
+Validation: npm run lint; npm run test:run -- tests/unit/home-page.test.tsx; live desktop and mobile Playwright screenshots; full suite 224 passed and 19 pre-existing unrelated failures; typecheck blocked by pre-existing ProjectRepository mocks
