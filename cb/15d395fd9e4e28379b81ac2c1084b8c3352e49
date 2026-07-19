@@ -1,0 +1,5 @@
+Task: Address PR 5 review findings
+Summary: Prevented active-session eviction, added bounded enrollment throttling and a production single-instance opt-in, and replaced the key overlay with a native focus-contained dialog.
+Docs: docs/architecture.md, docs/commands.md, docs/changelog.md
+TODO: Landing page brand polish / Task 7
+Validation: npm run lint; 45 focused tests passed; npm run typecheck reached only two pre-existing ProjectRepository mock errors
