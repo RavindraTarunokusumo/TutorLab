@@ -11,7 +11,7 @@ describe("private OpenAI key sessions", () => {
   beforeEach(() => {
     delete process.env.OPENAI_API_KEY;
     globalThis.tutorLabOpenAIKeySessions?.clear();
-    globalThis.tutorLabOpenAIKeyEnrollments?.clear();
+    globalThis.tutorLabOpenAIKeyEnrollmentWindow = undefined;
   });
 
   afterEach(() => {

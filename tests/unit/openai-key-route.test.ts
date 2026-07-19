@@ -11,7 +11,7 @@ describe("OpenAI key session API", () => {
   beforeEach(() => {
     delete process.env.OPENAI_API_KEY;
     globalThis.tutorLabOpenAIKeySessions?.clear();
-    globalThis.tutorLabOpenAIKeyEnrollments?.clear();
+    globalThis.tutorLabOpenAIKeyEnrollmentWindow = undefined;
   });
 
   afterEach(() => {
@@ -85,7 +85,7 @@ describe("OpenAI key session API", () => {
     expect(response.status).toBe(403);
   });
 
-  it("rate-limits repeated enrollment from one client", async () => {
+  it("enforces the process-wide enrollment budget", async () => {
     const { POST } = await import("@/app/api/openai-key/route");
     const enroll = () =>
       POST(
@@ -94,7 +94,6 @@ describe("OpenAI key session API", () => {
           headers: {
             "content-type": "application/json",
             origin: "http://localhost",
-            "x-forwarded-for": "203.0.113.42",
           },
           body: JSON.stringify({ apiKey: testKey }),
         }),

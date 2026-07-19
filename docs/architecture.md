@@ -44,7 +44,7 @@ The deployment-level `OPENAI_API_KEY` remains the preferred credential. When it 
 
 Because user-supplied key sessions deliberately have no shared persistence, production disables them unless `TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS=1` explicitly confirms a single long-lived Node process with request affinity. Serverless, multi-instance, or rolling deployments must configure `OPENAI_API_KEY` on every instance instead. Reverse proxies and observability tooling must not record request bodies for `/api/openai-key`.
 
-Credential enrollment requires a same-origin browser request, is rate-limited by the trusted proxy client address, and refuses new sessions at capacity rather than evicting active users. Production proxies must replace untrusted inbound forwarding headers before requests reach TutorLab.
+Credential enrollment requires a same-origin browser request, uses a process-wide budget of ten new sessions per ten minutes, and refuses new sessions at capacity rather than evicting active users. Combined with the eight-hour TTL, public enrollment cannot exhaust the 1,000-slot pool.
 
 ## Invariants
 

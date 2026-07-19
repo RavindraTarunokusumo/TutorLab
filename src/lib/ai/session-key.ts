@@ -1,8 +1,7 @@
 import "server-only";
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import { createHash, randomBytes } from "node:crypto";
-import { isIP } from "node:net";
+import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { isFixtureRuntime } from "@/lib/fixture-runtime";
 
@@ -13,7 +12,6 @@ const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const MAX_SESSION_KEYS = 1_000;
 const ENROLLMENT_WINDOW_MS = 10 * 60 * 1000;
 const MAX_ENROLLMENTS_PER_WINDOW = 10;
-const MAX_ENROLLMENT_IDENTITIES = 5_000;
 const requestKeyStorage = new AsyncLocalStorage<string>();
 
 type SessionKey = { apiKey: string; expiresAt: number };
@@ -21,19 +19,12 @@ type EnrollmentWindow = { attempts: number; resetsAt: number };
 
 declare global {
   var tutorLabOpenAIKeySessions: Map<string, SessionKey> | undefined;
-  var tutorLabOpenAIKeyEnrollments: Map<string, EnrollmentWindow> | undefined;
+  var tutorLabOpenAIKeyEnrollmentWindow: EnrollmentWindow | undefined;
 }
 
 const sessionKeys =
   globalThis.tutorLabOpenAIKeySessions ??
   (globalThis.tutorLabOpenAIKeySessions = new Map<string, SessionKey>());
-const enrollmentWindows =
-  globalThis.tutorLabOpenAIKeyEnrollments ??
-  (globalThis.tutorLabOpenAIKeyEnrollments = new Map<
-    string,
-    EnrollmentWindow
-  >());
-
 function pruneExpiredSessions(now = Date.now()) {
   for (const [sessionId, session] of sessionKeys) {
     if (session.expiresAt <= now) sessionKeys.delete(sessionId);
@@ -70,36 +61,21 @@ export function canUseInMemoryOpenAIKeySessions(): boolean {
   );
 }
 
-function enrollmentIdentity(request: Request): string {
-  const forwardedFor = request.headers
-    .get("x-forwarded-for")
-    ?.split(",")[0]
-    ?.trim();
-  const candidate =
-    forwardedFor || request.headers.get("x-real-ip")?.trim() || "unknown";
-  const address = isIP(candidate) ? candidate : "unknown";
-  return createHash("sha256").update(address).digest("base64url").slice(0, 22);
-}
-
-export function consumeOpenAIKeyEnrollment(request: Request): boolean {
+export function consumeOpenAIKeyEnrollment(): boolean {
   const now = Date.now();
-  for (const [identity, window] of enrollmentWindows) {
-    if (window.resetsAt <= now) enrollmentWindows.delete(identity);
-  }
-
-  const identity = enrollmentIdentity(request);
-  const current = enrollmentWindows.get(identity);
-  if (current && current.resetsAt > now) {
-    if (current.attempts >= MAX_ENROLLMENTS_PER_WINDOW) return false;
+  const current = globalThis.tutorLabOpenAIKeyEnrollmentWindow;
+  if (current?.resetsAt && current.resetsAt > now) {
+    if (current.attempts >= MAX_ENROLLMENTS_PER_WINDOW) {
+      return false;
+    }
     current.attempts += 1;
     return true;
   }
 
-  if (enrollmentWindows.size >= MAX_ENROLLMENT_IDENTITIES) return false;
-  enrollmentWindows.set(identity, {
+  globalThis.tutorLabOpenAIKeyEnrollmentWindow = {
     attempts: 1,
     resetsAt: now + ENROLLMENT_WINDOW_MS,
-  });
+  };
   return true;
 }
 

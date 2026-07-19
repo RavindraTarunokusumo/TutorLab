@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!consumeOpenAIKeyEnrollment(request)) {
+  if (!consumeOpenAIKeyEnrollment()) {
     return NextResponse.json(
       { error: "Too many key connection attempts. Try again later." },
       {

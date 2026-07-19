@@ -13,7 +13,7 @@ npm run dev
 
 Set `DATABASE_URL` in `.env.local`. Setting `OPENAI_API_KEY` is recommended for server-managed deployments and avoids an in-app prompt; when it is omitted, the Create project flow accepts a user key into an ephemeral server-memory session. The OpenAI key is needed only for live AI workflows; fixture tests mock that boundary.
 
-Production must use HTTPS. User-supplied keys are disabled by default in production; set `TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS=1` only for a single long-lived Node process with request affinity. Serverless and multi-instance deployments must use the deployment-level `OPENAI_API_KEY`. Disable request-body capture for `/api/openai-key`, and configure the trusted proxy to replace inbound `X-Forwarded-For`/`X-Real-IP` headers so enrollment rate limiting cannot be bypassed by spoofed values.
+Production must use HTTPS. User-supplied keys are disabled by default in production; set `TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS=1` only for a single long-lived Node process with request affinity. Serverless and multi-instance deployments must use the deployment-level `OPENAI_API_KEY`. Disable request-body capture for `/api/openai-key`. The in-process enrollment budget permits ten new key sessions per ten minutes across the deployment instance.
 
 ## Common commands
 
