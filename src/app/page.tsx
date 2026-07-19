@@ -58,30 +58,30 @@ const stages = [
 
 export default function Home() {
   return (
-    <main className="min-h-dvh bg-background px-4 py-4 sm:px-6 sm:py-6 lg:p-8">
-      <div className="mx-auto grid min-h-[calc(100dvh-2rem)] w-full max-w-[90rem] overflow-hidden rounded-[2rem] border bg-card shadow-[0_24px_80px_-32px_oklch(0.31_0.09_284.8/0.28)] sm:min-h-[calc(100dvh-3rem)] lg:grid-cols-[minmax(0,1.06fr)_minmax(28rem,0.94fr)]">
-        <section className="flex flex-col justify-between px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12 xl:px-20">
+    <main className="h-dvh overflow-hidden bg-background p-2 sm:p-4 lg:p-6">
+      <div className="mx-auto grid h-full w-full max-w-[90rem] grid-rows-[minmax(0,1.12fr)_minmax(0,0.88fr)] overflow-hidden rounded-[1.5rem] border bg-card shadow-[0_24px_80px_-32px_oklch(0.31_0.09_284.8/0.28)] sm:rounded-[2rem] lg:grid-cols-[minmax(0,1.06fr)_minmax(28rem,0.94fr)] lg:grid-rows-1">
+        <section className="flex min-h-0 flex-col justify-between px-6 py-6 sm:px-10 sm:py-8 lg:px-12 lg:py-8 xl:px-16">
           <Image
             src="/tutorlab-logo-transparent.png"
             alt="TutorLab"
             width={1161}
             height={250}
             priority
-            className="h-auto w-48 sm:w-56"
+            className="h-auto w-40 sm:w-48 xl:w-52"
           />
 
-          <div className="my-14 max-w-2xl lg:my-10">
-            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-accent/60 px-3.5 py-2 text-sm font-medium text-accent-foreground">
+          <div className="my-5 max-w-2xl sm:my-7 lg:my-4">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-accent/60 px-3 py-1.5 text-xs font-medium text-accent-foreground sm:text-sm">
               <CheckCircle2
                 aria-hidden="true"
                 className="size-4 text-primary"
               />
               Evidence-grounded from day one
             </div>
-            <h1 className="max-w-2xl text-4xl font-semibold leading-[1.04] tracking-[-0.045em] text-balance sm:text-6xl xl:text-7xl">
+            <h1 className="max-w-2xl text-3xl font-semibold leading-[1.04] tracking-[-0.045em] text-balance sm:text-5xl xl:text-6xl">
               Build a tutor your course can trust.
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
+            <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
               Shape an AI tutor around your materials, your teaching decisions,
               and the learning boundaries that matter.
             </p>
@@ -90,7 +90,7 @@ export default function Home() {
             />
           </div>
 
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <p className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
             <MessageSquareText
               aria-hidden="true"
               className="size-4 text-primary"
@@ -99,7 +99,7 @@ export default function Home() {
           </p>
         </section>
 
-        <aside className="relative isolate overflow-hidden bg-primary px-6 py-10 text-primary-foreground sm:px-10 lg:px-12 lg:py-12 xl:px-16">
+        <aside className="relative isolate min-h-0 overflow-hidden bg-primary px-5 py-5 text-primary-foreground sm:px-8 sm:py-7 lg:px-8 lg:py-8 xl:px-10">
           <div
             aria-hidden="true"
             className="absolute -top-32 -right-28 -z-10 size-96 rounded-full border-[5rem] border-white/5"
@@ -109,43 +109,46 @@ export default function Home() {
             className="absolute -bottom-28 -left-32 -z-10 size-80 rounded-full bg-white/5 blur-2xl"
           />
 
-          <div className="mx-auto flex h-full max-w-xl flex-col justify-center">
+          <div className="mx-auto flex h-full max-w-2xl flex-col justify-center">
             <p className="font-mono text-xs font-semibold tracking-[0.18em] text-primary-foreground/65 uppercase">
               The TutorLab journey
             </p>
-            <h2 className="mt-4 max-w-md text-3xl font-semibold tracking-[-0.03em] text-balance sm:text-4xl">
+            <h2 className="mt-2 max-w-lg text-2xl font-semibold tracking-[-0.03em] text-balance sm:text-3xl">
               From raw material to ready-to-teach.
             </h2>
-            <p className="mt-4 max-w-lg leading-7 text-primary-foreground/72">
+            <p className="mt-2 hidden max-w-lg text-sm leading-6 text-primary-foreground/72 sm:block">
               One guided workflow keeps evidence, teaching intent, and quality
               checks connected at every stage.
             </p>
 
-            <ol className="mt-8 grid gap-2" aria-label="Tutor building stages">
+            <ol
+              className="mt-4 grid min-h-0 grid-cols-2 gap-2 sm:mt-5"
+              aria-label="Tutor building stages"
+            >
               {stages.map((stage, index) => {
                 const Icon = stage.icon;
                 return (
                   <li
                     key={stage.title}
-                    className="group grid grid-cols-[2.5rem_minmax(0,1fr)] gap-3 rounded-2xl border border-white/10 bg-white/[0.075] p-3 backdrop-blur-sm transition-colors duration-200 hover:bg-white/[0.12]"
+                    className="group grid min-h-12 grid-cols-[2rem_minmax(0,1fr)] items-center gap-2 rounded-xl border border-white/10 bg-white/[0.075] p-2 backdrop-blur-sm transition-colors duration-200 hover:bg-white/[0.12] sm:min-h-16 sm:grid-cols-[2.25rem_minmax(0,1fr)] sm:gap-3 sm:p-2.5"
                   >
-                    <span className="flex size-10 items-center justify-center rounded-xl bg-white/10 text-white shadow-sm ring-1 ring-white/10">
+                    <span className="flex size-8 items-center justify-center rounded-lg bg-white/10 text-white shadow-sm ring-1 ring-white/10 sm:size-9">
                       <Icon
                         aria-hidden="true"
-                        className="size-5"
+                        className="size-4 sm:size-[1.125rem]"
                         strokeWidth={1.8}
                       />
                     </span>
                     <div>
-                      <div className="flex items-baseline justify-between gap-4">
-                        <h3 className="font-semibold text-white">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <h3 className="text-xs font-semibold leading-4 text-white sm:text-sm">
                           {stage.title}
                         </h3>
-                        <span className="font-mono text-xs font-semibold text-white/45">
+                        <span className="hidden font-mono text-[0.65rem] font-semibold text-white/45 sm:inline">
                           {String(index + 1).padStart(2, "0")}
                         </span>
                       </div>
-                      <p className="mt-1 text-sm leading-5 text-primary-foreground/68">
+                      <p className="mt-0.5 hidden text-xs leading-4 text-primary-foreground/68 lg:block">
                         {stage.description}
                       </p>
                     </div>
