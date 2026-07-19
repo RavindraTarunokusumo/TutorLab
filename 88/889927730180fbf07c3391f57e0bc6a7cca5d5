@@ -1,0 +1,5 @@
+Task: Archive merged UI polish iteration
+Summary: Moved the completed PR 5 task group from active TODO into the dated iteration archive with its merge ID.
+Docs: TODO.md, docs/iterations/archive/2026-07-19-ui-polish.md
+TODO: Landing page brand polish / Tasks 1-7
+Validation: git diff --check; Prettier reported archive formatting to normalize in the next commit
