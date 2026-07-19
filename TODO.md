@@ -36,6 +36,10 @@ Rules:
   - [x] Make project creation request a key only when neither server configuration nor a valid session key exists (`632d6ec`)
   - [x] Provide the request-scoped key to every server route that calls OpenAI (`632d6ec`)
   - [x] Cover the credential boundary and launcher flow with focused tests and production configuration docs (`632d6ec`)
+- [ ] Task 7 — Address PR #5 credential-session and dialog accessibility review findings
+  - [ ] Prevent anonymous enrollment from evicting active key sessions and rate-limit new sessions
+  - [ ] Require an explicit single-instance production opt-in for process-local key sessions
+  - [ ] Use a focus-contained modal and restore focus to the Create project action
 
 ### Source ingestion metric correction
 

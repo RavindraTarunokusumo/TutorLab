@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import {
+  canUseInMemoryOpenAIKeySessions,
+  consumeOpenAIKeyEnrollment,
   createOpenAIKeySession,
   getSessionOpenAIKey,
   hasEnvironmentOpenAIKey,
@@ -11,7 +13,7 @@ const NO_STORE_HEADERS = { "cache-control": "no-store" };
 
 function isSameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  return origin === new URL(request.url).origin;
 }
 
 export async function GET(request: Request) {
@@ -39,11 +41,39 @@ export async function POST(request: Request) {
     );
   }
 
+  if (!canUseInMemoryOpenAIKeySessions()) {
+    return NextResponse.json(
+      {
+        error:
+          "This deployment requires a server-managed OpenAI API key or explicit single-instance key sessions.",
+      },
+      { status: 503, headers: NO_STORE_HEADERS },
+    );
+  }
+
   const body = await request.json().catch(() => null);
   if (!isValidOpenAIKey(body?.apiKey)) {
     return NextResponse.json(
       { error: "Enter a valid OpenAI API key." },
       { status: 400, headers: NO_STORE_HEADERS },
+    );
+  }
+
+  if (!consumeOpenAIKeyEnrollment(request)) {
+    return NextResponse.json(
+      { error: "Too many key connection attempts. Try again later." },
+      {
+        status: 429,
+        headers: { ...NO_STORE_HEADERS, "retry-after": "600" },
+      },
+    );
+  }
+
+  const sessionId = createOpenAIKeySession(body.apiKey);
+  if (!sessionId) {
+    return NextResponse.json(
+      { error: "Key sessions are temporarily at capacity. Try again later." },
+      { status: 503, headers: NO_STORE_HEADERS },
     );
   }
 
@@ -53,7 +83,7 @@ export async function POST(request: Request) {
   );
   response.cookies.set({
     name: OPENAI_KEY_COOKIE,
-    value: createOpenAIKeySession(body.apiKey),
+    value: sessionId,
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",

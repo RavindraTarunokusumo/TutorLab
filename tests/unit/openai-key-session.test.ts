@@ -10,9 +10,12 @@ const testKey = "sk-test-session-key-that-is-long-enough";
 describe("private OpenAI key sessions", () => {
   beforeEach(() => {
     delete process.env.OPENAI_API_KEY;
+    globalThis.tutorLabOpenAIKeySessions?.clear();
+    globalThis.tutorLabOpenAIKeyEnrollments?.clear();
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     if (originalOpenAIKey === undefined) delete process.env.OPENAI_API_KEY;
     else process.env.OPENAI_API_KEY = originalOpenAIKey;
   });
@@ -21,8 +24,9 @@ describe("private OpenAI key sessions", () => {
     const { createOpenAIKeySession, getSessionOpenAIKey, OPENAI_KEY_COOKIE } =
       await import("@/lib/ai/session-key");
     const sessionId = createOpenAIKeySession(testKey);
+    expect(sessionId).not.toBeNull();
     const request = new Request("http://localhost/api/test", {
-      headers: { cookie: `${OPENAI_KEY_COOKIE}=${sessionId}` },
+      headers: { cookie: `${OPENAI_KEY_COOKIE}=${sessionId!}` },
     });
 
     expect(sessionId).not.toContain(testKey);
@@ -38,8 +42,9 @@ describe("private OpenAI key sessions", () => {
       withOpenAIRequestKey,
     } = await import("@/lib/ai/session-key");
     const sessionId = createOpenAIKeySession(testKey);
+    expect(sessionId).not.toBeNull();
     const request = new Request("http://localhost/api/test", {
-      headers: { cookie: `${OPENAI_KEY_COOKIE}=${sessionId}` },
+      headers: { cookie: `${OPENAI_KEY_COOKIE}=${sessionId!}` },
     });
 
     const response = await withOpenAIRequestKey(request, async () => {
@@ -62,5 +67,38 @@ describe("private OpenAI key sessions", () => {
     expect(await response.json()).toMatchObject({
       code: "OPENAI_API_KEY_REQUIRED",
     });
+  });
+
+  it("refuses new sessions at capacity without evicting active sessions", async () => {
+    const { createOpenAIKeySession, getSessionOpenAIKey, OPENAI_KEY_COOKIE } =
+      await import("@/lib/ai/session-key");
+    const firstSessionId = createOpenAIKeySession(testKey);
+    expect(firstSessionId).not.toBeNull();
+    for (let index = 1; index < 1_000; index += 1) {
+      expect(createOpenAIKeySession(`${testKey}-${index}`)).not.toBeNull();
+    }
+
+    expect(createOpenAIKeySession(`${testKey}-overflow`)).toBeNull();
+    expect(
+      getSessionOpenAIKey(
+        new Request("http://localhost/api/test", {
+          headers: {
+            cookie: `${OPENAI_KEY_COOKIE}=${firstSessionId!}`,
+          },
+        }),
+      ),
+    ).toBe(testKey);
+  });
+
+  it("requires an explicit production opt-in for process-local sessions", async () => {
+    const { canUseInMemoryOpenAIKeySessions } =
+      await import("@/lib/ai/session-key");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS", "0");
+    expect(canUseInMemoryOpenAIKeySessions()).toBe(false);
+
+    vi.stubEnv("TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS", "1");
+    expect(canUseInMemoryOpenAIKeySessions()).toBe(true);
+    vi.unstubAllEnvs();
   });
 });

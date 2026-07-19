@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
   const [name, setName] = useState("Probability workshop");
@@ -10,6 +10,26 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
   const [apiKey, setApiKey] = useState("");
   const [keyError, setKeyError] = useState("");
   const [savingKey, setSavingKey] = useState(false);
+  const createButtonRef = useRef<HTMLButtonElement>(null);
+  const keyDialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = keyDialogRef.current;
+    if (!showKeyPrompt || !dialog || dialog.open) return;
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else dialog.setAttribute("open", "");
+  }, [showKeyPrompt]);
+
+  function closeKeyPrompt({
+    restoreFocus = true,
+  }: { restoreFocus?: boolean } = {}) {
+    const dialog = keyDialogRef.current;
+    if (dialog?.open && typeof dialog.close === "function") dialog.close();
+    setApiKey("");
+    setKeyError("");
+    setShowKeyPrompt(false);
+    if (restoreFocus) createButtonRef.current?.focus();
+  }
 
   async function createProject() {
     setError("");
@@ -66,8 +86,7 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
         return;
       }
 
-      setApiKey("");
-      setShowKeyPrompt(false);
+      closeKeyPrompt({ restoreFocus: false });
       await createProject();
     } catch {
       setKeyError("The API key could not be accepted.");
@@ -99,6 +118,7 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
           className="min-h-11 min-w-0 flex-1 rounded-xl border bg-card px-4 text-base shadow-sm transition-colors duration-200 placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         />
         <button
+          ref={createButtonRef}
           type="button"
           disabled={creating || !name.trim()}
           onClick={() => void createProject()}
@@ -117,20 +137,17 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
         </p>
       ) : null}
       {showKeyPrompt ? (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-foreground/30 p-4 backdrop-blur-sm"
-          role="dialog"
+        <dialog
+          ref={keyDialogRef}
+          className="m-auto w-[calc(100%-2rem)] max-w-md rounded-3xl border border-primary/20 bg-card p-0 text-foreground shadow-2xl backdrop:bg-foreground/30 backdrop:backdrop-blur-sm"
           aria-modal="true"
           aria-labelledby="openai-key-title"
-          onKeyDown={(event) => {
-            if (event.key === "Escape" && !savingKey) {
-              setApiKey("");
-              setKeyError("");
-              setShowKeyPrompt(false);
-            }
+          onCancel={(event) => {
+            event.preventDefault();
+            if (!savingKey) closeKeyPrompt();
           }}
         >
-          <div className="w-full max-w-md rounded-3xl border border-primary/20 bg-card p-6 shadow-2xl">
+          <div className="p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
               Private connection
             </p>
@@ -172,11 +189,7 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
               <button
                 type="button"
                 disabled={savingKey}
-                onClick={() => {
-                  setApiKey("");
-                  setKeyError("");
-                  setShowKeyPrompt(false);
-                }}
+                onClick={() => closeKeyPrompt()}
                 className="min-h-11 rounded-xl border bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
               >
                 Cancel
@@ -191,7 +204,7 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
               </button>
             </div>
           </div>
-        </div>
+        </dialog>
       ) : null}
     </section>
   );

@@ -120,11 +120,12 @@ describe("project APIs", () => {
     const sessionId = createOpenAIKeySession(
       "sk-test-session-key-that-is-long-enough",
     );
+    expect(sessionId).not.toBeNull();
 
     const response = await POST(
       new Request("http://localhost/api/projects", {
         method: "POST",
-        headers: { cookie: `${OPENAI_KEY_COOKIE}=${sessionId}` },
+        headers: { cookie: `${OPENAI_KEY_COOKIE}=${sessionId!}` },
         body: JSON.stringify({ name: "Probability tutor" }),
       }),
     );

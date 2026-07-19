@@ -42,7 +42,9 @@ OpenAI Files/vector stores supply retrieval text for ingestion and analysis. PDF
 
 The deployment-level `OPENAI_API_KEY` remains the preferred credential. When it is absent, project creation asks the teacher for a key and sends it to a same-origin server route over HTTPS. The key is held only in a bounded, eight-hour in-memory server session and is made available to OpenAI adapters through request-scoped async context. The browser receives only a random, HTTP-only, same-site session identifier; neither the plaintext key nor an encrypted copy is written to cookies, application logs, files, or the database. Restarting the server invalidates these sessions and prompts the teacher again.
 
-Because user-supplied key sessions deliberately have no shared persistence, a multi-instance production deployment must use request affinity for the session or configure `OPENAI_API_KEY` on every instance. Reverse proxies and observability tooling must not record request bodies for `/api/openai-key`.
+Because user-supplied key sessions deliberately have no shared persistence, production disables them unless `TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS=1` explicitly confirms a single long-lived Node process with request affinity. Serverless, multi-instance, or rolling deployments must configure `OPENAI_API_KEY` on every instance instead. Reverse proxies and observability tooling must not record request bodies for `/api/openai-key`.
+
+Credential enrollment requires a same-origin browser request, is rate-limited by the trusted proxy client address, and refuses new sessions at capacity rather than evicting active users. Production proxies must replace untrusted inbound forwarding headers before requests reach TutorLab.
 
 ## Invariants
 

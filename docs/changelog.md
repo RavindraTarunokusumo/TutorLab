@@ -8,6 +8,7 @@ Record notable behavior, architecture, API, persistence, or workflow changes.
 - Unified the Brief through Export workspace with branded navigation, content surfaces, controls, and progress states.
 - When no deployment-level OpenAI key exists, project creation now requests a user key and holds it only in bounded server memory behind an opaque HTTP-only session identifier.
 - OpenAI-backed routes use the user key only within the originating server request; the key is not written to browser storage, application logs, files, or the database.
+- Review hardening prevents anonymous enrollment from evicting active sessions, explicitly gates process-local sessions in production, and uses a native focus-contained key dialog.
 
 ## 2026-07-17 — Original-document extraction metrics
 

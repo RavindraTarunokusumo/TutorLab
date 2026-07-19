@@ -28,6 +28,12 @@ describe("ProjectLauncher", () => {
       cache: "no-store",
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("dialog").tagName).toBe("DIALOG");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(
+      screen.getByRole("button", { name: "Create project" }),
+    ).toHaveFocus();
   });
 
   it("skips the key check in fixture mode", async () => {
