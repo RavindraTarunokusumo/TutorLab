@@ -369,7 +369,7 @@ export function TeachingBriefWizard({ project }: TeachingBriefWizardProps) {
       <p role="status" aria-live="polite" className="text-sm text-muted-foreground">{saveStatus}</p>
       <div className="flex justify-between gap-3 border-t pt-5">
         <button type="button" disabled={currentStep === 0} onClick={() => { setCurrentStep((index) => index - 1); setValidationError(""); }} className="rounded-md border px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Back</button>
-        <button type="button" onClick={next} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{currentStep === steps.length - 1 ? "Finish brief" : "Next"}</button>
+        <button type="button" onClick={next} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-[background-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{currentStep === steps.length - 1 ? "Finish brief" : "Next"}</button>
       </div>
     </section>
   );
