@@ -1,0 +1,5 @@
+Task: Normalize UI polish archive formatting
+Summary: Applied repository Markdown formatting to the new post-merge archive.
+Docs: docs/iterations/archive/2026-07-19-ui-polish.md
+TODO: N/A
+Validation: npx prettier --write docs/iterations/archive/2026-07-19-ui-polish.md
