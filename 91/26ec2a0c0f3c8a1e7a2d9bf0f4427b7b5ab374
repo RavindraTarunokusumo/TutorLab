@@ -1,0 +1,5 @@
+Task: Record final PR 5 security follow-up
+Summary: Added the global enrollment-budget commit to the completed review-hardening task.
+Docs: N/A
+TODO: Landing page brand polish / Task 7
+Validation: git diff --check
