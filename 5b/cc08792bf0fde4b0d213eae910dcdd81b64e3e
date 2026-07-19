@@ -1,0 +1,5 @@
+Task: Add trusted enrollment validation
+Summary: Added explicit trusted-edge production gating, layered per-client/global throttling, provider authentication before allocation, and valid-key session deduplication.
+Docs: docs/architecture.md, docs/commands.md, docs/changelog.md
+TODO: Landing page brand polish / Task 7
+Validation: npm run lint; 27 focused tests passed; npm run typecheck reached only two pre-existing ProjectRepository mock errors
