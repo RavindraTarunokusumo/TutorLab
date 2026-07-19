@@ -1,0 +1,5 @@
+Task: Record cross-stage workspace UI completion
+Summary: Mark the Brief-through-Export design system task complete with implementation commit ad3ec32.
+Docs: N/A
+TODO: TODO.md - Landing page brand polish Task 4
+Validation: git diff --check
