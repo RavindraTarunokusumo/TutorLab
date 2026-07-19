@@ -22,6 +22,10 @@ Rules:
 - [x] Task 2 — Fit the complete branded landing experience inside the viewport without page scrolling (`4920d18`)
   - [x] Compact the hero and stage summary responsively without losing the workflow overview (`4920d18`)
   - [x] Verify zero page overflow at desktop and mobile viewport sizes (`4920d18`)
+- [x] Task 3 — Extend viewport fitting to short phones, landscape phones, tablets, and large displays (`3318517`)
+  - [x] Add height-aware density rules for short portrait screens (`3318517`)
+  - [x] Use a side-by-side composition for short landscape screens (`3318517`)
+  - [x] Verify visible bounds across the expanded viewport matrix (`3318517`)
 
 ### Source ingestion metric correction
 
