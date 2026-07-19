@@ -30,12 +30,12 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
   }
 
   return (
-    <section className="mt-5 max-w-xl rounded-2xl border bg-background/70 p-2 shadow-[0_16px_44px_-28px_oklch(0.31_0.09_284.8/0.4)] sm:mt-6">
+    <section className="landing-launcher mt-5 max-w-xl rounded-2xl border bg-background/70 p-2 shadow-[0_16px_44px_-28px_oklch(0.31_0.09_284.8/0.4)] sm:mt-6">
       <div className="px-2 pt-2 sm:px-3">
         <h2 className="text-sm font-semibold text-foreground">
           {fixtureMode ? "Fixture-mode project" : "Create a tutor project"}
         </h2>
-        <p className="mt-1 hidden text-xs leading-5 text-muted-foreground sm:block">
+        <p className="landing-launcher-help mt-1 hidden text-xs leading-5 text-muted-foreground sm:block">
           Start with a working title. You can refine every decision as you
           build.
         </p>
