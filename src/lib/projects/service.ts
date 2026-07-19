@@ -59,10 +59,6 @@ export async function requireProjectAccess(
     projectId,
     hashProjectEditToken(editToken),
   );
-  if (!project && process.env.NODE_ENV === "development") {
-    const localProject = await repository.findById(projectId);
-    if (localProject) return localProject;
-  }
   if (!project) {
     throw new ProjectAccessError(404);
   }
