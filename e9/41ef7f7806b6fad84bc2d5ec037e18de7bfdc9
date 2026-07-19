@@ -1,0 +1,5 @@
+Task: Record viewport fit completion
+Summary: Mark the viewport-fit task complete with implementation commit 4920d18.
+Docs: N/A
+TODO: TODO.md - Landing page brand polish Task 2
+Validation: git diff --check
