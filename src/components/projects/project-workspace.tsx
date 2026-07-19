@@ -23,7 +23,10 @@ function TutorScreen({
 }: {
   projectId: string;
   projectName: string;
-  routeStage: Extract<ProjectStage, "design" | "build" | "report" | "preview" | "export">;
+  routeStage: Extract<
+    ProjectStage,
+    "design" | "build" | "report" | "preview" | "export"
+  >;
 }) {
   if (routeStage === "design") {
     return <TutorDesignComparison projectId={projectId} />;
@@ -50,23 +53,50 @@ export function ProjectWorkspace({
 }: ProjectWorkspaceProps) {
   const preview = routeStage === "preview";
   return (
-    <main className={preview ? "flex h-dvh flex-col overflow-hidden bg-background" : "min-h-screen bg-background"}>
+    <main
+      data-stage={routeStage}
+      className={
+        preview
+          ? "project-workspace flex h-dvh flex-col overflow-hidden bg-background"
+          : "project-workspace min-h-screen bg-background"
+      }
+    >
       <StageHeader
         projectId={project.id}
+        projectName={project.name}
         currentStage={project.stage}
         lastCompletedStage={lastCompletedProjectStage(project.stage)}
       />
-      <div className={routeStage === "build" ? "w-full" : preview ? "mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col px-4 py-6 sm:px-8" : "mx-auto w-full max-w-7xl px-4 py-10 sm:px-8"}>
-        {routeStage !== "build" ? <p className="mb-8 text-sm text-muted-foreground">
-          Project: {project.name}
-        </p> : null}
+      <div
+        className={
+          routeStage === "build"
+            ? "project-stage-content min-h-0 w-full flex-1"
+            : preview
+              ? "project-stage-content mx-auto flex min-h-0 w-full max-w-[90rem] flex-1 flex-col px-4 py-4 sm:px-8 sm:py-6"
+              : "project-stage-content mx-auto w-full max-w-[90rem] px-4 py-7 sm:px-8 sm:py-10"
+        }
+      >
         {routeStage === "brief" ? (
           <TeachingBriefWizard project={project} />
         ) : routeStage === "sources" ? (
           <SourceWorkspace projectId={project.id} />
         ) : routeStage === "course_model" ? (
           <CourseModelReview projectId={project.id} />
-        ) : preview ? <div className="min-h-0 flex-1"><TutorScreen projectId={project.id} projectName={project.name} routeStage={routeStage} /></div> : <TutorScreen projectId={project.id} projectName={project.name} routeStage={routeStage} />}
+        ) : preview ? (
+          <div className="min-h-0 flex-1">
+            <TutorScreen
+              projectId={project.id}
+              projectName={project.name}
+              routeStage={routeStage}
+            />
+          </div>
+        ) : (
+          <TutorScreen
+            projectId={project.id}
+            projectName={project.name}
+            routeStage={routeStage}
+          />
+        )}
       </div>
     </main>
   );
