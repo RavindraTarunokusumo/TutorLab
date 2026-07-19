@@ -1,0 +1,5 @@
+Task: Record UI polish release
+Summary: Added the changelog entry required by the PR template for the branded responsive workspace and private OpenAI key sessions.
+Docs: docs/changelog.md
+TODO: Landing page brand polish / Tasks 1-6
+Validation: npx prettier --check docs/changelog.md; git diff --check
