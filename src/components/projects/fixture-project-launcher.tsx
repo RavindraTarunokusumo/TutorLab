@@ -6,17 +6,39 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
   const [name, setName] = useState("Probability workshop");
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [showKeyPrompt, setShowKeyPrompt] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [keyError, setKeyError] = useState("");
+  const [savingKey, setSavingKey] = useState(false);
 
   async function createProject() {
     setError("");
     setCreating(true);
     try {
+      if (!fixtureMode) {
+        const keyResponse = await fetch("/api/openai-key", {
+          cache: "no-store",
+        });
+        const keyStatus = await keyResponse.json().catch(() => null);
+        if (!keyResponse.ok) throw new Error("key-status-unavailable");
+        if (!keyStatus?.configured) {
+          setShowKeyPrompt(true);
+          setCreating(false);
+          return;
+        }
+      }
+
       const response = await fetch("/api/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name }),
       });
       const body = await response.json().catch(() => null);
+      if (response.status === 428 && body?.code === "OPENAI_API_KEY_REQUIRED") {
+        setShowKeyPrompt(true);
+        setCreating(false);
+        return;
+      }
       if (!response.ok || !body?.project?.id) {
         setError("Project could not be created.");
         setCreating(false);
@@ -26,6 +48,31 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
     } catch {
       setError("Project could not be created.");
       setCreating(false);
+    }
+  }
+
+  async function saveKeyAndCreateProject() {
+    setKeyError("");
+    setSavingKey(true);
+    try {
+      const response = await fetch("/api/openai-key", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ apiKey }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok || !body?.configured) {
+        setKeyError(body?.error ?? "The API key could not be accepted.");
+        return;
+      }
+
+      setApiKey("");
+      setShowKeyPrompt(false);
+      await createProject();
+    } catch {
+      setKeyError("The API key could not be accepted.");
+    } finally {
+      setSavingKey(false);
     }
   }
 
@@ -68,6 +115,83 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
         <p role="alert" className="px-4 py-2 text-sm text-destructive">
           {error}
         </p>
+      ) : null}
+      {showKeyPrompt ? (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-foreground/30 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="openai-key-title"
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && !savingKey) {
+              setApiKey("");
+              setKeyError("");
+              setShowKeyPrompt(false);
+            }
+          }}
+        >
+          <div className="w-full max-w-md rounded-3xl border border-primary/20 bg-card p-6 shadow-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Private connection
+            </p>
+            <h2
+              id="openai-key-title"
+              className="mt-2 text-xl font-semibold tracking-tight text-foreground"
+            >
+              Add your OpenAI API key
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              TutorLab needs a key to analyze course material and build your
+              tutor. The key is kept only in this server&apos;s memory for up to
+              eight hours. It is never written to logs, the database, files, or
+              browser storage.
+            </p>
+            <label
+              htmlFor="openai-api-key"
+              className="mt-5 block text-sm font-medium text-foreground"
+            >
+              OpenAI API key
+            </label>
+            <input
+              id="openai-api-key"
+              type="password"
+              autoComplete="off"
+              autoFocus
+              spellCheck={false}
+              value={apiKey}
+              onChange={(event) => setApiKey(event.target.value)}
+              placeholder="sk-…"
+              className="mt-2 min-h-11 w-full rounded-xl border bg-background px-4 font-mono text-sm shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            />
+            {keyError ? (
+              <p role="alert" className="mt-2 text-sm text-destructive">
+                {keyError}
+              </p>
+            ) : null}
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={savingKey}
+                onClick={() => {
+                  setApiKey("");
+                  setKeyError("");
+                  setShowKeyPrompt(false);
+                }}
+                className="min-h-11 rounded-xl border bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingKey || apiKey.length < 20}
+                onClick={() => void saveKeyAndCreateProject()}
+                className="min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {savingKey ? "Connecting…" : "Use key and create project"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </section>
   );

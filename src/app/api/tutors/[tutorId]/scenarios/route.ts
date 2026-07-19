@@ -11,6 +11,7 @@ import {
   ProjectAccessError,
   requireProjectAccess,
 } from "@/lib/projects/service";
+import { withOpenAIRequestKey } from "@/lib/ai/session-key";
 
 const ScenarioRequestSchema = z.strictObject({
   projectId: z.string().trim().min(1).max(96),
@@ -35,12 +36,18 @@ function errorResponse(error: unknown) {
             ? 503
             : 422;
     return NextResponse.json(
-      { error: "Evaluation scenarios could not be generated.", code: error.code },
+      {
+        error: "Evaluation scenarios could not be generated.",
+        code: error.code,
+      },
       { status },
     );
   }
   if (error instanceof z.ZodError || error instanceof SyntaxError) {
-    return NextResponse.json({ error: "Invalid scenario request" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid scenario request" },
+      { status: 400 },
+    );
   }
   throw error;
 }
@@ -49,22 +56,24 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ tutorId: string }> },
 ) {
-  try {
-    const body = ScenarioRequestSchema.parse(await request.json());
-    const project = await requireProjectAccess(request, body.projectId);
-    const { tutorId } = await params;
-    const result = await generateEvaluationScenarios({
-      project,
-      tutorVersionId: tutorId,
-      idempotencyKey: body.idempotencyKey,
-    });
-    return NextResponse.json(
-      { job: result.job, scenarios: result.scenarios },
-      { status: result.job.status === "completed" ? 201 : 202 },
-    );
-  } catch (error) {
-    return errorResponse(error);
-  }
+  return withOpenAIRequestKey(request, async () => {
+    try {
+      const body = ScenarioRequestSchema.parse(await request.json());
+      const project = await requireProjectAccess(request, body.projectId);
+      const { tutorId } = await params;
+      const result = await generateEvaluationScenarios({
+        project,
+        tutorVersionId: tutorId,
+        idempotencyKey: body.idempotencyKey,
+      });
+      return NextResponse.json(
+        { job: result.job, scenarios: result.scenarios },
+        { status: result.job.status === "completed" ? 201 : 202 },
+      );
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
 }
 
 export async function GET(
@@ -74,12 +83,16 @@ export async function GET(
   try {
     const projectId = new URL(request.url).searchParams.get("projectId");
     if (!projectId) {
-      return NextResponse.json({ error: "Invalid scenario request" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid scenario request" },
+        { status: 400 },
+      );
     }
     await requireProjectAccess(request, projectId);
     const { tutorId } = await params;
     const tutor = await getTutorRepository().findVersion(projectId, tutorId);
-    if (!tutor) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!tutor)
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({
       scenarios: await listEvaluationScenarios(projectId, tutorId),
       job: await findLatestScenarioJob(projectId, tutorId),

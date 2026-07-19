@@ -31,6 +31,11 @@ Rules:
   - [x] Unify the responsive content canvas, cards, controls, and interaction states (`ad3ec32`)
   - [x] Validate Brief, Sources, Model, Design, Build, Report, Preview, and Export states (`ad3ec32`)
 - [x] Task 5 — Center the "Ask for reasoning first" checkbox against its label copy (`cb3e643`)
+- [ ] Task 6 — Prompt for a private OpenAI API key when the server has no configured key
+  - [ ] Keep user-supplied keys encrypted, session-only, HttpOnly, and out of logs and persistence
+  - [ ] Make project creation request a key only when neither server configuration nor a valid session key exists
+  - [ ] Provide the request-scoped key to every server route that calls OpenAI
+  - [ ] Cover the credential boundary and launcher flow with focused tests and production configuration docs
 
 ### Source ingestion metric correction
 

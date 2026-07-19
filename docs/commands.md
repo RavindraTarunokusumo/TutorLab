@@ -11,7 +11,9 @@ npm run db:migrate
 npm run dev
 ```
 
-Set `DATABASE_URL` and `OPENAI_API_KEY` in `.env.local`. The OpenAI key is needed only for live ingestion/analysis; fixture tests mock that boundary.
+Set `DATABASE_URL` in `.env.local`. Setting `OPENAI_API_KEY` is recommended for server-managed deployments and avoids an in-app prompt; when it is omitted, the Create project flow accepts a user key into an ephemeral server-memory session. The OpenAI key is needed only for live AI workflows; fixture tests mock that boundary.
+
+Production must use HTTPS. If user-supplied keys are enabled on a multi-instance deployment, configure request affinity so the opaque session cookie returns to the instance holding its in-memory key. Disable request-body capture for `/api/openai-key` in reverse-proxy and observability configuration. Prefer the deployment-level `OPENAI_API_KEY` when request affinity is unavailable.
 
 ## Common commands
 

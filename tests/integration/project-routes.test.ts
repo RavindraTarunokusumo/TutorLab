@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
 const repository = {
   create: vi.fn(),
   findById: vi.fn(),
@@ -12,6 +14,7 @@ vi.mock("@/lib/projects/repository", () => ({
 }));
 
 const originalSecret = process.env.PROJECT_EDIT_TOKEN_SECRET;
+const originalOpenAIKey = process.env.OPENAI_API_KEY;
 
 function project(overrides: Record<string, unknown> = {}) {
   return {
@@ -29,6 +32,7 @@ describe("project APIs", () => {
   beforeEach(() => {
     process.env.PROJECT_EDIT_TOKEN_SECRET =
       "a-test-secret-with-at-least-32-characters";
+    process.env.OPENAI_API_KEY = "test-openai-api-key-for-project-routes";
     vi.resetModules();
     vi.clearAllMocks();
   });
@@ -38,6 +42,11 @@ describe("project APIs", () => {
       delete process.env.PROJECT_EDIT_TOKEN_SECRET;
     } else {
       process.env.PROJECT_EDIT_TOKEN_SECRET = originalSecret;
+    }
+    if (originalOpenAIKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = originalOpenAIKey;
     }
   });
 
@@ -82,6 +91,46 @@ describe("project APIs", () => {
 
     expect(response.status).toBe(400);
     expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it("requests an OpenAI key before creating a project when none is configured", async () => {
+    delete process.env.OPENAI_API_KEY;
+    const { POST } = await import("@/app/api/projects/route");
+
+    const response = await POST(
+      new Request("http://localhost/api/projects", {
+        method: "POST",
+        body: JSON.stringify({ name: "Probability tutor" }),
+      }),
+    );
+
+    expect(response.status).toBe(428);
+    expect(await response.json()).toMatchObject({
+      code: "OPENAI_API_KEY_REQUIRED",
+    });
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a project with an opaque in-memory key session", async () => {
+    delete process.env.OPENAI_API_KEY;
+    repository.create.mockResolvedValue(project());
+    const { createOpenAIKeySession, OPENAI_KEY_COOKIE } =
+      await import("@/lib/ai/session-key");
+    const { POST } = await import("@/app/api/projects/route");
+    const sessionId = createOpenAIKeySession(
+      "sk-test-session-key-that-is-long-enough",
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/projects", {
+        method: "POST",
+        headers: { cookie: `${OPENAI_KEY_COOKIE}=${sessionId}` },
+        body: JSON.stringify({ name: "Probability tutor" }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(repository.create).toHaveBeenCalledOnce();
   });
 
   it("updates a canonical brief patch when the edit cookie authorizes that project", async () => {

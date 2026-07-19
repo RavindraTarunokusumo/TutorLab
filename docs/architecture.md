@@ -40,10 +40,15 @@ Project mutations require an HTTP-only signed edit cookie. The database stores v
 
 OpenAI Files/vector stores supply retrieval text for ingestion and analysis. PDF and DOCX text are derived from the original uploaded file because vector-store parsed-content elements are retrieval chunks, not authoritative document pages. PDF.js supplies PDF page boundaries; DOCX uses its saved application page-count property when present and otherwise leaves the page total unknown rather than guessing. Responses structured output supplies document analysis and course synthesis. Tests inject mock providers/adapters; automated tests make no live OpenAI calls. Failed provider work records safe, retryable messages rather than provider payloads.
 
+The deployment-level `OPENAI_API_KEY` remains the preferred credential. When it is absent, project creation asks the teacher for a key and sends it to a same-origin server route over HTTPS. The key is held only in a bounded, eight-hour in-memory server session and is made available to OpenAI adapters through request-scoped async context. The browser receives only a random, HTTP-only, same-site session identifier; neither the plaintext key nor an encrypted copy is written to cookies, application logs, files, or the database. Restarting the server invalidates these sessions and prompts the teacher again.
+
+Because user-supplied key sessions deliberately have no shared persistence, a multi-instance production deployment must use request affinity for the session or configure `OPENAI_API_KEY` on every instance. Reverse proxies and observability tooling must not record request bodies for `/api/openai-key`.
+
 ## Invariants
 
 - Source limits are 30 files, 500 pages, 2 million extracted tokens, 10 MB per file, and 200 MB per course workspace.
 - `CourseModel` is a compact synthesis: raw documents, chunks, slide summaries, and complete worked solutions remain out of it.
 - Source permissions govern modelling, pedagogy drafting, runtime retrieval, evaluation, and student-visible excerpts. Sources marked as containing protected solutions are always denied runtime retrieval and student-visible excerpts.
 - Every synthesized claim carries source evidence; source/provider secrets and raw uploaded content are not exposed through client responses or logs.
+- User-supplied OpenAI keys exist only in process memory, are scoped by an opaque session identifier, and expire after eight hours at most.
 - Tutor versions and evaluation artifacts are immutable or append-only once persisted. Evaluation reports show deterministic and judge evidence without provider prompts or raw source content.

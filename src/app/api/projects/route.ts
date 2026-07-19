@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { CreateProjectInputSchema } from "@/lib/schemas/project";
 import { createProject } from "@/lib/projects/service";
+import {
+  hasOpenAIKeyForRequest,
+  OPENAI_KEY_REQUIRED,
+} from "@/lib/ai/session-key";
 
 function invalidRequest() {
   return NextResponse.json(
@@ -11,6 +15,16 @@ function invalidRequest() {
 }
 
 export async function POST(request: Request) {
+  if (!hasOpenAIKeyForRequest(request)) {
+    return NextResponse.json(
+      {
+        error: "An OpenAI API key is required to create a project.",
+        code: OPENAI_KEY_REQUIRED,
+      },
+      { status: 428 },
+    );
+  }
+
   try {
     const input = CreateProjectInputSchema.parse(await request.json());
     const { project, editToken } = await createProject(input);
