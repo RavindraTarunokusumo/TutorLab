@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { getTutorRuntime, type RuntimeDraft, type TutorRuntime } from "@/lib/ai/tutor-runtime";
 import { getSourceRepository, type SourceRepository } from "@/lib/sources/repository";
 import { getOpenAIFileProvider, type OpenAIFileProvider } from "@/lib/ai/openai-files";
+import { getCourseModelRepository, type CourseModelRepository } from "@/lib/analysis/course-synthesis";
 import { getProjectRepository, type ProjectRepository } from "@/lib/projects/repository";
 import { validateTransition } from "@/lib/tutor/state-machine";
 import { getTutorRepository, type TutorRepository, type TutorVersionRecord } from "@/lib/tutor/repository";
@@ -24,6 +25,7 @@ type Dependencies = {
   runtime: TutorRuntime;
   projectRepository: ProjectRepository;
   fileProvider: OpenAIFileProvider;
+  courseModelRepository: CourseModelRepository;
   createId: () => string;
   now: () => Date;
 };
@@ -36,6 +38,7 @@ function dependencies(overrides?: Partial<Dependencies>): Dependencies {
     runtime: overrides?.runtime ?? getTutorRuntime(),
     projectRepository: overrides?.projectRepository ?? getProjectRepository(),
     fileProvider: overrides?.fileProvider ?? getOpenAIFileProvider(),
+    courseModelRepository: overrides?.courseModelRepository ?? getCourseModelRepository(),
     createId: overrides?.createId ?? randomUUID,
     now: overrides?.now ?? (() => new Date()),
   };
@@ -51,23 +54,67 @@ function runtimeSources(version: TutorVersionRecord, sources: Awaited<ReturnType
     .map((source) => ({ documentId: source.id, title: source.name }));
 }
 
-async function retrieveRuntimeSources(version: TutorVersionRecord, projectId: string, query: string, sources: Awaited<ReturnType<SourceRepository["list"]>>, deps: Dependencies) {
+type RuntimeSource = { documentId: string; title: string; passage: string };
+
+function queryTokens(query: string): string[] {
+  return [...new Set(query.toLowerCase().match(/[a-z]{4,}/g) ?? [])];
+}
+
+function relevanceScore(query: string, text: string): number {
+  const textTokens = queryTokens(text);
+  return queryTokens(query).filter((queryToken) => textTokens.some((textToken) =>
+    queryToken === textToken || (queryToken.length >= 7 && textToken.length >= 7 && queryToken.slice(0, 7) === textToken.slice(0, 7)),
+  )).length;
+}
+
+async function courseModelSources(version: TutorVersionRecord, projectId: string, query: string, selected: Array<{ documentId: string; title: string }>, deps: Dependencies): Promise<RuntimeSource[]> {
+  const courseModel = await deps.courseModelRepository.findById?.(projectId, version.courseModelVersionId);
+  if (!courseModel) return [];
+  const sourceById = new Map(selected.map((source) => [source.documentId, source]));
+  return courseModel.artifact.concepts
+    .map((concept) => ({ concept, score: relevanceScore(query, `${concept.name} ${concept.description}`) }))
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .flatMap(({ concept }) => concept.evidence
+      .map((evidence) => sourceById.get(evidence.documentId))
+      .flatMap((source) => source ? [{
+        documentId: source.documentId,
+        title: source.title,
+        passage: `Course model concept: ${concept.name}. ${concept.description}`,
+      }] : []))
+    .filter((source, index, entries) => entries.findIndex((candidate) => candidate.documentId === source.documentId && candidate.passage === source.passage) === index)
+    .slice(0, version.spec.runtimeRetrieval.maxPassages);
+}
+
+async function retrieveRuntimeSources(version: TutorVersionRecord, projectId: string, query: string, sources: Awaited<ReturnType<SourceRepository["list"]>>, deps: Dependencies): Promise<RuntimeSource[]> {
   const selected = runtimeSources(version, sources);
+  const synthesizedSources = await courseModelSources(version, projectId, query, selected, deps);
   const vectorStoreId = await deps.projectRepository.findVectorStoreId(projectId);
-  if (!vectorStoreId) return [];
+  if (!vectorStoreId) return synthesizedSources;
   const files = await Promise.all(selected.map(async (source) => {
     const record = await deps.sourceRepository.findById(projectId, source.documentId);
     return record?.openaiFileId ? { ...source, fileId: record.openaiFileId } : null;
   }));
   const permittedFiles = files.flatMap((file) => file ? [file] : []);
-  if (permittedFiles.length === 0 || !deps.fileProvider.searchPassages) return [];
+  if (permittedFiles.length === 0 || !deps.fileProvider.searchPassages) return synthesizedSources;
   const sourceByFileId = new Map(permittedFiles.map((file) => [file.fileId, file]));
   const passages = await deps.fileProvider.searchPassages({ vectorStoreId, query, fileIds: permittedFiles.map(({ fileId }) => fileId), limit: version.spec.runtimeRetrieval.maxPassages });
-  return passages.flatMap((passage) => {
+  const retrieved = passages.flatMap((passage) => {
     const source = sourceByFileId.get(passage.fileId);
     const text = passage.text.replace(/\s+/g, " ").trim().slice(0, 2_000);
     return source && text ? [{ documentId: source.documentId, title: source.title, passage: text }] : [];
   });
+  return [...synthesizedSources, ...retrieved].slice(0, version.spec.runtimeRetrieval.maxPassages);
+}
+
+function retrievalQuery(conversation: Conversation, learnerMessage: string): string {
+  const recentTutorContext = conversation.messages
+    .filter((message) => message.role === "tutor")
+    .slice(-2)
+    .map((message) => message.content)
+    .join("\n")
+    .slice(-4_000);
+  return recentTutorContext ? `${learnerMessage}\n${recentTutorContext}` : learnerMessage;
 }
 
 function boundedWords(content: string, maxWords: number): string {
@@ -126,6 +173,13 @@ function meaningfulPromptSegments(compiledPrompt: string): string[] {
   return [...segments];
 }
 
+function normalizeTeachingMove(version: TutorVersionRecord, draft: RuntimeDraft): RuntimeDraft | null {
+  if (version.spec.pedagogy.permittedTeachingMoves.includes(draft.teachingMove)) return draft;
+  const replacement = (["give_conceptual_hint", "explain_concept", "elicit_reasoning", "check_understanding", "summarize_learning"] as const)
+    .find((move) => version.spec.pedagogy.permittedTeachingMoves.includes(move));
+  return replacement ? { ...draft, teachingMove: replacement } : null;
+}
+
 function safeguardDraft(version: TutorVersionRecord, draft: RuntimeDraft, sources: Array<{ documentId: string; title: string; passage: string }>, learnerMessage: string): RuntimeDraft {
   if (requestsInternalInstructionDisclosure(learnerMessage)) return safeInternalDisclosureDraft();
   if (requestsProtectedAnswer(learnerMessage) || disclosesProtectedAnswer(draft.content)) return safeProtectedDisclosureDraft();
@@ -133,12 +187,13 @@ function safeguardDraft(version: TutorVersionRecord, draft: RuntimeDraft, source
   const lower = draft.content.toLowerCase();
   const normalizedContent = normalizeDisclosureText(draft.content);
   const leaksInternal = /system prompt|compiled prompt|provider instructions|openai api|api key/.test(lower) || meaningfulPromptSegments(version.compiledPrompt).some((segment) => normalizedContent.includes(segment));
-  const permittedMove = version.spec.pedagogy.permittedTeachingMoves.includes(draft.teachingMove);
-  if (leaksInternal || !permittedMove) return { ...safeLimitedEvidenceDraft(), boundary: "protected_solution" };
+  if (leaksInternal) return { ...safeLimitedEvidenceDraft(), boundary: "protected_solution" };
+  const normalizedDraft = normalizeTeachingMove(version, draft);
+  if (!normalizedDraft) return { ...safeLimitedEvidenceDraft(), boundary: "protected_solution" };
   const permittedIds = new Set(sources.map((source) => source.documentId));
-  const citedDocumentIds = draft.citedDocumentIds.filter((id) => permittedIds.has(id));
+  const citedDocumentIds = normalizedDraft.citedDocumentIds.filter((id) => permittedIds.has(id));
   if (version.spec.runtimeRetrieval.citationsRequired && citedDocumentIds.length === 0) return safeLimitedEvidenceDraft();
-  return { ...draft, content: boundedWords(draft.content, version.spec.responseStyle.maxWords), citedDocumentIds };
+  return { ...normalizedDraft, content: boundedWords(normalizedDraft.content, version.spec.responseStyle.maxWords), citedDocumentIds };
 }
 
 function metadata(version: TutorVersionRecord, conversation: Conversation, draft: RuntimeDraft, sources: Array<{ documentId: string; title: string; passage: string }>, startedAt: Date): TutorReplyMetadata {
@@ -208,7 +263,7 @@ export async function sendPreviewMessage(input: { projectId: string; tutorVersio
   const extractionAttempt = requestsInternalInstructionDisclosure(learnerMessage);
   const sources = extractionAttempt
     ? []
-    : await retrieveRuntimeSources(version, input.projectId, learnerMessage, await deps.sourceRepository.list(input.projectId), deps);
+    : await retrieveRuntimeSources(version, input.projectId, retrievalQuery(afterLearner, learnerMessage), await deps.sourceRepository.list(input.projectId), deps);
   const runtimeDraft = extractionAttempt
     ? safeInternalDisclosureDraft()
     : await deps.runtime.reply({ compiledPrompt: version.compiledPrompt, spec: version.spec, conversation: afterLearner, learnerMessage, sources });

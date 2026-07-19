@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { EvaluationRunError, getEvaluationRun, runTutorEvaluation } from "@/lib/evaluation/runner";
 import { ProjectAccessError, requireProjectAccess } from "@/lib/projects/service";
+import { getProjectRepository } from "@/lib/projects/repository";
 
 const ResumeSchema = z.strictObject({ projectId: z.string().trim().min(1).max(96), idempotencyKey: z.string().trim().min(1).max(160) });
 
@@ -12,7 +13,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ tut
     const { tutorId, runId } = await params;
     const persisted = await getEvaluationRun(body.projectId, runId);
     if (!persisted || persisted.run.tutorVersionId !== tutorId) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(await runTutorEvaluation({ ...body, tutorVersionId: tutorId, scenarioIds: persisted.run.scenarioIds, resume: true, existingRunId: runId }));
+    const evaluation = await runTutorEvaluation({ ...body, tutorVersionId: tutorId, scenarioIds: persisted.run.scenarioIds, resume: true, existingRunId: runId });
+    if (evaluation.run.status === "completed") {
+      await getProjectRepository().updateStage(body.projectId, "report");
+    }
+    return NextResponse.json(evaluation);
   } catch (error) {
     if (error instanceof ProjectAccessError) return NextResponse.json({ error: error.status === 401 ? "Unauthorized" : "Not found" }, { status: error.status });
     if (error instanceof EvaluationRunError) return NextResponse.json({ error: "Idempotency key cannot be reused for a different evaluation request.", code: error.code }, { status: 409 });

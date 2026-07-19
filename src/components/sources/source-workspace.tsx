@@ -273,7 +273,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
         return false;
       }
       if (file.size > DEFAULT_WORKSPACE_BUDGET.maxBytesPerFile) {
-        localErrors.push(`${file.name} exceeds the 50 MB per-file limit.`);
+        localErrors.push(`${file.name} exceeds the 10 MB per-file limit.`);
         return false;
       }
       return true;
@@ -450,7 +450,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
       </div>
 
       <section
-        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-3 sm:grid-cols-2"
         aria-label="Workspace budget"
       >
         <BudgetMeter
@@ -465,18 +465,6 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
           limit={DEFAULT_WORKSPACE_BUDGET.maxWorkspaceBytes}
           detail={`${formatBytes(summary.bytes)} of 200 MB`}
         />
-        <BudgetMeter
-          label="Pages"
-          value={summary.pages}
-          limit={DEFAULT_WORKSPACE_BUDGET.maxPages}
-          detail={`${summary.pages} of 500 known pages`}
-        />
-        <BudgetMeter
-          label="Extracted tokens"
-          value={summary.tokens}
-          limit={DEFAULT_WORKSPACE_BUDGET.maxExtractedTokens}
-          detail={`${summary.tokens.toLocaleString("en-US")} known of ${DEFAULT_WORKSPACE_BUDGET.maxExtractedTokens.toLocaleString("en-US")}${summary.pendingTokenSources ? ` · ${summary.pendingTokenSources} source${summary.pendingTokenSources === 1 ? "" : "s"} pending measurement` : ""}`}
-        />
       </section>
 
       <section
@@ -488,8 +476,11 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
             Upload course material
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            PDF only. Up to 50 MB each; text and rendered page images are used
+            PDF only. Up to 10 MB each; text and rendered page images are used
             during analysis.
+          </p>
+          <p className="mt-2 text-sm text-amber-700">
+            Image-heavy files take longer to process and may cost more to analyze.
           </p>
         </div>
         <label className="grid gap-2 text-sm font-medium">

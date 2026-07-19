@@ -122,7 +122,12 @@ async function executeScenario(run: EvalRun, scenario: EvalScenario, version: Tu
     const judgeResult = shouldSkipPedagogyJudge(checks) ? skippedJudge() : judgeWithTranscriptEvidence(await dependencies.judge.judge({ scenario, tutorSpec: version.spec, transcript }), transcript);
     const failed = checks.some((check) => !check.passed) || judgeResult.outcome === "fail";
     return dependencies.evaluationRepository.saveResult(run.projectId, { schemaVersion: "0.1", id: dependencies.createId(), evalRunId: run.id, scenarioId: scenario.id, status: failed ? "failed" : "passed", transcript, deterministicChecks: checks, judgeResult, usage: usage(transcript), startedAt, completedAt: dependencies.now().toISOString() });
-  } catch {
+  } catch (error) {
+    console.error("Evaluation scenario execution failed", {
+      scenarioId: scenario.id,
+      scenarioType: scenario.type,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
     return dependencies.evaluationRepository.saveResult(run.projectId, { schemaVersion: "0.1", id: dependencies.createId(), evalRunId: run.id, scenarioId: scenario.id, status: "error", transcript: [], deterministicChecks: [], diagnostic: diagnostic(), startedAt, completedAt: dependencies.now().toISOString() });
   }
 }
@@ -213,7 +218,13 @@ export async function runTutorEvaluation(input: { projectId: string; tutorVersio
 export async function getEvaluationRun(projectId: string, runId: string, overrides?: Partial<EvaluationRunDependencies>) {
   const repository = deps(overrides).evaluationRepository;
   const run = await repository.findRun(projectId, runId);
-  return run ? { run, results: await repository.listResults(projectId, runId) } : null;
+  if (!run) return null;
+  const scenarios = await repository.listScenarios(projectId, run.tutorVersionId);
+  return {
+    run,
+    results: await repository.listResults(projectId, runId),
+    scenarios: scenarios.filter((scenario) => run.scenarioIds.includes(scenario.id)),
+  };
 }
 
 export { CONCURRENCY, readiness };

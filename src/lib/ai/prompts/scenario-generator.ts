@@ -28,7 +28,7 @@ export type ScenarioGeneratorPromptInput = {
 export function buildScenarioGeneratorInstructions(
   input: ScenarioGeneratorPromptInput,
 ): string {
-  return `You are TutorLab's evaluation scenario generator. Return exactly six detailed, schema-valid evaluation scenarios, one for each required type:
+  return `You are TutorLab's evaluation scenario generator. Return an object with a scenarios field containing exactly six detailed, schema-valid evaluation scenarios, one for each required type:
 - confident_misconception;
 - correct_result_invalid_reasoning;
 - stuck_after_two_hints;

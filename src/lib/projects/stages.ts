@@ -4,11 +4,12 @@ import type { ProjectRouteArtifacts } from "./route-artifacts";
 export const projectStages = [
   { stage: "brief", label: "Brief", href: "setup" },
   { stage: "sources", label: "Sources", href: "sources" },
-  { stage: "course_model", label: "Course Model", href: "course-model" },
+  { stage: "course_model", label: "Model", href: "course-model" },
   { stage: "design", label: "Design", href: "designs" },
   { stage: "build", label: "Build", href: "build" },
   { stage: "report", label: "Report", href: "report" },
   { stage: "preview", label: "Preview", href: "preview" },
+  { stage: "export", label: "Export", href: "export" },
 ] as const satisfies ReadonlyArray<{
   stage: ProjectStage;
   label: string;
@@ -31,6 +32,7 @@ export function isProjectStageReachable(
       case "build":
       case "preview":
       case "report":
+      case "export":
         return artifacts.hasActiveTutor;
     }
   }

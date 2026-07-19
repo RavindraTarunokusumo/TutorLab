@@ -3,10 +3,13 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/lib/analysis/course-synthesis", () => ({
+  getCourseModelRepository: () => ({ findById: async () => null }),
+}));
 
 import { resetPreviewConversation, runtimeSources, sendPreviewMessage } from "@/lib/conversations/service";
 import { getTutorRuntime } from "@/lib/ai/tutor-runtime";
-import { streamPreviewReply } from "@/app/api/tutors/[tutorId]/chat/route";
+import { streamPreviewReply } from "@/lib/conversations/preview-stream";
 import type { Conversation, SourceDocument, TutorSpec } from "@/lib/schemas";
 import type { TutorVersionRecord } from "@/lib/tutor/repository";
 
@@ -66,6 +69,98 @@ describe("preview runtime safeguards", () => {
     expect(appended).toHaveLength(2);
     expect(result.metadata).toMatchObject({ citations: [{ documentId: "safe", title: "safe notes" }], nextState: "diagnose", stateFallback: { applied: true, reason: "transition_not_in_spec_graph" } });
     expect(result.conversation.messages.at(-1)?.metadata).toEqual(result.metadata);
+  });
+
+  it("uses matching source-backed course-model evidence when vector retrieval misses an in-scope concept", async () => {
+    let conversation: Conversation | null = null;
+    let receivedSources: Array<{ documentId: string; title: string; passage: string }> = [];
+    const repository = {
+      create: async (input: Conversation) => (conversation = input),
+      getOrCreateTeacherPreview: async (input: Conversation) => conversation ?? (conversation = input),
+      findById: async () => conversation,
+      findLatestForTutor: async () => conversation,
+      appendMessage: async ({ message, currentState }: { projectId: string; conversationId: string; message: Conversation["messages"][number]; currentState?: Conversation["currentState"] }) => (conversation = { ...conversation!, messages: [...conversation!.messages, message], currentState: currentState ?? conversation!.currentState }),
+      delete: async () => { conversation = null; },
+      claimPreview: async () => true, releasePreviewClaim: async () => {},
+    };
+    const result = await sendPreviewMessage({ projectId: "project-preview", tutorVersionId: "tutor-preview", message: "Are mutually exclusive events independent?" }, {
+      conversationRepository: repository,
+      tutorRepository: { findVersion: async () => version, findLatestVersion: async () => version } as never,
+      sourceRepository: { list: async () => [source("safe")], findById: async () => ({ source: source("safe"), openaiFileId: "file-safe" }) } as never,
+      projectRepository: { findVectorStoreId: async () => "vector-preview" } as never,
+      courseModelRepository: { findById: async () => ({ artifact: { concepts: [{ name: "Independence", description: "Independent events are distinguished from disjoint events.", evidence: [{ documentId: "safe" }] }] } }) } as never,
+      fileProvider: { searchPassages: async () => [{ fileId: "file-safe", text: "An unrelated regression table." }] } as never,
+      runtime: { reply: async (input) => { receivedSources = input.sources; return { content: "Compare the intersection rule with the fact that disjoint events cannot occur together.", teachingMove: "give_conceptual_hint", proposedState: "hint_1", boundary: "none", citedDocumentIds: ["safe"] }; } },
+      createId: (() => { let i = 0; return () => `course-model-${++i}`; })(), now: () => new Date("2026-07-18T12:00:00.000Z"),
+    });
+    expect(receivedSources[0]).toMatchObject({ documentId: "safe", passage: expect.stringContaining("Course model concept: Independence") });
+    expect(result.content).toContain("intersection rule");
+    expect(result.metadata.citations).toEqual([{ documentId: "safe", title: "safe notes" }]);
+  });
+
+  it("keeps a follow-up grounded in the preceding tutor context", async () => {
+    let retrievalQuery = "";
+    const existing: Conversation = {
+      schemaVersion: "0.1", id: "conversation-follow-up", projectId: "project-preview", tutorVersionId: "tutor-preview", mode: "teacher_preview", currentState: "hint_1",
+      messages: [
+        { id: "prior-learner", role: "learner", content: "Please give an example question about this.", createdAt: "2026-07-18T12:00:00.000Z" },
+        { id: "prior-tutor", role: "tutor", content: "Are mutually exclusive events independent? Compare the intersection rule.", metadata: { schemaVersion: "0.1", teachingMove: "give_conceptual_hint", currentState: "diagnose", nextState: "hint_1", citations: [{ documentId: "safe", title: "safe notes" }], boundary: "none", stateFallback: { applied: false }, usage: { inputTokens: 0, outputTokens: 0, latencyMs: 0 } }, createdAt: "2026-07-18T12:00:01.000Z" },
+      ], createdAt: "2026-07-18T12:00:00.000Z", updatedAt: "2026-07-18T12:00:01.000Z",
+    };
+    let conversation: Conversation | null = existing;
+    const repository = {
+      findById: async () => conversation, findLatestForTutor: async () => conversation,
+      appendMessage: async ({ message, currentState }: { projectId: string; conversationId: string; message: Conversation["messages"][number]; currentState?: Conversation["currentState"] }) => (conversation = { ...conversation!, messages: [...conversation!.messages, message], currentState: currentState ?? conversation!.currentState }),
+      claimPreview: async () => true, releasePreviewClaim: async () => {},
+    };
+    const result = await sendPreviewMessage({ projectId: "project-preview", tutorVersionId: "tutor-preview", conversationId: existing.id, message: "They cannot both occur at the same time." }, {
+      conversationRepository: repository as never,
+      tutorRepository: { findVersion: async () => version, findLatestVersion: async () => version } as never,
+      sourceRepository: { list: async () => [source("safe")], findById: async () => ({ source: source("safe"), openaiFileId: "file-safe" }) } as never,
+      projectRepository: { findVectorStoreId: async () => "vector-preview" } as never,
+      courseModelRepository: { findById: async () => ({ artifact: { concepts: [{ name: "Independence", description: "Independent events are distinguished from disjoint events.", evidence: [{ documentId: "safe" }] }] } }) } as never,
+      fileProvider: { searchPassages: async ({ query }: { query: string }) => { retrievalQuery = query; return []; } } as never,
+      runtime: { reply: async () => ({ content: "Yes. That means the events are disjoint; now compare that with independence.", teachingMove: "give_conceptual_hint", proposedState: "hint_2", boundary: "none", citedDocumentIds: ["safe"] }) },
+      createId: (() => { let i = 0; return () => `follow-up-${++i}`; })(), now: () => new Date("2026-07-18T12:05:00.000Z"),
+    });
+    expect(retrievalQuery).toContain("Are mutually exclusive events independent?");
+    expect(result.content).toContain("events are disjoint");
+    expect(result.metadata.citations).toEqual([{ documentId: "safe", title: "safe notes" }]);
+  });
+
+  it("keeps a cited practice question when the runtime proposes an unsupported teaching-move label", async () => {
+    let conversation: Conversation | null = null;
+    const constrainedVersion = {
+      ...version,
+      spec: {
+        ...version.spec,
+        pedagogy: {
+          ...version.spec.pedagogy,
+          permittedTeachingMoves: version.spec.pedagogy.permittedTeachingMoves.filter((move) => move !== "model_worked_step"),
+        },
+      },
+    };
+    const repository = {
+      create: async (input: Conversation) => (conversation = input),
+      getOrCreateTeacherPreview: async (input: Conversation) => conversation ?? (conversation = input),
+      findById: async () => conversation,
+      findLatestForTutor: async () => conversation,
+      appendMessage: async ({ message, currentState }: { projectId: string; conversationId: string; message: Conversation["messages"][number]; currentState?: Conversation["currentState"] }) => (conversation = { ...conversation!, messages: [...conversation!.messages, message], currentState: currentState ?? conversation!.currentState }),
+      delete: async () => { conversation = null; },
+      claimPreview: async () => true, releasePreviewClaim: async () => {},
+    };
+    const result = await sendPreviewMessage({ projectId: "project-preview", tutorVersionId: "tutor-preview", message: "Please give me an example question for Bayes theorem." }, {
+      conversationRepository: repository,
+      tutorRepository: { findVersion: async () => constrainedVersion, findLatestVersion: async () => constrainedVersion } as never,
+      sourceRepository: { list: async () => [source("safe")], findById: async () => ({ source: source("safe"), openaiFileId: "file-safe" }) } as never,
+      projectRepository: { findVectorStoreId: async () => "vector-preview" } as never,
+      fileProvider: { searchPassages: async () => [{ fileId: "file-safe", text: "Bayes theorem relates conditional probabilities." }] } as never,
+      runtime: { reply: async () => ({ content: "Example question: a test is positive. How would you use Bayes' theorem to update the probability of the condition?", teachingMove: "model_worked_step", proposedState: "worked_step", boundary: "none", citedDocumentIds: ["safe"] }) },
+      createId: (() => { let i = 0; return () => `practice-${++i}`; })(), now: () => new Date("2026-07-19T12:00:00.000Z"),
+    });
+    expect(result.content).toContain("Example question");
+    expect(result.content).not.toContain("do not have permitted course evidence");
+    expect(result.metadata).toMatchObject({ teachingMove: "give_conceptual_hint", citations: [{ documentId: "safe", title: "safe notes" }], boundary: "none" });
   });
 
   it("replaces leaked or unsupported replies with an uncertainty limit when no permitted passage exists", async () => {

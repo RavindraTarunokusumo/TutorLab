@@ -22,7 +22,7 @@ export type DeterministicEvaluationInput = {
   createId: () => string;
 };
 
-const UNCERTAINTY_PATTERN = /\b(?:do not have|don't have|cannot confirm|can't confirm|not enough (?:course )?evidence|no permitted (?:course )?evidence|outside (?:the )?(?:approved )?course|not (?:available|supported)|unable to (?:verify|confirm))\b/i;
+const UNCERTAINTY_PATTERN = /\b(?:do not have|don['’]t have|cannot confirm|can['’]t confirm|not enough (?:course )?evidence|no permitted (?:course )?evidence|(?:do not|don['’]t) (?:provide|directly support) (?:course )?evidence|outside (?:this |the )?(?:approved )?course(?:['’]s)?(?: supported)? scope|not (?:available|supported)|unable to (?:verify|confirm))\b/i;
 const GENERIC_FALLBACK_ORDER = [
   "diagnose",
   "check_understanding",

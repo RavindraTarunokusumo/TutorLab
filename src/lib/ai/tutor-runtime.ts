@@ -27,10 +27,27 @@ export interface TutorRuntime {
 
 function classifyBoundary(message: string): RuntimeDraft["boundary"] {
   const lower = message.toLowerCase();
-  if (/answer key|worked solution|mark scheme|give me the final answer/.test(lower)) return "protected_solution";
-  if (/write my essay|medical advice|investment advice/.test(lower)) return "off_topic";
+  if (/answer key|worked solution|mark scheme|final answer/.test(lower)) return "protected_solution";
+  if (/write my essay|medical advice|investment advice|cover[- ]letter|resume|\bcv\b/.test(lower)) return "off_topic";
   if (/not (?:in|about) (?:this )?course|unrelated to (?:the )?course/.test(lower)) return "out_of_scope";
   return "none";
+}
+
+function applyBoundaryGuardrail(
+  learnerMessage: string,
+  draft: RuntimeDraft,
+): RuntimeDraft {
+  const requiredBoundary = classifyBoundary(learnerMessage);
+  if (requiredBoundary === "none" || draft.boundary === requiredBoundary) {
+    return draft;
+  }
+  return {
+    ...draft,
+    boundary: requiredBoundary,
+    teachingMove: "redirect",
+    proposedState: "redirect",
+    citedDocumentIds: [],
+  };
 }
 
 function fixtureReply(input: TutorRuntimePromptInput): RuntimeDraft {
@@ -75,7 +92,7 @@ export function getTutorRuntime(): TutorRuntime {
   return {
     async reply(input) {
       const response = await getOpenAIClient().responses.create({
-        model: "gpt-5.6",
+        model: "gpt-5.6-terra",
         input: buildTutorRuntimeInstructions(input),
         text: {
           format: {
@@ -86,7 +103,10 @@ export function getTutorRuntime(): TutorRuntime {
           },
         },
       });
-      return RuntimeDraftSchema.parse(JSON.parse(response.output_text));
+      return applyBoundaryGuardrail(
+        input.learnerMessage,
+        RuntimeDraftSchema.parse(JSON.parse(response.output_text)),
+      );
     },
   };
 }

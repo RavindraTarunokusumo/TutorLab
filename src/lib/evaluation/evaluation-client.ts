@@ -1,13 +1,15 @@
 import {
   EvalResultSchema,
   EvalRunSchema,
+  EvalScenarioSchema,
   PipelineJobSchema,
   type EvalResult,
   type EvalRun,
+  type EvalScenario,
   type PipelineJob,
 } from "@/lib/schemas";
 
-type EvaluationResponse = { job?: PipelineJob; run: EvalRun; results: EvalResult[] };
+type EvaluationResponse = { job?: PipelineJob; run: EvalRun; results: EvalResult[]; scenarios?: EvalScenario[] };
 
 function parseRun(input: unknown): EvalRun {
   if (!input || typeof input !== "object") return EvalRunSchema.parse(input);
@@ -28,12 +30,13 @@ async function errorMessage(response: Response) {
 
 function parseResponse(input: unknown): EvaluationResponse {
   if (!input || typeof input !== "object") throw new Error("Evaluation data is unavailable.");
-  const body = input as { job?: unknown; run?: unknown; results?: unknown };
+  const body = input as { job?: unknown; run?: unknown; results?: unknown; scenarios?: unknown };
   if (!Array.isArray(body.results)) throw new Error("Evaluation data is unavailable.");
   return {
     ...(body.job ? { job: PipelineJobSchema.parse(body.job) } : {}),
     run: parseRun(body.run),
     results: body.results.map((result) => EvalResultSchema.parse(result)),
+    ...(Array.isArray(body.scenarios) ? { scenarios: body.scenarios.map((scenario) => EvalScenarioSchema.parse(scenario)) } : {}),
   };
 }
 

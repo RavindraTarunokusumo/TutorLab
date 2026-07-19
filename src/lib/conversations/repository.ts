@@ -100,7 +100,7 @@ export function getConversationRepository(): ConversationRepository {
         throw new Error("Teacher preview conversation input is invalid");
       }
       return db.$transaction(async (tx) => {
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`${conversation.projectId}:${conversation.tutorVersionId}:teacher_preview`}))`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${conversation.projectId}:${conversation.tutorVersionId}:teacher_preview`}))`;
         const existing = await tx.conversation.findFirst({
           where: { projectId: conversation.projectId, tutorVersionId: conversation.tutorVersionId, mode: "teacher_preview" },
           orderBy: { updatedAt: "desc" }, include: conversationInclude(),

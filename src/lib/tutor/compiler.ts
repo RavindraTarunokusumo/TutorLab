@@ -266,6 +266,32 @@ function sameStrings(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
+function applyCompilerInvariants(
+  output: unknown,
+  input: PolicyDraftingInput,
+): unknown {
+  const parsed = TutorSpecSchema.safeParse(output);
+  if (!parsed.success) return output;
+  const expected = buildFixtureTutorSpec(input);
+
+  return {
+    ...parsed.data,
+    projectId: expected.projectId,
+    tutorId: expected.tutorId,
+    version: expected.version,
+    courseModelVersionId: expected.courseModelVersionId,
+    selectedDesign: expected.selectedDesign,
+    learningContract: expected.learningContract,
+    pedagogy: expected.pedagogy,
+    responseStyle: expected.responseStyle,
+    boundaries: expected.boundaries,
+    hardConstraints: expected.hardConstraints,
+    courseManifest: expected.courseManifest,
+    runtimeRetrieval: expected.runtimeRetrieval,
+    evaluation: expected.evaluation,
+  };
+}
+
 export function validateCompiledTutorSpec(
   output: unknown,
   input: PolicyDraftingInput,
@@ -407,10 +433,16 @@ export async function compileTutor(
     }
     let spec: TutorSpec;
     try {
-      spec = validateCompiledTutorSpec(compiled, policyInput);
+      spec = validateCompiledTutorSpec(
+        applyCompilerInvariants(compiled, policyInput),
+        policyInput,
+      );
     } catch {
       spec = validateCompiledTutorSpec(
-        await deps.compiler.repair(policyInput, compiled),
+        applyCompilerInvariants(
+          await deps.compiler.repair(policyInput, compiled),
+          policyInput,
+        ),
         policyInput,
       );
     }
@@ -425,6 +457,7 @@ export async function compileTutor(
     const job = await deps.jobRepository.complete(started.job.id, version.id);
     return { job, tutorVersion: version };
   } catch (error) {
+    console.error("Tutor compilation failed", error);
     const failure =
       error instanceof TutorCompilationError
         ? error

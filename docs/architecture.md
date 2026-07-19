@@ -42,7 +42,7 @@ OpenAI Files/vector stores supply retrieval text for ingestion and analysis. PDF
 
 ## Invariants
 
-- Source limits are 30 files, 500 pages, 2 million extracted tokens, 50 MB per file, and 200 MB per course workspace.
+- Source limits are 30 files, 500 pages, 2 million extracted tokens, 10 MB per file, and 200 MB per course workspace.
 - `CourseModel` is a compact synthesis: raw documents, chunks, slide summaries, and complete worked solutions remain out of it.
 - Source permissions govern modelling, pedagogy drafting, runtime retrieval, evaluation, and student-visible excerpts. Sources marked as containing protected solutions are always denied runtime retrieval and student-visible excerpts.
 - Every synthesized claim carries source evidence; source/provider secrets and raw uploaded content are not exposed through client responses or logs.

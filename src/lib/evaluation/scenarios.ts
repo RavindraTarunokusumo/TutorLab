@@ -304,6 +304,7 @@ export async function generateEvaluationScenarios(
     const job = await deps.jobRepository.complete(started.job.id, tutorVersion.id);
     return { job, scenarios: persisted };
   } catch (error) {
+    console.error("Scenario generation failed", error);
     const failure =
       error instanceof ScenarioGenerationError
         ? error

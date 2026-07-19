@@ -165,6 +165,30 @@ const MAX_WORDS_BY_BRIEF_LENGTH = {
   detailed: 1_000,
 } as const;
 
+function applyTeachingBriefSafeguards(
+  output: unknown,
+  brief: TeachingBrief,
+): unknown {
+  const parsed = TutorDesignSetSchema.safeParse(output);
+  if (!parsed.success) return output;
+
+  const requiresDiagnosis =
+    brief.assistanceBoundaries.requireReasoningBeforeAnswer ||
+    brief.style.questioningPreference === "questions_first";
+  if (!requiresDiagnosis) return parsed.data;
+
+  return {
+    ...parsed.data,
+    candidates: parsed.data.candidates.map((candidate) => ({
+      ...candidate,
+      controls: {
+        ...candidate.controls,
+        diagnoseBeforeExplain: true,
+      },
+    })),
+  };
+}
+
 export function isTeachingBriefCompatible(
   design: TutorDesign,
   brief: TeachingBrief,
@@ -301,12 +325,22 @@ export async function generateTutorDesigns(
     }
     let set;
     try {
-      set = validateDesignSet(first, architectInput);
-    } catch {
       set = validateDesignSet(
-        await deps.architect.repair(architectInput, first),
+        applyTeachingBriefSafeguards(first, brief),
         architectInput,
       );
+    } catch {
+      try {
+        set = validateDesignSet(
+          applyTeachingBriefSafeguards(
+            await deps.architect.repair(architectInput, first),
+            brief,
+          ),
+          architectInput,
+        );
+      } catch {
+        throw new TutorDesignGenerationError("INVALID_DESIGN_OUTPUT");
+      }
     }
     const designs = await deps.tutorRepository.saveDesignSet(set);
     const job = await deps.jobRepository.complete(started.job.id, set.id);

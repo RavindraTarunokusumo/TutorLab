@@ -20,28 +20,28 @@ export function StageHeader({
     : currentIndex - 1;
 
   return (
-    <nav aria-label="Project progress" className="border-b bg-card">
-      <ol className="mx-auto grid max-w-7xl grid-cols-2 gap-2 px-4 py-3 sm:grid-cols-4 lg:grid-cols-7 lg:px-8">
+    <nav aria-label="Project progress" className="shrink-0 border-b bg-card">
+      <ol className="mx-auto grid max-w-7xl grid-cols-2 gap-2 px-4 py-3 sm:grid-cols-4 lg:grid-cols-8 lg:px-8">
         {projectStages.map((item, index) => {
           const isCurrent = item.stage === currentStage;
           const isCompleted = index <= completedIndex;
           const isReachable = isCompleted || isCurrent;
-          const status = isCurrent
-            ? "Current stage"
-            : isCompleted
-              ? "Completed"
-              : "Locked";
           const content = (
             <>
               {isCurrent ? (
                 <CircleDot aria-hidden="true" className="size-4 shrink-0" />
               ) : isCompleted ? (
-                <CheckCircle2 aria-hidden="true" className="size-4 shrink-0" />
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-emerald-600"
+                />
               ) : (
-                <LockKeyhole aria-hidden="true" className="size-4 shrink-0" />
+                <LockKeyhole
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-red-600"
+                />
               )}
               <span className="min-w-0 truncate font-medium">{item.label}</span>
-              <span className="text-xs text-muted-foreground">{status}</span>
             </>
           );
 

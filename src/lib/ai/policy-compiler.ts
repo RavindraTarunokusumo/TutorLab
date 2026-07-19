@@ -28,7 +28,7 @@ function responseFormat() {
 
 async function requestStructuredOutput(prompt: string): Promise<unknown> {
   const response = await getOpenAIClient().responses.create({
-    model: "gpt-5.6",
+    model: "gpt-5.6-terra",
     input: prompt,
     text: { format: responseFormat() },
   });

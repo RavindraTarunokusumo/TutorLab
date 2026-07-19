@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   ProjectAccessError,
@@ -10,6 +11,8 @@ import {
   findActiveTutorVersion,
   TutorCompilationError,
 } from "@/lib/tutor/compiler";
+import { getProjectRepository } from "@/lib/projects/repository";
+import { getEvaluationRepository } from "@/lib/evaluation/repository";
 
 const CompileRequestSchema = z.strictObject({
   idempotencyKey: z.string().trim().min(1).max(160),
@@ -75,7 +78,33 @@ export async function POST(
     const { projectId } = await params;
     const project = await requireProjectAccess(request, projectId);
     const body = CompileRequestSchema.parse(await request.json());
+    const previousTutorVersion = await findActiveTutorVersion(projectId);
     const result = await compileTutor({ project, ...body });
+    if (result.job.status === "completed") {
+      if (
+        previousTutorVersion &&
+        result.tutorVersion &&
+        previousTutorVersion.id !== result.tutorVersion.id &&
+        previousTutorVersion.courseModelVersionId === result.tutorVersion.courseModelVersionId
+      ) {
+        const evaluations = getEvaluationRepository();
+        const scenarios = await evaluations.listScenarios(
+          projectId,
+          previousTutorVersion.id,
+        );
+        if (scenarios.length === 6) {
+          await evaluations.saveScenarios(
+            scenarios.map((scenario) => ({
+              ...scenario,
+              id: randomUUID(),
+              tutorVersionId: result.tutorVersion!.id,
+              createdAt: new Date().toISOString(),
+            })),
+          );
+        }
+      }
+      await getProjectRepository().updateStage(projectId, "build");
+    }
     return NextResponse.json(
       {
         job: result.job,

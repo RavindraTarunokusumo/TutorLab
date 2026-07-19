@@ -112,3 +112,15 @@ export async function generateCourseModel(
   }
   return parseVersion(await response.json());
 }
+
+export async function advanceToDesign(projectId: string): Promise<void> {
+  const response = await fetch(`/api/projects/${projectId}/advance-design`, {
+    method: "POST",
+    credentials: "same-origin",
+  });
+  if (!response.ok) {
+    throw new Error(
+      await responseMessage(response, "Could not continue to tutor design."),
+    );
+  }
+}
