@@ -1,0 +1,5 @@
+Task: Add hover feedback to enabled buttons
+Summary: Establishes a shared hover lift, shadow, and active reset while preserving button-specific colors and disabled states.
+Docs: N/A
+TODO: N/A
+Validation: git diff --check; brief action focused tests and ESLint passed before global style rollout
