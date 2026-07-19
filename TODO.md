@@ -13,6 +13,13 @@ Rules:
 
 ## Backlog
 
+### Landing page brand polish
+
+- [x] Task 1 — Add the TutorLab logo and a branded, responsive stage summary to the landing page (`277fcd8`)
+  - [x] Integrate the official transparent logo without layout shift (`277fcd8`)
+  - [x] Present the full tutor-building journey in a right-side brand panel (`277fcd8`)
+  - [x] Polish the project launcher and validate responsive, accessible behavior (`277fcd8`)
+
 ### Source ingestion metric correction
 
 - [x] Task 1 — Derive PDF page and extracted-token metrics from the uploaded PDF rather than vector-store parsed-content boundaries (`8d176bc`)
