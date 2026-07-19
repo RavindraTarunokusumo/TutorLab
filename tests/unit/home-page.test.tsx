@@ -1,10 +1,12 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import Home from "@/app/page";
+import { describe, expect, it, vi } from "vitest";
+import { LandingPage } from "@/app/page";
+
+vi.mock("server-only", () => ({}));
 
 describe("Home page", () => {
   it("introduces the TutorLab workspace", () => {
-    render(<Home />);
+    render(<LandingPage />);
 
     expect(screen.getByRole("img", { name: "TutorLab" })).toBeInTheDocument();
     expect(
@@ -20,5 +22,25 @@ describe("Home page", () => {
     expect(
       screen.getByRole("button", { name: "Create project" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows the current browser-authorized project as resumable work", () => {
+    render(
+      <LandingPage
+        resumableProject={{
+          id: "fd87c251-f620-4bc1-aba5-d58104f80724",
+          name: "Probability Course",
+          stage: "preview",
+          teachingBrief: {},
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Probability Course")).toBeInTheDocument();
+    expect(screen.getByText("Current stage: Preview")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Continue" })).toHaveAttribute(
+      "href",
+      "/projects/fd87c251-f620-4bc1-aba5-d58104f80724/preview",
+    );
   });
 });

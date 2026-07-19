@@ -155,7 +155,9 @@ function projectRepository(vectorStoreId: string | null = null): ProjectReposito
     create: vi.fn(),
     findById: vi.fn(),
     findByIdAndEditTokenHash: vi.fn(),
+    findByEditTokenHash: vi.fn(),
     updateTeachingBrief: vi.fn(),
+    updateStage: vi.fn(),
     findVectorStoreId: vi.fn(async () => storedVectorStoreId),
     claimVectorStoreId: vi.fn(async (_projectId, candidateId) => {
       storedVectorStoreId ??= candidateId;

@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ProjectSnapshot } from "@/lib/projects/project-snapshot";
+import { projectStages } from "@/lib/projects/stages";
 
-export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
+export function ProjectLauncher({
+  fixtureMode,
+  resumableProject,
+}: {
+  fixtureMode: boolean;
+  resumableProject?: ProjectSnapshot | null;
+}) {
   const [name, setName] = useState("Probability workshop");
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
@@ -12,6 +20,9 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
   const [savingKey, setSavingKey] = useState(false);
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const keyDialogRef = useRef<HTMLDialogElement>(null);
+  const resumeStage = resumableProject
+    ? projectStages.find((stage) => stage.stage === resumableProject.stage)
+    : undefined;
 
   useEffect(() => {
     const dialog = keyDialogRef.current;
@@ -97,6 +108,29 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
 
   return (
     <section className="landing-launcher mt-5 max-w-xl rounded-2xl border bg-background/70 p-2 shadow-[0_16px_44px_-28px_oklch(0.31_0.09_284.8/0.4)] sm:mt-6">
+      {resumableProject && resumeStage ? (
+        <div className="mx-2 mt-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-3 sm:mx-3">
+          <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+            Continue your project
+          </p>
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {resumableProject.name}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Current stage: {resumeStage.label}
+              </p>
+            </div>
+            <a
+              href={`/projects/${resumableProject.id}/${resumeStage.href}`}
+              className="inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              Continue
+            </a>
+          </div>
+        </div>
+      ) : null}
       <div className="px-2 pt-2 sm:px-3">
         <h2 className="text-sm font-semibold text-foreground">
           {fixtureMode ? "Fixture-mode project" : "Create a tutor project"}

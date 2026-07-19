@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-07-20
+
+- The landing page now offers a secure continue action for the browser-authorized project, returning the teacher to its saved workflow stage.
+
 Record notable behavior, architecture, API, persistence, or workflow changes.
 
 ## 2026-07-19 — Branded workspace and private API-key sessions

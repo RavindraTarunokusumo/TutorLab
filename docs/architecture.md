@@ -34,6 +34,8 @@ TutorLab is a Next.js App Router application. Day 1–2 covers project setup thr
 
 Project mutations require an HTTP-only signed edit cookie. The database stores verification material only, not the plaintext token. Route handlers authorize before loading or changing project-scoped resources.
 
+The landing page uses that same edit session to show a single resumable project card. It resolves only the project matching the signed cookie hash and routes back to its persisted stage; it never lists other projects or advances project state.
+
 `PipelineJob` tracks analysis progress and safe retry diagnostics. There is no separate worker service in this milestone: route-triggered orchestration persists state so the UI can poll it.
 
 ## OpenAI boundary

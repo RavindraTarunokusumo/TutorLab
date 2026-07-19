@@ -1,13 +1,22 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProjectLauncher } from "@/components/projects/fixture-project-launcher";
 
 afterEach(() => {
+  cleanup();
   vi.unstubAllGlobals();
 });
 
 describe("ProjectLauncher", () => {
+  it("renders no resumable project without an authorized snapshot", () => {
+    render(<ProjectLauncher fixtureMode={false} />);
+
+    expect(
+      screen.queryByText("Continue your project"),
+    ).not.toBeInTheDocument();
+  });
+
   it("asks for a key only after the server reports that none is configured", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
       new Response(JSON.stringify({ configured: false }), {

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { cookies } from "next/headers";
 import {
   BookOpenText,
   Boxes,
@@ -12,6 +13,10 @@ import {
   Sparkles,
 } from "lucide-react";
 import { ProjectLauncher } from "@/components/projects/fixture-project-launcher";
+import {
+  loadCurrentAuthorizedProjectSnapshot,
+  type ProjectSnapshot,
+} from "@/lib/projects/project-snapshot";
 
 const stages = [
   {
@@ -56,7 +61,11 @@ const stages = [
   },
 ] as const;
 
-export default function Home() {
+export function LandingPage({
+  resumableProject,
+}: {
+  resumableProject?: ProjectSnapshot | null;
+}) {
   return (
     <main className="h-dvh overflow-hidden bg-background p-2 sm:p-4 lg:p-6">
       <div className="landing-frame mx-auto grid h-full w-full max-w-[90rem] grid-rows-[minmax(0,1.12fr)_minmax(0,0.88fr)] overflow-hidden rounded-[1.5rem] border bg-card shadow-[0_24px_80px_-32px_oklch(0.31_0.09_284.8/0.28)] sm:rounded-[2rem] lg:grid-cols-[minmax(0,1.06fr)_minmax(28rem,0.94fr)] lg:grid-rows-1">
@@ -87,6 +96,7 @@ export default function Home() {
             </p>
             <ProjectLauncher
               fixtureMode={process.env.TUTORLAB_FIXTURE_MODE === "1"}
+              resumableProject={resumableProject}
             />
           </div>
 
@@ -161,4 +171,11 @@ export default function Home() {
       </div>
     </main>
   );
+}
+
+export default async function Home() {
+  const editToken = (await cookies()).get("tutorlab_project_edit")?.value;
+  const resumableProject = await loadCurrentAuthorizedProjectSnapshot(editToken);
+
+  return <LandingPage resumableProject={resumableProject} />;
 }

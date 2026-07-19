@@ -3,6 +3,11 @@ import type { ProjectRecord } from "@/lib/projects/repository";
 import type { StoredTeachingBrief } from "./repository";
 import type { ProjectStage } from "@/lib/schemas/project";
 import { requireProjectAccess } from "./service";
+import {
+  hashProjectEditToken,
+  verifyProjectEditToken,
+} from "./auth";
+import { getProjectRepository } from "./repository";
 
 export type ProjectSnapshot = {
   id: string;
@@ -34,4 +39,17 @@ export async function loadAuthorizedProjectSnapshot(
     projectId,
   );
   return toProjectSnapshot(project);
+}
+
+export async function loadCurrentAuthorizedProjectSnapshot(
+  editToken: string | undefined,
+): Promise<ProjectSnapshot | null> {
+  if (!editToken || !verifyProjectEditToken(editToken)) {
+    return null;
+  }
+
+  const project = await getProjectRepository().findByEditTokenHash(
+    hashProjectEditToken(editToken),
+  );
+  return project ? toProjectSnapshot(project) : null;
 }
