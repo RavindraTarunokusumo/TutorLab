@@ -1,0 +1,5 @@
+Task: Center reasoning checkbox
+Summary: Align the Ask for reasoning first checkbox vertically with its two-line explanatory label.
+Docs: N/A
+TODO: TODO.md - Landing page brand polish Task 5
+Validation: npm run lint; npm run test:run -- tests/unit/teaching-brief-wizard.test.tsx
