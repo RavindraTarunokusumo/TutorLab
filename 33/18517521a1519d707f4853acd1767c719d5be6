@@ -1,0 +1,5 @@
+Task: Expand landing page viewport support
+Summary: Add short-screen density rules and a landscape-phone split layout while preserving the standard responsive composition.
+Docs: N/A
+TODO: TODO.md - Landing page brand polish Task 3
+Validation: npm run lint; npm run test:run -- tests/unit/home-page.test.tsx; Playwright visible-bounds matrix across 15 portrait, landscape, tablet, laptop, and desktop viewports
