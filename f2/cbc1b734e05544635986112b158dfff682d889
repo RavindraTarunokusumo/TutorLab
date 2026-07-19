@@ -1,0 +1,5 @@
+Task: Support restricted key verification responses
+Summary: Treated only OpenAI 401 responses as invalid credentials and surfaced 403/provider failures as permission or availability verification errors.
+Docs: N/A
+TODO: Landing page brand polish / Task 7
+Validation: npm run lint; 14 focused tests passed
