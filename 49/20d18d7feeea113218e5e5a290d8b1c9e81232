@@ -1,0 +1,5 @@
+Task: Fit landing page within viewport
+Summary: Compact the hero and arrange all eight stages in a responsive two-column grid so the page has no horizontal or vertical scroll.
+Docs: N/A
+TODO: TODO.md - Landing page brand polish Task 2
+Validation: npm run lint; npm run test:run -- tests/unit/home-page.test.tsx; Playwright viewport metrics at 1440x900 and 375x812
