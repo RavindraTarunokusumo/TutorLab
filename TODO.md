@@ -30,6 +30,7 @@ Rules:
   - [x] Create a branded, accessible eight-stage workspace header and progress system (`ad3ec32`)
   - [x] Unify the responsive content canvas, cards, controls, and interaction states (`ad3ec32`)
   - [x] Validate Brief, Sources, Model, Design, Build, Report, Preview, and Export states (`ad3ec32`)
+- [x] Task 5 — Center the "Ask for reasoning first" checkbox against its label copy (`cb3e643`)
 
 ### Source ingestion metric correction
 
