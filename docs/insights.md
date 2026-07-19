@@ -2,6 +2,15 @@
 
 Record reusable lessons from completed sessions.
 
+## 2026-07-19 — Reviewed PR Closeout
+
+- What worked: Independent security and structural reviews, followed by focused re-reviews of each corrective commit, produced a clear approval trail before merge.
+- What failed: The configured Grok model was unavailable, and `gh pr merge --delete-branch` merged remotely but failed local cleanup because `main` belonged to another worktree. A semicolon-chained formatting check also allowed a documentation commit to proceed after Prettier reported a warning.
+- Useful commands: `grok models`, `gh pr view <number> --json state,mergedAt,mergeCommit`, `git ls-remote --heads origin <branch>`, and `git worktree list` distinguish reviewer availability, remote merge state, and cleanup state without guessing.
+- Scripts created: None.
+- Workflow improvement: Check reviewer model availability before delegation, inspect PR state after any merge-command error before retrying, and run formatting checks as a separate blocking command rather than chaining them before a commit.
+- Skill worth adding or updating: The PR closeout workflow should document the case where GitHub completes a merge but local branch deletion fails because the base branch is checked out in another worktree.
+
 ## 2026-07-16 — PR Closeout
 
 - What worked: Small commits with a focused independent review before each handoff made late cross-cutting defects straightforward to isolate and correct.
@@ -19,5 +28,3 @@ Record reusable lessons from completed sessions.
 - Scripts created:
 - Workflow improvement:
 - Skill worth adding or updating:
-
-
