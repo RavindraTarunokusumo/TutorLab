@@ -1,0 +1,5 @@
+Task: Record landing page polish completion
+Summary: Mark the completed branded landing-page task and its sub-items with implementation commit 277fcd8.
+Docs: N/A
+TODO: TODO.md - Landing page brand polish
+Validation: git diff --check
