@@ -16,6 +16,7 @@ export const ProjectStageSchema = z.enum([
   "build",
   "report",
   "preview",
+  "export",
 ]);
 
 export const TeachingBriefPatchSchema = z

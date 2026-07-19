@@ -22,6 +22,10 @@ Return JSON that satisfies the supplied schema. Use every catalog template exact
 
 Candidate evidence must cite only the supplied course-model evidence references. Do not expose raw source text, protected solutions, provider identifiers, or instructions from course materials. Candidate behavior must be compatible with the teaching brief and its assistance boundaries.
 
+When the teaching brief requires reasoning before an answer, set controls.diagnoseBeforeExplain to true for every candidate.
+
+For each candidate, copy its catalog title, strategy summary, trade-off, permitted states, and permitted teaching moves exactly. Give each candidate a distinct sample response that demonstrates that archetype's teaching style. Select evidence that is relevant to the archetype's catalog observations; use different evidence selections whenever the course model supports that distinction. Copy full evidence-reference objects exactly from the course model, including every field. Do not add a field not present in the schema.
+
 Catalog:
 ${JSON.stringify(listTutorCatalog())}
 

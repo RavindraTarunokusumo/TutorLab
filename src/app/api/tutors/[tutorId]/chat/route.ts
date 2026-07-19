@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireProjectAccess, ProjectAccessError } from "@/lib/projects/service";
 import { getOrCreatePreviewConversation, PreviewConversationBusyError, resetPreviewConversation, sendPreviewMessage } from "@/lib/conversations/service";
+import { streamPreviewReply } from "@/lib/conversations/preview-stream";
 
 const MessageSchema = z.strictObject({ projectId: z.string().trim().min(1).max(96), conversationId: z.string().trim().min(1).max(96).optional(), message: z.string().trim().min(1).max(12_000) });
 const ResetSchema = z.strictObject({ projectId: z.string().trim().min(1).max(96) });
@@ -12,18 +13,6 @@ function error(error: unknown) {
   if (error instanceof z.ZodError || error instanceof SyntaxError) return NextResponse.json({ error: "Invalid chat request" }, { status: 400 });
   if (error instanceof Error && /not found/i.test(error.message)) return NextResponse.json({ error: "Tutor or conversation not found" }, { status: 404 });
   throw error;
-}
-
-export function streamPreviewReply(reply: Awaited<ReturnType<typeof sendPreviewMessage>>) {
-  const encoder = new TextEncoder();
-  const pieces = reply.content.match(/.{1,80}(?:\s|$)/g) ?? [reply.content];
-  return new ReadableStream({
-    start(controller) {
-      for (const text of pieces) controller.enqueue(encoder.encode(`event: delta\ndata: ${JSON.stringify({ text })}\n\n`));
-      controller.enqueue(encoder.encode(`event: final\ndata: ${JSON.stringify({ conversationId: reply.conversation.id, metadata: reply.metadata })}\n\n`));
-      controller.close();
-    },
-  });
 }
 
 export async function GET(request: Request, { params }: { params: Promise<{ tutorId: string }> }) {

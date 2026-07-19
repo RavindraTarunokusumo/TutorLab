@@ -15,6 +15,7 @@ enum ProjectStage {
   build
   report
   preview
+  export
 }
 
 enum SourceRole {
@@ -315,6 +316,7 @@ model EvalRun {
   readiness      EvalReadiness @default(pending)
   passCount      Int           @default(0)
   warningCount   Int           @default(0)
+  teacherRecommendations Json   @default("[]")
   startedAt      DateTime?
   completedAt    DateTime?
   createdAt      DateTime      @default(now())

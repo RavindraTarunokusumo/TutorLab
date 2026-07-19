@@ -150,7 +150,7 @@ export function getTutorRepository(): TutorRepository {
     async createVersion(input) {
       const spec = assertVersionInput(input);
       return db.$transaction(async (tx) => {
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${input.projectId}))`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${input.projectId}))`;
         const selected = await tx.tutorDesign.findUnique({
           where: {
             projectId_id: {

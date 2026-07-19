@@ -59,4 +59,21 @@ Rules:
 
 ## Future Backlog
 
-_No scheduled work._
+### Evaluation report persistence
+
+- [ ] Persist teacher recommendations with their evaluation run so they survive navigation and refresh.
+- [ ] Advance the stage to Preview when leaving the evaluation report.
+
+### Preview course-evidence recovery
+
+- [ ] Supplement raw-file retrieval with matching, source-backed CourseModel evidence when an in-scope concept is missed by the vector search.
+
+### Preview streaming and rendering
+
+- [ ] Display learner messages optimistically, stream tutor replies, render Markdown/LaTeX, and constrain transcript height with scrolling.
+- [ ] Replace the latest-reply inspector with normalized per-reply details and remove fallback diagnostics.
+
+### Standalone tutor export
+
+- [ ] Export the active tutor as a standalone chatbot ZIP from a final Export stage.
+- [ ] Include a compact course context and rebuildable local retrieval data, excluding protected and teacher-only content.

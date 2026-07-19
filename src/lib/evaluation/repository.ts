@@ -58,6 +58,7 @@ function toRun(record: PrismaEvalRun): EvalRunRecord {
       readiness: record.readiness,
       passCount: record.passCount,
       warningCount: record.warningCount,
+      teacherRecommendations: record.teacherRecommendations ?? [],
       ...(record.startedAt ? { startedAt: record.startedAt.toISOString() } : {}),
       ...(record.completedAt ? { completedAt: record.completedAt.toISOString() } : {}),
     }),
@@ -93,6 +94,7 @@ function runData(run: EvalRun): Prisma.EvalRunUncheckedCreateInput {
     readiness: run.readiness,
     passCount: run.passCount,
     warningCount: run.warningCount,
+    ...(run.teacherRecommendations ? { teacherRecommendations: run.teacherRecommendations as Prisma.InputJsonValue } : {}),
     ...(run.startedAt ? { startedAt: new Date(run.startedAt) } : {}),
     ...(run.completedAt ? { completedAt: new Date(run.completedAt) } : {}),
   };
@@ -195,6 +197,7 @@ export function getEvaluationRepository(): EvaluationRepository {
           readiness: run.readiness,
           passCount: run.passCount,
           warningCount: run.warningCount,
+          ...(run.teacherRecommendations ? { teacherRecommendations: run.teacherRecommendations as Prisma.InputJsonValue } : {}),
           ...(run.startedAt ? { startedAt: new Date(run.startedAt) } : { startedAt: null }),
           ...(run.completedAt ? { completedAt: new Date(run.completedAt) } : { completedAt: null }),
         },

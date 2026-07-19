@@ -123,6 +123,26 @@ export const JudgeFindingSchema = z.strictObject({
   evidenceTurnIds: z.array(StableIdSchema).min(1).max(EVALUATION_MAX_TRANSCRIPT_TURNS),
 });
 
+export const TeacherRecommendationSchema = z.strictObject({
+  title: z.string().trim().min(1).max(SCHEMA_LIMITS.shortText),
+  configurationArea: z.enum([
+    "response_length",
+    "hint_progression",
+    "source_materials",
+    "off_topic_handling",
+    "tone",
+    "answer_sharing",
+  ]),
+  recommendation: RequiredTextSchema,
+  rationale: RequiredTextSchema,
+  evidenceScenarioIds: z.array(StableIdSchema).min(1).max(EVALUATION_SCENARIO_COUNT),
+});
+
+export const TeacherRecommendationSetSchema = z
+  .array(TeacherRecommendationSchema)
+  .min(1)
+  .max(6);
+
 export const JudgeResultSchema = z
   .strictObject({
     outcome: z.enum(["pass", "warning", "fail", "skipped"]),
@@ -233,6 +253,7 @@ export const EvalRunSchema = z
     readiness: z.enum(["ready", "ready_with_warnings", "needs_revision", "pending"]),
     passCount: z.number().int().nonnegative().max(EVALUATION_SCENARIO_COUNT),
     warningCount: z.number().int().nonnegative().max(EVALUATION_SCENARIO_COUNT),
+    teacherRecommendations: z.array(TeacherRecommendationSchema).max(6).optional(),
     startedAt: TimestampSchema.optional(),
     completedAt: TimestampSchema.optional(),
   })
@@ -253,6 +274,7 @@ export type EvalScenarioType = z.infer<typeof EvalScenarioTypeSchema>;
 export type EvalScenario = z.infer<typeof EvalScenarioSchema>;
 export type DeterministicCheck = z.infer<typeof DeterministicCheckSchema>;
 export type JudgeFinding = z.infer<typeof JudgeFindingSchema>;
+export type TeacherRecommendation = z.infer<typeof TeacherRecommendationSchema>;
 export type JudgeResult = z.infer<typeof JudgeResultSchema>;
 export type EvalResult = z.infer<typeof EvalResultSchema>;
 export type EvalRun = z.infer<typeof EvalRunSchema>;

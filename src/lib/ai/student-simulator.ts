@@ -53,7 +53,7 @@ export function getStudentSimulator(): StudentSimulator {
   return {
     async nextTurn(input) {
       const response = await getOpenAIClient().responses.create({
-        model: "gpt-5.6",
+        model: "gpt-5.6-luna",
         input: buildStudentSimulatorInstructions(input),
       });
       return StudentMessageSchema.parse(response.output_text);
