@@ -19,6 +19,9 @@ Rules:
   - [x] Integrate the official transparent logo without layout shift (`277fcd8`)
   - [x] Present the full tutor-building journey in a right-side brand panel (`277fcd8`)
   - [x] Polish the project launcher and validate responsive, accessible behavior (`277fcd8`)
+- [x] Task 2 — Fit the complete branded landing experience inside the viewport without page scrolling (`4920d18`)
+  - [x] Compact the hero and stage summary responsively without losing the workflow overview (`4920d18`)
+  - [x] Verify zero page overflow at desktop and mobile viewport sizes (`4920d18`)
 
 ### Source ingestion metric correction
 
