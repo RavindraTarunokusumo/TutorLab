@@ -4,6 +4,10 @@
 
 TutorLab is an evidence-grounded tutor builder for teachers and instructional designers. It turns course materials and teaching decisions into an inspectable tutor, evaluates that tutor against simulated learners, and exports a portable standalone chatbot package.
 
+## Built with Codex and GPT-5.6
+
+This project was built entirely with GPT-5.6 in ChatGPT Codex, from ideation to polish. The models used for testing and development were also GPT-5.6 (Luna and Terra) via OpenAI Responses API
+
 ## What it does
 
 TutorLab guides a teacher through eight stages:
