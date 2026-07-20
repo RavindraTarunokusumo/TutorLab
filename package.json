@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "npm run prisma:generate && next build",
+    "build": "npm run prisma:generate && npm run prisma:migrate:deploy && next build",
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -25,6 +25,7 @@
     "test:e2e:ui": "playwright test --ui",
     "prisma": "node scripts/prisma.mjs",
     "prisma:generate": "npm run prisma -- generate",
+    "prisma:migrate:deploy": "npm run prisma -- migrate deploy",
     "prisma:validate": "npm run prisma -- validate",
     "db:push": "npm run prisma -- db push",
     "db:migrate": "npm run prisma -- migrate dev",

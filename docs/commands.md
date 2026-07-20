@@ -15,6 +15,8 @@ Set `DATABASE_URL` in `.env.local`. Setting `OPENAI_API_KEY` is recommended for 
 
 Production must use HTTPS. User-supplied keys are disabled by default in production; set `TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS=1` only for a single long-lived Node process with request affinity, and set `TUTORLAB_TRUST_PROXY_IP_HEADERS=1` only when a trusted edge strips inbound forwarding headers and supplies the real client address. Serverless and multi-instance deployments must use the deployment-level `OPENAI_API_KEY`. Disable request-body capture for `/api/openai-key`. Enrollment is limited per trusted client and globally, and a key must pass OpenAI authentication before it consumes a session slot.
 
+`npm run build` applies committed Prisma migrations with `prisma migrate deploy` before compiling Next.js. Production deployments therefore require a reachable `DATABASE_URL` during the build as well as at runtime.
+
 ## Common commands
 
 ```bash
