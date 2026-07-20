@@ -1,7 +1,18 @@
 import "server-only";
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+
+async function loadPdfJs() {
+  const canvas = await import("@napi-rs/canvas");
+  const runtimeGlobals = globalThis as unknown as Record<string, unknown>;
+
+  runtimeGlobals.DOMMatrix ??= canvas.DOMMatrix;
+  runtimeGlobals.ImageData ??= canvas.ImageData;
+  runtimeGlobals.Path2D ??= canvas.Path2D;
+
+  return import("pdfjs-dist/legacy/build/pdf.mjs");
+}
 
 export async function extractPdfText(bytes: Uint8Array): Promise<string> {
+  const { getDocument } = await loadPdfJs();
   const loadingTask = getDocument({
     data: bytes.slice(),
     isEvalSupported: false,
