@@ -2,6 +2,15 @@
 
 Record reusable lessons from completed sessions.
 
+## 2026-07-20 — PR Closeout
+
+- What worked: Comparing the branch against `origin/main`, then validating the published PR state, kept the release path explicit and reversible.
+- What failed: The full Vitest worker pool exited unexpectedly, and the single-worker retry exceeded the available execution window without reporting an assertion failure.
+- Useful commands: `npx eslint . --ignore-pattern '.worktree/**'`, `npm run typecheck`, `git diff --check origin/main...HEAD`, and `gh pr view <number> --json state,mergedAt,mergeCommit` provided the final release evidence.
+- Scripts created: None.
+- Workflow improvement: Keep nested local worktrees excluded from repository-wide tooling and document a bounded fallback for slow full-suite runs.
+- Skill worth adding or updating: The publish workflow should distinguish worker-process failures from assertion failures in its validation summary.
+
 ## 2026-07-19 — Reviewed PR Closeout
 
 - What worked: Independent security and structural reviews, followed by focused re-reviews of each corrective commit, produced a clear approval trail before merge.
