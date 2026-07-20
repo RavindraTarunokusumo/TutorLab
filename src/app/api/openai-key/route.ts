@@ -12,9 +12,43 @@ import {
 
 const NO_STORE_HEADERS = { "cache-control": "no-store" };
 
+function firstForwardedValue(value: string | null): string | null {
+  return value?.split(",")[0]?.trim() || null;
+}
+
+function trustedProxyOrigin(request: Request): string | null {
+  if (process.env.TUTORLAB_TRUST_PROXY_IP_HEADERS !== "1") return null;
+
+  const protocol = firstForwardedValue(
+    request.headers.get("x-forwarded-proto"),
+  );
+  const host =
+    firstForwardedValue(request.headers.get("x-forwarded-host")) ??
+    request.headers.get("host")?.trim();
+  if ((protocol !== "http" && protocol !== "https") || !host) return null;
+
+  try {
+    return new URL(`${protocol}://${host}`).origin;
+  } catch {
+    return null;
+  }
+}
+
 function isSameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
-  return origin === new URL(request.url).origin;
+  if (!origin) return false;
+
+  let normalizedOrigin: string;
+  try {
+    normalizedOrigin = new URL(origin).origin;
+  } catch {
+    return false;
+  }
+
+  return (
+    normalizedOrigin === new URL(request.url).origin ||
+    normalizedOrigin === trustedProxyOrigin(request)
+  );
 }
 
 export async function GET(request: Request) {

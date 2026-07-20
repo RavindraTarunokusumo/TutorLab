@@ -92,6 +92,48 @@ describe("OpenAI key session API", () => {
     expect(response.status).toBe(403);
   });
 
+  it("accepts the public HTTPS origin from a trusted reverse proxy", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("TUTORLAB_IN_MEMORY_OPENAI_KEY_SESSIONS", "1");
+    vi.stubEnv("TUTORLAB_TRUST_PROXY_IP_HEADERS", "1");
+    const { POST } = await import("@/app/api/openai-key/route");
+    const response = await POST(
+      new Request("http://127.0.0.1:3000/api/openai-key", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          host: "127.0.0.1:3000",
+          origin: "https://tutorlab.site",
+          "x-forwarded-host": "tutorlab.site",
+          "x-forwarded-proto": "https",
+        },
+        body: JSON.stringify({ apiKey: testKey }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain("Secure");
+  });
+
+  it("ignores forwarded origins without the trusted-proxy opt-in", async () => {
+    vi.stubEnv("TUTORLAB_TRUST_PROXY_IP_HEADERS", "0");
+    const { POST } = await import("@/app/api/openai-key/route");
+    const response = await POST(
+      new Request("http://127.0.0.1:3000/api/openai-key", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://tutorlab.site",
+          "x-forwarded-host": "tutorlab.site",
+          "x-forwarded-proto": "https",
+        },
+        body: JSON.stringify({ apiKey: testKey }),
+      }),
+    );
+
+    expect(response.status).toBe(403);
+  });
+
   it("enforces the trusted-client enrollment budget", async () => {
     const { POST } = await import("@/app/api/openai-key/route");
     const enroll = () =>
