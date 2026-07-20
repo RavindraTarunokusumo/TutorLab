@@ -6,6 +6,9 @@ import "katex/dist/katex.min.css";
 export const metadata: Metadata = {
   title: "TutorLab",
   description: "Build evidence-grounded AI tutors from course materials.",
+  icons: {
+    icon: "/tutorlab-favicon.png",
+  },
 };
 
 export default function RootLayout({
