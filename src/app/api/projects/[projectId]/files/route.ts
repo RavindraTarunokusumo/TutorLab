@@ -11,7 +11,10 @@ import {
   parseSourceUploadMetadata,
 } from "@/lib/sources/ingestion";
 import { SourceValidationError } from "@/lib/sources/validation";
-import { withOpenAIRequestKey } from "@/lib/ai/session-key";
+import {
+  withOpenAIRequestKey,
+  withOptionalOpenAIRequestKey,
+} from "@/lib/ai/session-key";
 
 function invalidRequest() {
   return NextResponse.json({ error: "Invalid source upload" }, { status: 400 });
@@ -122,11 +125,13 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ projectId: string }> },
 ) {
-  try {
-    const { projectId } = await params;
-    await requireProjectAccess(request, projectId);
-    return NextResponse.json({ sources: await listSources(projectId) });
-  } catch (error) {
-    return errorResponse(error);
-  }
+  return withOptionalOpenAIRequestKey(request, async () => {
+    try {
+      const { projectId } = await params;
+      await requireProjectAccess(request, projectId);
+      return NextResponse.json({ sources: await listSources(projectId) });
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
 }
