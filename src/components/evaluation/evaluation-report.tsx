@@ -22,7 +22,6 @@ const recommendationDestinations = {
   hint_progression: { label: "Configure in Design", href: "designs" },
   off_topic_handling: { label: "Configure in Design", href: "designs" },
   tone: { label: "Configure in Brief", href: "setup" },
-  answer_sharing: { label: "Configure in Brief", href: "setup" },
   source_materials: { label: "Configure in Sources", href: "sources" },
 } as const;
 

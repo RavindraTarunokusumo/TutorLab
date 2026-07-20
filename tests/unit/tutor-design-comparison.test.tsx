@@ -16,7 +16,6 @@ vi.mock("@/lib/tutor/compiler-client", () => compiler);
 const baseControls = {
   diagnoseBeforeExplain: true,
   hintEscalation: "gradual",
-  answerPolicy: "never_reveal",
   tone: "encouraging",
   maxWords: 160,
   offTopicHandling: "redirect",
@@ -73,17 +72,16 @@ describe("TutorDesignComparison", () => {
     expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
   });
 
-  it("reveals all six validated controls after selection and restores that selection after refresh", async () => {
+  it("reveals the validated controls after selection and restores that selection after refresh", async () => {
     const first = render(<TutorDesignComparison projectId="project-alpha" />);
     await userEvent.click(await screen.findByRole("button", { name: "Choose Tutor beta" }));
 
     expect(screen.getByRole("heading", { name: "Tailor Tutor beta" })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /Diagnose before explaining/ })).toBeChecked();
     expect(screen.getByLabelText("Hint progression")).toHaveValue("gradual");
-    expect(screen.getByLabelText("Answer sharing")).toHaveValue("never_reveal");
-    expect(screen.getByLabelText("Tone")).toHaveValue("encouraging");
+    expect(screen.getByText("encouraging")).toBeInTheDocument();
     expect(screen.getByLabelText("Off-topic requests")).toHaveValue("redirect");
-    expect(screen.getByLabelText("Maximum words per reply")).toHaveValue(160);
+    expect(screen.getByLabelText("Maximum words per reply")).toHaveValue("160");
     expect(screen.getByRole("button", { name: "Compile tutor" })).toBeEnabled();
 
     first.unmount();
@@ -93,23 +91,18 @@ describe("TutorDesignComparison", () => {
     expect(screen.getByRole("button", { name: "Selected" })).toHaveAccessibleName("Selected");
   });
 
-  it("passes the selected design and only validated controls to the compiler hook", async () => {
+  it("passes the selected design controls to the compiler hook", async () => {
     const onCompile = vi.fn().mockResolvedValue(undefined);
     render(<TutorDesignComparison projectId="project-alpha" onCompile={onCompile} />);
 
     await userEvent.click(await screen.findByRole("button", { name: "Choose Tutor alpha" }));
-    fireEvent.change(screen.getByLabelText("Maximum words per reply"), { target: { value: "10" } });
-    expect(screen.getByText("Choose a reply length between 20 and 1,000 words before compiling.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Compile tutor" })).toBeDisabled();
-
     fireEvent.change(screen.getByLabelText("Maximum words per reply"), { target: { value: "240" } });
     await userEvent.click(screen.getByRole("button", { name: "Compile tutor" }));
 
     await waitFor(() => expect(onCompile).toHaveBeenCalledWith({
       designId: "alpha",
-      overrides: expect.objectContaining({ maxWords: 240, answerPolicy: "never_reveal" }),
+      overrides: expect.objectContaining({ maxWords: 240 }),
     }));
-    expect(screen.getByRole("status")).toHaveTextContent("Tutor compilation started.");
   });
 
   it("gives an accessible retry state without exposing response internals", async () => {

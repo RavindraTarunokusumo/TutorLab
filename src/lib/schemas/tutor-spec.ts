@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { SCHEMA_LIMITS } from "./constants";
 import {
-  AnswerPolicySchema,
   AssistanceStateSchema,
   HintEscalationSchema,
   TeachingMoveSchema,
@@ -33,13 +32,12 @@ export const TutorSpecSchema = z
     pedagogy: z.strictObject({
       diagnoseBeforeExplain: z.boolean(),
       hintEscalation: HintEscalationSchema,
-      answerPolicy: AnswerPolicySchema,
       permittedAssistanceStates: z.array(AssistanceStateSchema).min(1).max(9),
       permittedTeachingMoves: z.array(TeachingMoveSchema).min(1).max(9),
     }),
     responseStyle: z.strictObject({
       tone: z.enum(["encouraging", "neutral", "formal"]),
-      maxWords: z.number().int().min(20).max(1_000),
+      maxWords: z.number().int().min(50).max(500),
     }),
     boundaries: z.strictObject({
       offTopic: z.enum(["redirect", "brief_redirect", "decline"]),

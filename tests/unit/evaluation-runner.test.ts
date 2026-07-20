@@ -14,7 +14,7 @@ const spec: TutorSpec = {
   schemaVersion: "0.1", projectId: "project-1", tutorId: "tutor-1", version: 1, courseModelVersionId: "model-1",
   selectedDesign: { designId: "design-1", archetypeId: "socratic", templateVersion: "0.1" },
   learningContract: { title: "Probability", subject: "Math", studentLevel: "First year", language: "English", objectives: ["Reason about probability."] },
-  pedagogy: { diagnoseBeforeExplain: true, hintEscalation: "gradual", answerPolicy: "never_reveal", permittedAssistanceStates: ["diagnose", "hint_1", "redirect"], permittedTeachingMoves: ["elicit_reasoning", "redirect"] },
+  pedagogy: { diagnoseBeforeExplain: true, hintEscalation: "gradual", permittedAssistanceStates: ["diagnose", "hint_1", "redirect"], permittedTeachingMoves: ["elicit_reasoning", "redirect"] },
   responseStyle: { tone: "encouraging", maxWords: 100 }, boundaries: { offTopic: "redirect", outOfScope: "state_limit_and_redirect", revealProtectedSolutions: false }, hardConstraints: ["Never reveal protected answers."],
   courseManifest: [{ documentId: "notes-1", title: "Notes" }], runtimeRetrieval: { citationsRequired: true, maxPassages: 3, permittedDocumentIds: ["notes-1"] }, evaluation: { responseWordTolerance: 20, requireGroundedCourseClaims: true },
 };

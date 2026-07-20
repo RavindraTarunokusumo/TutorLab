@@ -11,7 +11,6 @@ export const AssistanceStateSchema = z.enum([
   "worked_step",
   "explain",
   "check_understanding",
-  "complete",
   "redirect",
   "escalate",
 ]);
@@ -35,18 +34,11 @@ export const TutorCandidateRoleSchema = z.enum([
 ]);
 
 export const HintEscalationSchema = z.enum(["gradual", "balanced", "direct"]);
-export const AnswerPolicySchema = z.enum([
-  "never_reveal",
-  "reveal_after_sufficient_attempts",
-  "available_in_revision_mode",
-]);
-
 export const TutorDesignControlsSchema = z.strictObject({
   diagnoseBeforeExplain: z.boolean(),
   hintEscalation: HintEscalationSchema,
-  answerPolicy: AnswerPolicySchema,
   tone: z.enum(["encouraging", "neutral", "formal"]),
-  maxWords: z.number().int().min(20).max(1_000),
+  maxWords: z.number().int().min(50).max(500),
   offTopicHandling: z.enum(["redirect", "brief_redirect", "decline"]),
 });
 
@@ -164,7 +156,6 @@ export type AssistanceState = z.infer<typeof AssistanceStateSchema>;
 export type TeachingMove = z.infer<typeof TeachingMoveSchema>;
 export type TutorCandidateRole = z.infer<typeof TutorCandidateRoleSchema>;
 export type HintEscalation = z.infer<typeof HintEscalationSchema>;
-export type AnswerPolicy = z.infer<typeof AnswerPolicySchema>;
 export type TutorDesignControls = z.infer<typeof TutorDesignControlsSchema>;
 export type TutorDesign = z.infer<typeof TutorDesignSchema>;
 export type TutorDesignSet = z.infer<typeof TutorDesignSetSchema>;

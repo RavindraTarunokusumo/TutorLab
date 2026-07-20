@@ -49,7 +49,7 @@ describe("TeachingBriefWizard", () => {
     expect(
       screen.getByRole("heading", { name: "What is this tutor for?" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Step 2 of 5")).toBeInTheDocument();
+    expect(screen.getByText("Step 2 of 4")).toBeInTheDocument();
   });
 
   it("supports Back, Next, and radio keyboard interaction with visible focus", async () => {

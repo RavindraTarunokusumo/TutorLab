@@ -25,7 +25,7 @@ const tutorSpec: TutorSpec = {
   courseModelVersionId: "course-version-alpha",
   selectedDesign: { designId: "design-alpha", archetypeId: "socratic", templateVersion: "0.1" },
   learningContract: { title: model.courseIdentity.title, subject: model.courseIdentity.subject, studentLevel: model.courseIdentity.studentLevel, language: model.courseIdentity.language, objectives: [model.learningObjectives[0]!.statement] },
-  pedagogy: { diagnoseBeforeExplain: true, hintEscalation: "gradual", answerPolicy: "never_reveal", permittedAssistanceStates: ["diagnose", "hint_1", "check_understanding", "redirect"], permittedTeachingMoves: ["elicit_reasoning", "give_conceptual_hint", "check_understanding", "redirect"] },
+  pedagogy: { diagnoseBeforeExplain: true, hintEscalation: "gradual", permittedAssistanceStates: ["diagnose", "hint_1", "check_understanding", "redirect"], permittedTeachingMoves: ["elicit_reasoning", "give_conceptual_hint", "check_understanding", "redirect"] },
   responseStyle: { tone: "encouraging", maxWords: 160 },
   boundaries: { offTopic: "redirect", outOfScope: "state_limit_and_redirect", revealProtectedSolutions: false },
   hardConstraints: ["Do not reveal protected answers."],

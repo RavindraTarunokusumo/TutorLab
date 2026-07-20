@@ -29,7 +29,7 @@ export function buildStudentSimulatorInstructions(
     })}\n</UNTRUSTED_SCENARIO>`,
     `<UNTRUSTED_TUTOR_POLICY>\n${JSON.stringify({
       responseWordLimit: input.tutorSpec.responseStyle.maxWords,
-      answerPolicy: input.tutorSpec.pedagogy.answerPolicy,
+      protectedAnswers: "never_reveal",
     })}\n</UNTRUSTED_TUTOR_POLICY>`,
     `<UNTRUSTED_TRANSCRIPT>\n${transcript || "No previous turns."}\n</UNTRUSTED_TRANSCRIPT>`,
   ].join("\n\n");

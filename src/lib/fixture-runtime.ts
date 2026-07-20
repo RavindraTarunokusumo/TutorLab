@@ -582,15 +582,10 @@ function fixtureTutorDesignSet(
   input: TutorArchitectPromptInput,
 ) {
   const evidence = input.courseModel.courseIdentity.evidence;
-  const answerPolicyRank = {
-    never_reveal: 0,
-    reveal_after_sufficient_attempts: 1,
-    available_in_revision_mode: 2,
-  } as const;
   const responseLengthLimit = {
     concise: 160,
     balanced: 320,
-    detailed: 1_000,
+    detailed: 500,
   } as const;
   const roleByArchetype = new Map([
     [
@@ -627,15 +622,6 @@ function fixtureTutorDesignSet(
         "Show me the reasoning you used, and we can check the method before deciding whether the result is reliable.",
       controls: {
         ...template.defaultControls,
-        diagnoseBeforeExplain:
-          template.defaultControls.diagnoseBeforeExplain ||
-          input.teachingBrief.assistanceBoundaries.requireReasoningBeforeAnswer ||
-          input.teachingBrief.style.questioningPreference === "questions_first",
-        answerPolicy: [
-          template.defaultControls.answerPolicy,
-          input.teachingBrief.assistanceBoundaries.defaultDisclosure,
-          input.teachingBrief.assistanceBoundaries.assessedWorkDisclosure,
-        ].sort((left, right) => answerPolicyRank[left] - answerPolicyRank[right])[0]!,
         tone: input.teachingBrief.style.tone,
         maxWords: Math.min(
           template.defaultControls.maxWords,

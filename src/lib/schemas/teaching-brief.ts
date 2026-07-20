@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SCHEMA_LIMITS } from "./constants";
-import { DisclosureLabelSchema, StableIdSchema } from "./shared";
+import { StableIdSchema } from "./shared";
 
 const RequiredTextSchema = z
   .string()
@@ -31,32 +31,9 @@ export const TeachingBriefObjectivesStepSchema = z.strictObject({
     .max(SCHEMA_LIMITS.stringListItems),
 });
 
-export const TeachingBriefAssistanceStepSchema = z.strictObject({
-  defaultDisclosure: DisclosureLabelSchema,
-  assessedWorkDisclosure: DisclosureLabelSchema,
-  requireReasoningBeforeAnswer: z.boolean(),
-});
-
 export const TeachingBriefStyleStepSchema = z.strictObject({
   tone: z.enum(["encouraging", "neutral", "formal"]),
   responseLength: z.enum(["concise", "balanced", "detailed"]),
-  questioningPreference: z.enum([
-    "questions_first",
-    "balanced",
-    "explanations_first",
-  ]),
-  learnerSupports: z
-    .array(
-      z.enum([
-        "worked_examples",
-        "visual_analogies",
-        "step_by_step",
-        "retrieval_prompts",
-        "teach_back",
-      ]),
-    )
-    .max(5)
-    .default([]),
 });
 
 export const TeachingBriefSchema = z.strictObject({
@@ -65,11 +42,10 @@ export const TeachingBriefSchema = z.strictObject({
   context: TeachingBriefContextStepSchema,
   purpose: TeachingBriefPurposeStepSchema.shape.purpose,
   objectives: TeachingBriefObjectivesStepSchema.shape.objectives,
-  assistanceBoundaries: TeachingBriefAssistanceStepSchema,
   style: TeachingBriefStyleStepSchema,
   completedSteps: z
-    .array(z.enum(["context", "purpose", "objectives", "assistance", "style"]))
-    .max(5),
+    .array(z.enum(["context", "purpose", "objectives", "style"]))
+    .max(4),
 });
 
 export type TeachingBrief = z.infer<typeof TeachingBriefSchema>;

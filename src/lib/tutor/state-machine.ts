@@ -10,8 +10,6 @@ export type TransitionContext = {
   boundary?: TransitionBoundary;
   requestsFinalAnswer?: boolean;
   wouldRevealFinalAnswer?: boolean;
-  revisionMode?: boolean;
-  sufficientAttempts?: boolean;
 };
 
 export type StateTransition = {
@@ -31,8 +29,7 @@ const SPEC_TRANSITIONS: Readonly<Record<AssistanceState, readonly AssistanceStat
   hint_2: ["worked_step"],
   worked_step: ["check_understanding"],
   explain: ["check_understanding"],
-  check_understanding: ["diagnose", "complete"],
-  complete: [],
+  check_understanding: ["diagnose"],
   redirect: [],
   escalate: [],
 };
@@ -95,7 +92,7 @@ export function isSpecTransition(
 }
 
 export function isTerminalState(state: AssistanceState): boolean {
-  return state === "complete" || state === "redirect" || state === "escalate";
+  return state === "redirect" || state === "escalate";
 }
 
 function rejectTerminalProposal(
@@ -177,40 +174,12 @@ export function validateTransition({
 
   const finalAnswerDisclosure =
     context.requestsFinalAnswer === true || context.wouldRevealFinalAnswer === true;
-  if (finalAnswerDisclosure && spec.pedagogy.answerPolicy === "never_reveal") {
+  if (finalAnswerDisclosure) {
     return reject(
       currentState,
       proposedState,
       spec,
-      "answer_policy_never_reveal_requires_redirect",
-      true,
-    );
-  }
-
-  if (
-    finalAnswerDisclosure &&
-    spec.pedagogy.answerPolicy === "available_in_revision_mode" &&
-    context.revisionMode !== true
-  ) {
-    return reject(
-      currentState,
-      proposedState,
-      spec,
-      "answer_policy_requires_revision_mode",
-      true,
-    );
-  }
-
-  if (
-    finalAnswerDisclosure &&
-    spec.pedagogy.answerPolicy === "reveal_after_sufficient_attempts" &&
-    context.sufficientAttempts !== true
-  ) {
-    return reject(
-      currentState,
-      proposedState,
-      spec,
-      "answer_policy_requires_sufficient_attempts",
+      "protected_or_final_answer_requires_redirect",
       true,
     );
   }
@@ -239,40 +208,6 @@ export function validateTransition({
       proposedState,
       spec,
       "transition_not_in_spec_graph",
-    );
-  }
-
-  if (proposedState === "complete" && context.revisionMode !== true) {
-    return reject(
-      currentState,
-      proposedState,
-      spec,
-      "completion_requires_revision_mode",
-    );
-  }
-
-  if (
-    proposedState === "complete" &&
-    spec.pedagogy.answerPolicy !== "available_in_revision_mode"
-  ) {
-    return reject(
-      currentState,
-      proposedState,
-      spec,
-      "completion_requires_revision_mode_answer_policy",
-    );
-  }
-
-  if (
-    proposedState === "worked_step" &&
-    spec.pedagogy.answerPolicy === "reveal_after_sufficient_attempts" &&
-    context.sufficientAttempts !== true
-  ) {
-    return reject(
-      currentState,
-      proposedState,
-      spec,
-      "worked_step_requires_sufficient_attempts",
     );
   }
 

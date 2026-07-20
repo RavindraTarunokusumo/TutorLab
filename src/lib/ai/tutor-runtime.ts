@@ -16,7 +16,7 @@ export type RuntimeDraft = {
 const RuntimeDraftSchema = z.strictObject({
   content: z.string().trim().min(1).max(12_000),
   teachingMove: z.enum(["elicit_reasoning", "give_conceptual_hint", "give_procedural_hint", "model_worked_step", "explain_concept", "check_understanding", "summarize_learning", "redirect", "escalate"]),
-  proposedState: z.enum(["diagnose", "hint_1", "hint_2", "worked_step", "explain", "check_understanding", "complete", "redirect", "escalate"]),
+  proposedState: z.enum(["diagnose", "hint_1", "hint_2", "worked_step", "explain", "check_understanding", "redirect", "escalate"]),
   boundary: z.enum(["none", "off_topic", "out_of_scope", "protected_solution"]),
   citedDocumentIds: z.array(z.string().trim().min(1)).max(12),
 });

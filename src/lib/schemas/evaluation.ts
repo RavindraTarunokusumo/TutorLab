@@ -6,7 +6,7 @@ import {
 } from "./constants";
 import { ConversationMessageSchema, SafeUsageMetadataSchema } from "./conversation";
 import { StableIdSchema, TimestampSchema } from "./shared";
-import { AnswerPolicySchema, HintEscalationSchema } from "./tutor-design";
+import { HintEscalationSchema } from "./tutor-design";
 
 const RequiredTextSchema = z.string().trim().min(1).max(SCHEMA_LIMITS.longText);
 
@@ -20,7 +20,6 @@ export const EvalScenarioTypeSchema = z.enum([
 ]);
 
 export const AllowedRepairPathSchema = z.enum([
-  "/pedagogy/answer_policy",
   "/pedagogy/hint_escalation",
   "/pedagogy/diagnose_before_explain",
   "/boundaries/off_topic",
@@ -35,13 +34,12 @@ const RepairOperationShape = {
 };
 
 export const RecommendedRepairSchema = z.discriminatedUnion("path", [
-  z.strictObject({ ...RepairOperationShape, path: z.literal("/pedagogy/answer_policy"), value: AnswerPolicySchema }),
   z.strictObject({ ...RepairOperationShape, path: z.literal("/pedagogy/hint_escalation"), value: HintEscalationSchema }),
   z.strictObject({ ...RepairOperationShape, path: z.literal("/pedagogy/diagnose_before_explain"), value: z.boolean() }),
   z.strictObject({ ...RepairOperationShape, path: z.literal("/boundaries/off_topic"), value: z.enum(["redirect", "brief_redirect", "decline"]) }),
   z.strictObject({ ...RepairOperationShape, path: z.literal("/boundaries/out_of_scope"), value: z.enum(["state_limit_and_redirect", "redirect_to_teacher"]) }),
   z.strictObject({ ...RepairOperationShape, path: z.literal("/hard_constraints"), value: z.array(RequiredTextSchema).min(1).max(32) }),
-  z.strictObject({ ...RepairOperationShape, path: z.literal("/response_style/max_words"), value: z.number().int().min(20).max(1_000) }),
+  z.strictObject({ ...RepairOperationShape, path: z.literal("/response_style/max_words"), value: z.number().int().min(50).max(500) }),
 ]);
 
 export const EvalScenarioSchema = z
@@ -131,7 +129,6 @@ export const TeacherRecommendationSchema = z.strictObject({
     "source_materials",
     "off_topic_handling",
     "tone",
-    "answer_sharing",
   ]),
   recommendation: RequiredTextSchema,
   rationale: RequiredTextSchema,

@@ -31,18 +31,11 @@ const brief: TeachingBrief = {
   },
   purpose: "guided_practice",
   objectives: ["Explain probability reasoning."],
-  assistanceBoundaries: {
-    defaultDisclosure: "never_reveal",
-    assessedWorkDisclosure: "never_reveal",
-    requireReasoningBeforeAnswer: true,
-  },
   style: {
     tone: "encouraging",
     responseLength: "concise",
-    questioningPreference: "questions_first",
-    learnerSupports: ["step_by_step"],
   },
-  completedSteps: ["context", "purpose", "objectives", "assistance", "style"],
+  completedSteps: ["context", "purpose", "objectives", "style"],
 };
 
 const courseModel = {
@@ -337,7 +330,7 @@ describe("tutor design generation", () => {
         ...fixtureSet,
         candidates: fixtureSet.candidates.map((candidate) => ({
           ...candidate,
-          controls: { ...candidate.controls, tone: "formal", answerPolicy: "available_in_revision_mode", diagnoseBeforeExplain: false, maxWords: 500 },
+          controls: { ...candidate.controls, tone: "formal", diagnoseBeforeExplain: false, maxWords: 500 },
         })),
       }),
       repair: async (input, invalidOutput) => {
@@ -352,7 +345,7 @@ describe("tutor design generation", () => {
     expect(repairCalls).toBe(1);
   });
 
-  it("enforces global brief controls before validating an otherwise valid design set", async () => {
+  it("enforces the remaining global brief controls without overriding design behavior", async () => {
     const deps = inMemoryDependencies();
     const fixture = getFixtureTutorArchitect();
     let repairCalls = 0;
@@ -367,7 +360,6 @@ describe("tutor design generation", () => {
               ...candidate.controls,
               diagnoseBeforeExplain: false,
               tone: "neutral",
-              answerPolicy: "reveal_after_sufficient_attempts",
               maxWords: 500,
             },
           })),
@@ -390,9 +382,10 @@ describe("tutor design generation", () => {
     )).toBe(true);
     expect(result.designs.every(({ artifact }) =>
       artifact.controls.tone === "encouraging" &&
-      artifact.controls.answerPolicy === "never_reveal" &&
-      artifact.controls.diagnoseBeforeExplain &&
       artifact.controls.maxWords <= 160,
+    )).toBe(true);
+    expect(result.designs.every(({ artifact }) =>
+      artifact.controls.diagnoseBeforeExplain === false,
     )).toBe(true);
   });
 
@@ -419,7 +412,7 @@ describe("tutor design generation", () => {
       ...project,
       teachingBrief: {
         ...brief,
-        completedSteps: ["context", "purpose", "objectives", "assistance", "assistance"],
+        completedSteps: ["context", "purpose", "objectives", "style", "style"],
       } as TeachingBrief,
     };
     const crossProject: ProjectRecord = {

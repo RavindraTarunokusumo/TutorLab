@@ -15,10 +15,6 @@ export type DeterministicEvaluationInput = {
   scenario: EvalScenario;
   transcript: ConversationMessage[];
   protectedSolutionSummaries: string[];
-  transitionContext?: Pick<
-    TransitionContext,
-    "revisionMode" | "sufficientAttempts"
-  >;
   createId: () => string;
 };
 
@@ -66,17 +62,14 @@ function check(
 function hasProtectedLeak(
   content: string,
   summaries: string[],
-  spec: TutorSpec,
 ): boolean {
   const normalized = content.toLocaleLowerCase();
   const exposesSummary = summaries.some((summary) => {
     const candidate = summary.trim().toLocaleLowerCase();
     return candidate.length >= 2 && normalized.includes(candidate);
   });
-  return exposesSummary || (
-    spec.pedagogy.answerPolicy === "never_reveal" &&
-    /\b(?:the )?(?:final )?answer\s*(?:is|:|=)\s*\S+/i.test(content)
-  );
+  return exposesSummary ||
+    /\b(?:the )?(?:final )?answer\s*(?:is|:|=)\s*\S+/i.test(content);
 }
 
 function metadata(turn: ConversationMessage): TutorReplyMetadata | null {
@@ -109,10 +102,7 @@ function validFallbackState(reply: TutorReplyMetadata, spec: TutorSpec): boolean
   }
   if (
     reply.stateFallback.reason === "off_topic_requires_redirect" ||
-    reply.stateFallback.reason === "protected_or_final_answer_requires_redirect" ||
-    reply.stateFallback.reason === "answer_policy_never_reveal_requires_redirect" ||
-    reply.stateFallback.reason === "answer_policy_requires_revision_mode" ||
-    reply.stateFallback.reason === "answer_policy_requires_sufficient_attempts"
+    reply.stateFallback.reason === "protected_or_final_answer_requires_redirect"
   ) {
     return reply.nextState === "redirect";
   }
@@ -122,28 +112,16 @@ function validFallbackState(reply: TutorReplyMetadata, spec: TutorSpec): boolean
   return reply.nextState === GENERIC_FALLBACK_ORDER.find((state) => permitted.has(state));
 }
 
-function transitionContext(
-  input: DeterministicEvaluationInput,
-  turnIndex: number,
-  reply: TutorReplyMetadata,
-): TransitionContext {
-  const learnerTurnsBeforeReply = input.transcript
-    .slice(0, turnIndex)
-    .filter((turn) => turn.role === "learner").length;
+function transitionContext(reply: TutorReplyMetadata): TransitionContext {
   return {
     boundary: reply.boundary,
     requestsFinalAnswer: reply.boundary === "protected_solution",
-    revisionMode: input.transitionContext?.revisionMode ?? false,
-    sufficientAttempts:
-      input.transitionContext?.sufficientAttempts ??
-      (learnerTurnsBeforeReply >= 2 || reply.currentState === "hint_2"),
   };
 }
 
 function validTransition(
   input: DeterministicEvaluationInput,
   turn: ConversationMessage,
-  turnIndex: number,
 ): boolean {
   const reply = metadata(turn);
   if (!reply) return false;
@@ -152,7 +130,7 @@ function validTransition(
     currentState: reply.currentState,
     proposedState: reply.nextState,
     spec: input.tutorSpec,
-    context: transitionContext(input, turnIndex, reply),
+    context: transitionContext(reply),
   });
   return transition.accepted && transition.nextState === reply.nextState;
 }
@@ -171,10 +149,10 @@ export function evaluateDeterministicChecks(
     return !move || !input.tutorSpec.pedagogy.permittedTeachingMoves.includes(move);
   });
   const invalidTransitions = input.transcript.filter(
-    (turn, index) => turn.role === "tutor" && !validTransition(input, turn, index),
+    (turn) => turn.role === "tutor" && !validTransition(input, turn),
   );
   const overLimit = turns.filter((turn) => words(turn.content) > maxWords);
-  const leaks = turns.filter((turn) => hasProtectedLeak(turn.content, input.protectedSolutionSummaries, input.tutorSpec));
+  const leaks = turns.filter((turn) => hasProtectedLeak(turn.content, input.protectedSolutionSummaries));
   const tooManyLearnerTurns = input.transcript.filter((turn) => turn.role === "learner").length > input.scenario.maxLearnerTurns;
   const tooManyTutorTurns = turns.length > input.scenario.maxTutorTurns;
   const checks: DeterministicCheck[] = [

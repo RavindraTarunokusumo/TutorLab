@@ -86,7 +86,6 @@ export function buildFixtureTutorSpec(input: PolicyDraftingInput): TutorSpec {
     pedagogy: {
       diagnoseBeforeExplain: input.selectedControls.diagnoseBeforeExplain,
       hintEscalation: input.selectedControls.hintEscalation,
-      answerPolicy: input.selectedControls.answerPolicy,
       permittedAssistanceStates: [...input.selectedTutorDesign.permittedAssistanceStates],
       permittedTeachingMoves: [...input.selectedTutorDesign.permittedTeachingMoves],
     },

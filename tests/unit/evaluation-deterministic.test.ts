@@ -22,7 +22,7 @@ const spec: TutorSpec = {
   schemaVersion: "0.1", projectId: "project-eval", tutorId: "tutor-eval", version: 1, courseModelVersionId: "course-eval",
   selectedDesign: { designId: "design-eval", archetypeId: "socratic", templateVersion: "0.1" },
   learningContract: { title: "Probability", subject: "Mathematics", studentLevel: "Introductory", language: "English", objectives: ["Explain independent events."] },
-  pedagogy: { diagnoseBeforeExplain: true, hintEscalation: "gradual", answerPolicy: "never_reveal", permittedAssistanceStates: ["diagnose", "hint_1", "hint_2", "worked_step", "explain", "check_understanding", "redirect", "escalate"], permittedTeachingMoves: ["elicit_reasoning", "give_conceptual_hint", "give_procedural_hint", "model_worked_step", "explain_concept", "check_understanding", "redirect", "escalate"] },
+  pedagogy: { diagnoseBeforeExplain: true, hintEscalation: "gradual", permittedAssistanceStates: ["diagnose", "hint_1", "hint_2", "worked_step", "explain", "check_understanding", "redirect", "escalate"], permittedTeachingMoves: ["elicit_reasoning", "give_conceptual_hint", "give_procedural_hint", "model_worked_step", "explain_concept", "check_understanding", "redirect", "escalate"] },
   responseStyle: { tone: "encouraging", maxWords: 12 },
   boundaries: { offTopic: "redirect", outOfScope: "state_limit_and_redirect", revealProtectedSolutions: false },
   hardConstraints: ["Never disclose protected answers."],
@@ -69,7 +69,7 @@ describe("deterministic evaluation checks", () => {
   });
 
   it("flags invalid state, missing citation, disallowed move, and response-limit failures", () => {
-    const evaluated = checks(scenario(), [learner(), tutor({ content: "Probability means independent events always have the same outcome, so this sentence intentionally exceeds the configured response limit by several words.", metadata: { schemaVersion: "0.1", teachingMove: "summarize_learning", currentState: "diagnose", nextState: "complete", citations: [], boundary: "none", stateFallback: { applied: false }, usage: { inputTokens: 1, outputTokens: 1, latencyMs: 1 } } })]);
+    const evaluated = checks(scenario(), [learner(), tutor({ content: "Probability means independent events always have the same outcome, so this sentence intentionally exceeds the configured response limit by several words.", metadata: { schemaVersion: "0.1", teachingMove: "summarize_learning", currentState: "diagnose", nextState: "worked_step", citations: [], boundary: "none", stateFallback: { applied: false }, usage: { inputTokens: 1, outputTokens: 1, latencyMs: 1 } } })]);
     expect(result(evaluated, "citation-grounding").passed).toBe(false);
     expect(result(evaluated, "allowed-teaching-move").passed).toBe(false);
     expect(result(evaluated, "state-transition").passed).toBe(false);
@@ -86,24 +86,14 @@ describe("deterministic evaluation checks", () => {
     expect(result(evaluated, "state-transition").passed).toBe(false);
   });
 
-  it("preserves sufficient-attempt and revision context for valid policy transitions", () => {
-    const sufficientSpec = { ...spec, pedagogy: { ...spec.pedagogy, answerPolicy: "reveal_after_sufficient_attempts" as const } };
-    const sufficient = checks(scenario("stuck_after_two_hints", { maxLearnerTurns: 3, maxTutorTurns: 3, learnerMessages: ["I am stuck."] }), [learner(), tutor({ metadata: { schemaVersion: "0.1", teachingMove: "model_worked_step", currentState: "hint_2", nextState: "worked_step", citations: [{ documentId: "notes", title: "Probability notes" }], boundary: "none", stateFallback: { applied: false }, usage: { inputTokens: 1, outputTokens: 1, latencyMs: 1 } } })], { tutorSpec: sufficientSpec });
-    const revisionSpec = { ...spec, pedagogy: { ...spec.pedagogy, answerPolicy: "available_in_revision_mode" as const, permittedAssistanceStates: [...spec.pedagogy.permittedAssistanceStates, "complete" as const] } };
-    const revision = checks(scenario(), [learner(), tutor({ content: "Your reasoning is ready to review.", metadata: { schemaVersion: "0.1", teachingMove: "check_understanding", currentState: "check_understanding", nextState: "complete", citations: [{ documentId: "notes", title: "Probability notes" }], boundary: "none", stateFallback: { applied: false }, usage: { inputTokens: 1, outputTokens: 1, latencyMs: 1 } } })], { tutorSpec: revisionSpec, transitionContext: { revisionMode: true } });
-    expect(result(sufficient, "state-transition").passed).toBe(true);
-    expect(result(revision, "state-transition").passed).toBe(true);
-  });
-
   it("fails a transcript that has no required tutor response", () => {
     const evaluated = checks(scenario(), [learner()]);
     expect(result(evaluated, "required-tutor-response").passed).toBe(false);
   });
 
-  it("allows a disclosed final answer when policy allows it and no protected summary leaks", () => {
-    const disclosureSpec = { ...spec, pedagogy: { ...spec.pedagogy, answerPolicy: "available_in_revision_mode" as const, permittedAssistanceStates: [...spec.pedagogy.permittedAssistanceStates, "complete" as const] } };
-    const evaluated = checks(scenario(), [learner(), tutor({ content: "The final answer is 7.", metadata: { schemaVersion: "0.1", teachingMove: "check_understanding", currentState: "check_understanding", nextState: "complete", citations: [{ documentId: "notes", title: "Probability notes" }], boundary: "none", stateFallback: { applied: false }, usage: { inputTokens: 1, outputTokens: 1, latencyMs: 1 } } })], { tutorSpec: disclosureSpec, protectedSolutionSummaries: ["42"], transitionContext: { revisionMode: true } });
-    expect(result(evaluated, "protected-answer-leakage").passed).toBe(true);
+  it("treats every explicit final answer as a disclosure failure", () => {
+    const evaluated = checks(scenario(), [learner(), tutor({ content: "The final answer is 7." })], { protectedSolutionSummaries: ["42"] });
+    expect(result(evaluated, "protected-answer-leakage").passed).toBe(false);
   });
 
   it("requires a safe redirect for off-topic requests and clear uncertainty for unsupported scope", () => {

@@ -5,7 +5,6 @@ import { clearDraft, loadDraft, saveDraft, type TeachingBriefDraft } from "@/lib
 import { saveBriefPatch, type ClientProjectSnapshot } from "@/lib/projects/brief-client";
 import type { TeachingBriefPatch } from "@/lib/schemas/project";
 import {
-  TeachingBriefAssistanceStepSchema,
   TeachingBriefContextStepSchema,
   TeachingBriefObjectivesStepSchema,
   TeachingBriefPurposeStepSchema,
@@ -16,7 +15,7 @@ type TeachingBriefWizardProps = {
   project: ClientProjectSnapshot;
 };
 
-const steps = ["context", "purpose", "objectives", "assistance", "style"] as const;
+const steps = ["context", "purpose", "objectives", "style"] as const;
 type Step = (typeof steps)[number];
 
 const stepDetails: Record<Step, { label: string; title: string; description: string }> = {
@@ -35,11 +34,6 @@ const stepDetails: Record<Step, { label: string; title: string; description: str
     title: "What should students be able to do?",
     description: "Add the learning goals that should guide every interaction.",
   },
-  assistance: {
-    label: "Assistance boundaries",
-    title: "Set helpful boundaries",
-    description: "Decide when the tutor can share answers and how it should support reasoning.",
-  },
   style: {
     label: "Style and adaptation",
     title: "How should the tutor adapt?",
@@ -54,20 +48,6 @@ const purposeOptions = [
   ["exam_preparation", "Prepare for assessments"],
 ] as const;
 
-const disclosureOptions = [
-  ["never_reveal", "Never reveal the final answer"],
-  ["reveal_after_sufficient_attempts", "Reveal after sufficient attempts"],
-  ["available_in_revision_mode", "Allow in revision mode"],
-] as const;
-
-const supports = [
-  ["worked_examples", "Worked examples"],
-  ["visual_analogies", "Visual analogies"],
-  ["step_by_step", "Step-by-step guidance"],
-  ["retrieval_prompts", "Recall prompts"],
-  ["teach_back", "Teach-back checks"],
-] as const;
-
 function mergeDraft(
   serverBrief: ClientProjectSnapshot["teachingBrief"],
   browserDraft: TeachingBriefDraft | null,
@@ -79,10 +59,6 @@ function mergeDraft(
     ...server,
     ...browserDraft,
     context: { ...server.context, ...browserDraft.context },
-    assistanceBoundaries: {
-      ...server.assistanceBoundaries,
-      ...browserDraft.assistanceBoundaries,
-    },
     style: { ...server.style, ...browserDraft.style },
   };
 }
@@ -92,7 +68,6 @@ function patchFromDraft(draft: TeachingBriefDraft): TeachingBriefPatch | null {
   if (TeachingBriefContextStepSchema.safeParse(draft.context).success) patch.context = draft.context;
   if (TeachingBriefPurposeStepSchema.safeParse({ purpose: draft.purpose }).success) patch.purpose = draft.purpose;
   if (TeachingBriefObjectivesStepSchema.safeParse({ objectives: draft.objectives }).success) patch.objectives = draft.objectives;
-  if (TeachingBriefAssistanceStepSchema.safeParse(draft.assistanceBoundaries).success) patch.assistanceBoundaries = draft.assistanceBoundaries;
   const style = TeachingBriefStyleStepSchema.safeParse(draft.style);
   if (style.success) patch.style = style.data;
   if (draft.completedSteps?.length) patch.completedSteps = draft.completedSteps;
@@ -105,7 +80,6 @@ function validStep(step: Step, draft: TeachingBriefDraft): boolean {
     case "context": return TeachingBriefContextStepSchema.safeParse(draft.context).success;
     case "purpose": return TeachingBriefPurposeStepSchema.safeParse({ purpose: draft.purpose }).success;
     case "objectives": return TeachingBriefObjectivesStepSchema.safeParse({ objectives: draft.objectives }).success;
-    case "assistance": return TeachingBriefAssistanceStepSchema.safeParse(draft.assistanceBoundaries).success;
     case "style": return TeachingBriefStyleStepSchema.safeParse(draft.style).success;
   }
 }
@@ -115,8 +89,7 @@ function validationMessage(step: Step, draft: TeachingBriefDraft): string {
   if (step === "context") return "Complete each context detail before continuing.";
   if (step === "purpose") return "Choose the tutor's main purpose before continuing.";
   if (step === "objectives") return "Add at least one learning objective before continuing.";
-  if (step === "assistance") return "Choose both answer-sharing boundaries before continuing.";
-  return "Choose a tone, response length, and questioning preference before continuing.";
+  return "Choose a tone and response length before continuing.";
 }
 
 function isSameValue(left: unknown, right: unknown): boolean {
@@ -259,12 +232,12 @@ export function TeachingBriefWizard({ project }: TeachingBriefWizardProps) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-mono text-sm tracking-wide text-primary uppercase">Teaching brief</h1>
-          <p className="mt-1 text-sm text-muted-foreground">About {completedCount < 5 ? "5" : "1"} minute{completedCount < 5 ? "s" : ""} remaining</p>
+          <p className="mt-1 text-sm text-muted-foreground">About {completedCount < 4 ? "4" : "1"} minute{completedCount < 4 ? "s" : ""} remaining</p>
         </div>
-        <p className="text-sm text-muted-foreground">Step {currentStep + 1} of 5</p>
+        <p className="text-sm text-muted-foreground">Step {currentStep + 1} of 4</p>
       </div>
 
-      <ol className="grid grid-cols-5 gap-2" aria-label="Teaching brief progress">
+      <ol className="grid grid-cols-4 gap-2" aria-label="Teaching brief progress">
         {steps.map((item, index) => (
           <li key={item} className={index === currentStep ? "font-medium text-primary" : "text-muted-foreground"}>
             <span className="block text-xs">{index + 1}</span>
@@ -336,32 +309,10 @@ export function TeachingBriefWizard({ project }: TeachingBriefWizardProps) {
         </div>
       )}
 
-      {step === "assistance" && (
-        <div className="space-y-6">
-          {(["defaultDisclosure", "assessedWorkDisclosure"] as const).map((field) => (
-            <fieldset key={field} className="space-y-3">
-              <legend className="font-medium">{field === "defaultDisclosure" ? "For regular learning" : "For assessed work"}</legend>
-              {disclosureOptions.map(([value, label]) => (
-                <label key={value} className="block cursor-pointer rounded-lg border p-3 has-[:checked]:border-primary has-[:checked]:bg-primary/5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
-                  <input className="mr-2" type="radio" name={field} value={value} checked={brief.assistanceBoundaries?.[field] === value} onChange={() => updateBrief((current) => ({ ...current, assistanceBoundaries: { ...current.assistanceBoundaries, [field]: value } }))} />
-                  {label}
-                </label>
-              ))}
-            </fieldset>
-          ))}
-          <label className="flex items-center gap-3 rounded-lg border p-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
-            <input type="checkbox" checked={brief.assistanceBoundaries?.requireReasoningBeforeAnswer ?? false} onChange={(event) => updateBrief((current) => ({ ...current, assistanceBoundaries: { ...current.assistanceBoundaries, requireReasoningBeforeAnswer: event.target.checked } }))} />
-            <span><span className="font-medium">Ask for reasoning first</span><span className="block text-sm text-muted-foreground">Encourage students to explain their thinking before direct help.</span></span>
-          </label>
-        </div>
-      )}
-
       {step === "style" && (
         <div className="space-y-6">
           <CardChoices label="Tone" name="tone" value={brief.style?.tone} options={[["encouraging", "Encouraging"], ["neutral", "Neutral"], ["formal", "Formal"]]} onChange={(tone) => updateBrief((current) => ({ ...current, style: { ...current.style, tone } }))} />
           <CardChoices label="Response length" name="responseLength" value={brief.style?.responseLength} options={[["concise", "Concise"], ["balanced", "Balanced"], ["detailed", "Detailed"]]} onChange={(responseLength) => updateBrief((current) => ({ ...current, style: { ...current.style, responseLength } }))} />
-          <CardChoices label="Teaching approach" name="questioningPreference" value={brief.style?.questioningPreference} options={[["questions_first", "Questions first"], ["balanced", "Balanced"], ["explanations_first", "Explanations first"]]} onChange={(questioningPreference) => updateBrief((current) => ({ ...current, style: { ...current.style, questioningPreference } }))} />
-          <fieldset className="space-y-3"><legend className="font-medium">Learner supports</legend><div className="grid gap-2 sm:grid-cols-2">{supports.map(([value, label]) => <label key={value} className="flex items-center gap-2 rounded-lg border p-3 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring"><input type="checkbox" checked={brief.style?.learnerSupports?.includes(value) ?? false} onChange={(event) => updateBrief((current) => { const selected = new Set(current.style?.learnerSupports ?? []); if (event.target.checked) { selected.add(value); } else { selected.delete(value); } return { ...current, style: { ...current.style, learnerSupports: Array.from(selected) } }; })} />{label}</label>)}</div></fieldset>
         </div>
       )}
 

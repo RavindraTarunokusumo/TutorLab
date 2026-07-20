@@ -23,19 +23,8 @@ test("fixture-mode educator golden path reaches tutor evaluation and preview", a
     .fill("Explain independent events");
   await page.getByRole("button", { name: "Add objective" }).click();
   await page.getByRole("button", { name: "Next", exact: true }).click();
-  await page
-    .getByRole("group", { name: "For regular learning" })
-    .getByLabel("Never reveal the final answer")
-    .check();
-  await page
-    .getByRole("group", { name: "For assessed work" })
-    .getByLabel("Reveal after sufficient attempts")
-    .check();
-  await page.getByRole("checkbox", { name: "Ask for reasoning first" }).check();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
   await page.getByRole("radio", { name: "Encouraging" }).check();
-  await page.getByRole("radio", { name: "Balanced" }).nth(0).check();
-  await page.getByRole("radio", { name: "Questions first" }).check();
+  await page.getByRole("radio", { name: "Balanced" }).check();
   const finalBriefSave = page.waitForResponse(
     (response) => {
       if (

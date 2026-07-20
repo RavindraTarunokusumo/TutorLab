@@ -30,9 +30,8 @@ describe("fixture tutor architect", () => {
         schemaVersion: "0.1", projectId: "project-fixture",
         context: { subject: "Mathematics", topic: "Probability", studentLevel: "Introductory", language: "English" },
         purpose: "guided_practice", objectives: ["Explain reasoning."],
-        assistanceBoundaries: { defaultDisclosure: "never_reveal", assessedWorkDisclosure: "never_reveal", requireReasoningBeforeAnswer: true },
-        style: { tone: "encouraging", responseLength: "concise", questioningPreference: "questions_first", learnerSupports: ["step_by_step"] },
-        completedSteps: ["context", "purpose", "objectives", "assistance", "style"],
+        style: { tone: "encouraging", responseLength: "concise" },
+        completedSteps: ["context", "purpose", "objectives", "style"],
       } as never,
     });
     const model = {

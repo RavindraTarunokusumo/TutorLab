@@ -326,22 +326,14 @@ describe("Day 1–2 fixture golden path", () => {
         },
         purpose: "exam_preparation",
         objectives: ["Explain independent events"],
-        assistanceBoundaries: {
-          defaultDisclosure: "reveal_after_sufficient_attempts",
-          assessedWorkDisclosure: "never_reveal",
-          requireReasoningBeforeAnswer: true,
-        },
         style: {
           tone: "encouraging",
           responseLength: "balanced",
-          questioningPreference: "questions_first",
-          learnerSupports: ["step_by_step"],
         },
         completedSteps: [
           "context",
           "purpose",
           "objectives",
-          "assistance",
           "style",
         ],
       },

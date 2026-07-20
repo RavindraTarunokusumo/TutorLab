@@ -89,7 +89,6 @@ function requireCompleteTeachingBrief(
     "context",
     "purpose",
     "objectives",
-    "assistance",
     "style",
   ]);
   if (
@@ -153,16 +152,10 @@ function validateEvidenceReferences(
   });
 }
 
-const ANSWER_POLICY_RANK = {
-  never_reveal: 0,
-  reveal_after_sufficient_attempts: 1,
-  available_in_revision_mode: 2,
-} as const;
-
 const MAX_WORDS_BY_BRIEF_LENGTH = {
   concise: 160,
   balanced: 320,
-  detailed: 1_000,
+  detailed: 500,
 } as const;
 
 function applyTeachingBriefSafeguards(
@@ -172,14 +165,6 @@ function applyTeachingBriefSafeguards(
   const parsed = TutorDesignSetSchema.safeParse(output);
   if (!parsed.success) return output;
 
-  const requiresDiagnosis =
-    brief.assistanceBoundaries.requireReasoningBeforeAnswer ||
-    brief.style.questioningPreference === "questions_first";
-  const answerPolicy =
-    ANSWER_POLICY_RANK[brief.assistanceBoundaries.defaultDisclosure] <=
-    ANSWER_POLICY_RANK[brief.assistanceBoundaries.assessedWorkDisclosure]
-      ? brief.assistanceBoundaries.defaultDisclosure
-      : brief.assistanceBoundaries.assessedWorkDisclosure;
   const maxWords = MAX_WORDS_BY_BRIEF_LENGTH[brief.style.responseLength];
 
   return {
@@ -188,10 +173,7 @@ function applyTeachingBriefSafeguards(
       ...candidate,
       controls: {
         ...candidate.controls,
-        diagnoseBeforeExplain:
-          candidate.controls.diagnoseBeforeExplain || requiresDiagnosis,
         tone: brief.style.tone,
-        answerPolicy,
         maxWords: Math.min(candidate.controls.maxWords, maxWords),
       },
     })),
@@ -202,19 +184,10 @@ export function isTeachingBriefCompatible(
   design: TutorDesign,
   brief: TeachingBrief,
 ): boolean {
-  const disclosureCeiling = Math.min(
-    ANSWER_POLICY_RANK[brief.assistanceBoundaries.defaultDisclosure],
-    ANSWER_POLICY_RANK[brief.assistanceBoundaries.assessedWorkDisclosure],
-  );
   return (
-    ANSWER_POLICY_RANK[design.controls.answerPolicy] <= disclosureCeiling &&
-    (!brief.assistanceBoundaries.requireReasoningBeforeAnswer ||
-      design.controls.diagnoseBeforeExplain) &&
     design.controls.tone === brief.style.tone &&
     design.controls.maxWords <=
-      MAX_WORDS_BY_BRIEF_LENGTH[brief.style.responseLength] &&
-    (brief.style.questioningPreference !== "questions_first" ||
-      design.controls.diagnoseBeforeExplain)
+      MAX_WORDS_BY_BRIEF_LENGTH[brief.style.responseLength]
   );
 }
 

@@ -16,7 +16,7 @@ function design(id: string, archetypeId: string, candidateRole: "best_fit" | "st
     title: "Probability tutor", strategySummary: "Ask for reasoning before explanation.", tradeOff: "Takes one extra turn.",
     evidence: [{ documentId: "document-1", excerptId: `excerpt-${id}`, locatorLabel: "Page 1" }],
     comparisonLearnerMessage: "Help me understand probability.", sampleResponse: "What have you tried?",
-    controls: { diagnoseBeforeExplain: true, hintEscalation: "gradual" as const, answerPolicy: "never_reveal" as const, tone: "encouraging" as const, maxWords: 120, offTopicHandling: "redirect" as const },
+    controls: { diagnoseBeforeExplain: true, hintEscalation: "gradual" as const, tone: "encouraging" as const, maxWords: 120, offTopicHandling: "redirect" as const },
     permittedAssistanceStates: ["diagnose", "hint_1", "check_understanding", "redirect"] as Array<"diagnose" | "hint_1" | "check_understanding" | "redirect">,
     permittedTeachingMoves: ["elicit_reasoning", "give_conceptual_hint", "check_understanding", "redirect"] as Array<"elicit_reasoning" | "give_conceptual_hint" | "check_understanding" | "redirect">,
   };
@@ -27,7 +27,7 @@ function spec(id: string, version: number, courseModelVersionId = "course-versio
     schemaVersion: "0.1" as const, projectId: "project-1", tutorId: id, version, courseModelVersionId,
     selectedDesign: { designId: "design-1", archetypeId: "socratic", templateVersion: "0.1" as const },
     learningContract: { title: "Probability", subject: "Mathematics", studentLevel: "Introductory", language: "English", objectives: ["Explain probability."] },
-    pedagogy: { diagnoseBeforeExplain: true, hintEscalation: "gradual" as const, answerPolicy: "never_reveal" as const, permittedAssistanceStates: ["diagnose", "hint_1", "check_understanding", "redirect"] as Array<"diagnose" | "hint_1" | "check_understanding" | "redirect">, permittedTeachingMoves: ["elicit_reasoning", "give_conceptual_hint", "check_understanding", "redirect"] as Array<"elicit_reasoning" | "give_conceptual_hint" | "check_understanding" | "redirect"> },
+    pedagogy: { diagnoseBeforeExplain: true, hintEscalation: "gradual" as const, permittedAssistanceStates: ["diagnose", "hint_1", "check_understanding", "redirect"] as Array<"diagnose" | "hint_1" | "check_understanding" | "redirect">, permittedTeachingMoves: ["elicit_reasoning", "give_conceptual_hint", "check_understanding", "redirect"] as Array<"elicit_reasoning" | "give_conceptual_hint" | "check_understanding" | "redirect"> },
     responseStyle: { tone: "encouraging" as const, maxWords: 120 },
     boundaries: { offTopic: "redirect" as const, outOfScope: "state_limit_and_redirect" as const, revealProtectedSolutions: false as const },
     hardConstraints: ["Never disclose protected answers."], courseManifest: [{ documentId: "document-1", title: "Notes" }],

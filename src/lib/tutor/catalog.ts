@@ -34,7 +34,6 @@ const SOCrATIC_TEMPLATE: TutorCatalogTemplate = {
   defaultControls: {
     diagnoseBeforeExplain: true,
     hintEscalation: "gradual",
-    answerPolicy: "never_reveal",
     tone: "encouraging",
     maxWords: 140,
     offTopicHandling: "redirect",
@@ -82,7 +81,6 @@ const GUIDED_PRACTICE_TEMPLATE: TutorCatalogTemplate = {
   defaultControls: {
     diagnoseBeforeExplain: true,
     hintEscalation: "gradual",
-    answerPolicy: "never_reveal",
     tone: "encouraging",
     maxWords: 120,
     offTopicHandling: "brief_redirect",
@@ -132,7 +130,6 @@ const INQUIRY_CASE_BASED_TEMPLATE: TutorCatalogTemplate = {
   defaultControls: {
     diagnoseBeforeExplain: false,
     hintEscalation: "balanced",
-    answerPolicy: "reveal_after_sufficient_attempts",
     tone: "neutral",
     maxWords: 180,
     offTopicHandling: "redirect",
@@ -226,11 +223,7 @@ export function validateCatalogDesign(
   const hasOnlySupportedMoves = design.permittedTeachingMoves.every((move) =>
     template.permittedTeachingMoves.includes(move),
   );
-  const protectsAnswers =
-    design.controls.answerPolicy !== "available_in_revision_mode" ||
-    design.permittedAssistanceStates.includes("complete");
-
-  if (!hasOnlySupportedStates || !hasOnlySupportedMoves || !protectsAnswers) {
+  if (!hasOnlySupportedStates || !hasOnlySupportedMoves) {
     return { valid: false, reason: "unsupported_policy_combination" };
   }
 

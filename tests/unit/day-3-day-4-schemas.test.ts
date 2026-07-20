@@ -43,7 +43,6 @@ function design(
     controls: {
       diagnoseBeforeExplain: true,
       hintEscalation: "gradual",
-      answerPolicy: "never_reveal",
       tone: "encouraging",
       maxWords: 120,
       offTopicHandling: "redirect",
@@ -150,7 +149,6 @@ describe("Day 3–4 artifact contracts", () => {
       pedagogy: {
         diagnoseBeforeExplain: true,
         hintEscalation: "gradual",
-        answerPolicy: "never_reveal",
         permittedAssistanceStates: ["diagnose", "hint_1", "check_understanding", "redirect"],
         permittedTeachingMoves: ["elicit_reasoning", "give_conceptual_hint", "check_understanding", "redirect"],
       },
@@ -205,7 +203,7 @@ describe("Day 3–4 artifact contracts", () => {
       courseModelVersionId: "course-model-version-1",
       selectedDesign: { designId: "design-1", archetypeId: "socratic", templateVersion: "0.1" },
       learningContract: { title: "Probability Guide", subject: "Probability", studentLevel: "Introductory", language: "English", objectives: ["Explain equally likely outcomes."] },
-      pedagogy: { diagnoseBeforeExplain: true, hintEscalation: "gradual", answerPolicy: "never_reveal", permittedAssistanceStates: ["diagnose"], permittedTeachingMoves: ["elicit_reasoning"] },
+      pedagogy: { diagnoseBeforeExplain: true, hintEscalation: "gradual", permittedAssistanceStates: ["diagnose"], permittedTeachingMoves: ["elicit_reasoning"] },
       responseStyle: { tone: "encouraging", maxWords: 120 },
       boundaries: { offTopic: "redirect", outOfScope: "state_limit_and_redirect", revealProtectedSolutions: false },
       hardConstraints: ["Never reveal protected final answers."],

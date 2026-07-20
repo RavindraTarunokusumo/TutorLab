@@ -12,16 +12,9 @@
     "Distinguish mutually exclusive events from independent events",
     "Justify probability calculations before evaluating them"
   ],
-  "assistanceBoundaries": {
-    "defaultDisclosure": "reveal_after_sufficient_attempts",
-    "assessedWorkDisclosure": "never_reveal",
-    "requireReasoningBeforeAnswer": true
-  },
   "style": {
     "tone": "encouraging",
-    "responseLength": "balanced",
-    "questioningPreference": "questions_first",
-    "learnerSupports": ["step_by_step", "teach_back"]
+    "responseLength": "balanced"
   },
-  "completedSteps": ["context", "purpose", "objectives", "assistance", "style"]
+  "completedSteps": ["context", "purpose", "objectives", "style"]
 }

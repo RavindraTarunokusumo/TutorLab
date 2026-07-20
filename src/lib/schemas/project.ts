@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  TeachingBriefAssistanceStepSchema,
   TeachingBriefContextStepSchema,
   TeachingBriefObjectivesStepSchema,
   TeachingBriefPurposeStepSchema,
@@ -24,11 +23,10 @@ export const TeachingBriefPatchSchema = z
     context: TeachingBriefContextStepSchema,
     purpose: TeachingBriefPurposeStepSchema.shape.purpose,
     objectives: TeachingBriefObjectivesStepSchema.shape.objectives,
-    assistanceBoundaries: TeachingBriefAssistanceStepSchema,
     style: TeachingBriefStyleStepSchema,
     completedSteps: z
-      .array(z.enum(["context", "purpose", "objectives", "assistance", "style"]))
-      .max(5),
+      .array(z.enum(["context", "purpose", "objectives", "style"]))
+      .max(4),
   })
   .partial()
   .refine((patch) => Object.keys(patch).length > 0, {
