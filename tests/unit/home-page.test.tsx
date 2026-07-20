@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { LandingPage } from "@/app/page";
+import { LandingPage } from "@/components/projects/landing-page";
 
 vi.mock("server-only", () => ({}));
 
