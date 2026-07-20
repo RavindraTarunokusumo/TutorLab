@@ -1,6 +1,8 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 
+export const PROJECT_EDIT_COOKIE = "tutorlab_project_edit";
+
 const editTokenSecretSchema = z
   .string()
   .min(32, "PROJECT_EDIT_TOKEN_SECRET must be at least 32 characters");
@@ -37,14 +39,45 @@ export function verifyProjectEditToken(token: string): boolean {
   );
 }
 
-export function getProjectEditToken(request: Request): string | undefined {
-  const cookie = request.headers.get("cookie");
-  if (!cookie) {
-    return undefined;
-  }
+export function projectEditCookieName(projectId: string): string {
+  return `${PROJECT_EDIT_COOKIE}_${projectId}`;
+}
+
+function parseCookies(cookie: string | null): Array<[string, string]> {
+  if (!cookie) return [];
 
   return cookie
     .split(";")
     .map((part) => part.trim().split("=", 2))
-    .find(([name]) => name === "tutorlab_project_edit")?.[1];
+    .filter((part): part is [string, string] => Boolean(part[0] && part[1]));
+}
+
+export function getProjectEditToken(
+  request: Request,
+  projectId?: string,
+): string | undefined {
+  const cookie = request.headers.get("cookie");
+  const cookies = parseCookies(cookie);
+  if (projectId) {
+    const projectToken = cookies.find(
+      ([name]) => name === projectEditCookieName(projectId),
+    )?.[1];
+    if (projectToken) return projectToken;
+  }
+
+  return cookies.find(([name]) => name === PROJECT_EDIT_COOKIE)?.[1];
+}
+
+export function getProjectEditTokens(
+  cookies: ReadonlyArray<{ name: string; value: string }>,
+): string[] {
+  return [...new Set(
+    cookies
+      .filter(
+        ({ name }) =>
+          name === PROJECT_EDIT_COOKIE ||
+          name.startsWith(`${PROJECT_EDIT_COOKIE}_`),
+      )
+      .map(({ value }) => value),
+  )];
 }

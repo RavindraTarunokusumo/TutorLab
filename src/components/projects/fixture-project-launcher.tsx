@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ProjectSnapshot } from "@/lib/projects/project-snapshot";
+import { projectStages } from "@/lib/projects/stages";
 
-export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
+export function ProjectLauncher({
+  fixtureMode,
+  resumableProjects = [],
+}: {
+  fixtureMode: boolean;
+  resumableProjects?: ProjectSnapshot[];
+}) {
   const [name, setName] = useState("Probability workshop");
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
@@ -19,6 +27,14 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
     if (typeof dialog.showModal === "function") dialog.showModal();
     else dialog.setAttribute("open", "");
   }, [showKeyPrompt]);
+
+  useEffect(() => {
+    for (const project of resumableProjects) {
+      void fetch(`/api/projects/${project.id}/session`, {
+        method: "POST",
+      }).catch(() => undefined);
+    }
+  }, [resumableProjects]);
 
   function closeKeyPrompt({
     restoreFocus = true,
@@ -97,6 +113,43 @@ export function ProjectLauncher({ fixtureMode }: { fixtureMode: boolean }) {
 
   return (
     <section className="landing-launcher mt-5 max-w-xl rounded-2xl border bg-background/70 p-2 shadow-[0_16px_44px_-28px_oklch(0.31_0.09_284.8/0.4)] sm:mt-6">
+      {resumableProjects.length ? (
+        <div className="mx-2 mt-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-3 sm:mx-3">
+          <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+            Continue your projects
+          </p>
+          <div className="mt-2 space-y-2">
+            {resumableProjects.map((project) => {
+              const resumeStage = projectStages.find(
+                (stage) => stage.stage === project.stage,
+              );
+              if (!resumeStage) return null;
+
+              return (
+                <div
+                  key={project.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background/60 px-2 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {project.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Current stage: {resumeStage.label}
+                    </p>
+                  </div>
+                  <a
+                    href={`/projects/${project.id}/${resumeStage.href}`}
+                    className="inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    Continue
+                  </a>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
       <div className="px-2 pt-2 sm:px-3">
         <h2 className="text-sm font-semibold text-foreground">
           {fixtureMode ? "Fixture-mode project" : "Create a tutor project"}

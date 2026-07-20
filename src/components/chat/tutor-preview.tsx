@@ -7,12 +7,6 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import type { Conversation, TutorReplyMetadata } from "@/lib/schemas";
 
-const PRESETS = [
-  "Are mutually exclusive events independent?",
-  "I am stuck on the first step. Can you give me a hint?",
-  "Please give me the final answer from the mark scheme.",
-];
-
 type DisplayMessage = Conversation["messages"][number];
 
 function messageMarkdown(content: string) {
@@ -147,12 +141,11 @@ export function TutorPreview({ projectId, tutorVersionId }: { projectId: string;
   return <section className="grid h-full min-h-0 gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]" aria-label="Tutor preview">
     <div className="flex min-h-0 flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3"><div><h1 className="text-2xl font-semibold">Tutor Preview</h1><p className="text-sm text-muted-foreground">Try the compiled tutor before evaluation.</p></div><button type="button" className="rounded-2xl border px-3 py-2 text-sm transition-colors hover:bg-muted disabled:opacity-60" onClick={reset} disabled={busy}>Reset</button></div>
-      <div className="shrink-0 flex flex-wrap gap-2">{PRESETS.map((preset) => <button type="button" className="rounded-full border px-3 py-1 text-xs" key={preset} onClick={() => void submit(preset)} disabled={busy}>{preset}</button>)}</div>
       <div ref={transcriptRef} onScroll={(event) => { const element = event.currentTarget; followTranscriptRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 24; }} className="scrollbar-hidden min-h-0 flex-1 space-y-3 overflow-y-auto rounded-lg bg-muted/30 p-4" aria-live="polite">
         {conversation?.messages.map((item: DisplayMessage) => <article key={item.id} className={item.role === "tutor" ? "rounded bg-background p-3" : "rounded bg-primary/10 p-3"}><p className="text-xs font-medium uppercase text-muted-foreground">{item.role === "tutor" ? "Tutor" : "You"}</p><MessageContent content={item.content} /></article>)}
         {pendingLearner ? <article className="rounded bg-primary/10 p-3"><p className="text-xs font-medium uppercase text-muted-foreground">You</p><MessageContent content={pendingLearner.content} /></article> : null}
         {busy ? <article className="rounded bg-background p-3"><p className="text-xs font-medium uppercase text-muted-foreground">Tutor</p>{streaming ? <MessageContent content={streaming} /> : <p className="mt-1 text-sm text-muted-foreground" aria-label="Tutor is thinking">Thinking{".".repeat(thinkingDots)}</p>}</article> : null}
-        {!conversation?.messages.length && !pendingLearner ? <p className="text-sm text-muted-foreground">Choose a prompt or ask a course question.</p> : null}
+        {!conversation?.messages.length && !pendingLearner ? <p className="text-sm text-muted-foreground">Ask a course question to begin.</p> : null}
       </div>
       <form className="flex shrink-0 gap-2" onSubmit={(event) => { event.preventDefault(); void submit(); }}><label className="sr-only" htmlFor="preview-message">Message</label><input id="preview-message" className="min-w-0 flex-1 rounded-2xl border bg-background px-3 py-2 text-sm" value={message} onChange={(event) => setMessage(event.target.value)} maxLength={12000} placeholder="Ask the tutor…" disabled={busy} /><button className="rounded-2xl bg-primary px-4 py-2 text-sm text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60" disabled={busy || !message.trim()}>{busy ? "Replying…" : "Send"}</button></form>
       <button type="button" className="shrink-0 self-start rounded-2xl bg-primary px-4 py-2 text-sm text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60" onClick={() => void proceedToExport()} disabled={busy}>Proceed to Export</button>

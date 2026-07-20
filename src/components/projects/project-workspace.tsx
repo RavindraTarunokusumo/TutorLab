@@ -65,6 +65,7 @@ export function ProjectWorkspace({
         projectId={project.id}
         projectName={project.name}
         currentStage={project.stage}
+        activeStage={routeStage}
         lastCompletedStage={lastCompletedProjectStage(project.stage)}
       />
       <div

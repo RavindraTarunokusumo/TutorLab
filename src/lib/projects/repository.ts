@@ -37,6 +37,7 @@ export interface ProjectRepository {
     id: string,
     editTokenHash: string,
   ): Promise<ProjectRecord | null>;
+  findByEditTokenHash(editTokenHash: string): Promise<ProjectRecord | null>;
   updateTeachingBrief(
     id: string,
     patch: TeachingBriefPatch | TeachingBrief,
@@ -93,6 +94,12 @@ export function getProjectRepository(): ProjectRepository {
     async findByIdAndEditTokenHash(id, editTokenHash) {
       const project = await db.project.findFirst({
         where: { id, editTokenHash },
+      });
+      return project ? toProjectRecord(project) : null;
+    },
+    async findByEditTokenHash(editTokenHash) {
+      const project = await db.project.findUnique({
+        where: { editTokenHash },
       });
       return project ? toProjectRecord(project) : null;
     },

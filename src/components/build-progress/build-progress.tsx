@@ -379,7 +379,7 @@ export function BuildProgress({
                   onClick={() => void evaluate()}
                   disabled={isEvaluating}
                   aria-label={isEvaluating ? "Running evaluation" : undefined}
-                  className="flex min-w-28 justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+                  className="inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
                 >
                   {isEvaluating ? (
                     <span

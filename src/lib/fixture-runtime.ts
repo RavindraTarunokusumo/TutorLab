@@ -342,6 +342,12 @@ export function getFixtureProjectRepository(): ProjectRepository {
       const project = projects.get(id);
       return project?.editTokenHash === hash ? project : null;
     },
+    async findByEditTokenHash(hash) {
+      return (
+        [...projects.values()].find((project) => project.editTokenHash === hash) ??
+        null
+      );
+    },
     async updateTeachingBrief(id, patch) {
       const project = projects.get(id);
       if (!project) throw new Error("Project not found");

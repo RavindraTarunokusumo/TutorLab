@@ -16,4 +16,28 @@ describe("project edit tokens", () => {
     expect(verifyProjectEditToken(token)).toBe(true);
     expect(verifyProjectEditToken(`${token}tampered`)).toBe(false);
   });
+
+  it("prefers the project-specific edit session and keeps each project token", async () => {
+    const {
+      getProjectEditToken,
+      getProjectEditTokens,
+      projectEditCookieName,
+    } = await import("@/lib/projects/auth");
+    const projectId = "project-preview";
+    const request = new Request("http://localhost/projects/project-preview", {
+      headers: {
+        cookie: [
+          "tutorlab_project_edit=legacy-token",
+          `${projectEditCookieName(projectId)}=project-token`,
+        ].join("; "),
+      },
+    });
+
+    expect(getProjectEditToken(request, projectId)).toBe("project-token");
+    expect(getProjectEditTokens([
+      { name: "tutorlab_project_edit", value: "legacy-token" },
+      { name: projectEditCookieName(projectId), value: "project-token" },
+      { name: projectEditCookieName(projectId), value: "project-token" },
+    ])).toEqual(["legacy-token", "project-token"]);
+  });
 });

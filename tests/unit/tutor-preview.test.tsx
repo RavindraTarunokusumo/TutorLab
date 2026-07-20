@@ -44,11 +44,11 @@ describe("TutorPreview", () => {
     const user = userEvent.setup();
 
     const view = render(<TutorPreview projectId="project-preview" tutorVersionId="tutor-preview" />);
-    await screen.findByText("Choose a prompt or ask a course question.");
+    await screen.findByText("Ask a course question to begin.");
     await user.type(screen.getByLabelText("Message"), "Are mutually exclusive events independent?");
     await user.click(screen.getByRole("button", { name: "Send" }));
 
-    expect(screen.getAllByText("Are mutually exclusive events independent?")).toHaveLength(2);
+    expect(screen.getAllByText("Are mutually exclusive events independent?")).toHaveLength(1);
     await waitFor(() => expect(screen.getByText(/Compare/)).toBeInTheDocument());
     expect(view.container.querySelector(".katex")).toBeTruthy();
 

@@ -62,6 +62,9 @@ function projectRepository(): ProjectRepository {
     findByIdAndEditTokenHash: vi.fn(async (id, hash) =>
       id === projectId && hash === tokenHash ? project : null,
     ),
+    findByEditTokenHash: vi.fn(async (hash) =>
+      hash === tokenHash ? project : null,
+    ),
     updateTeachingBrief: vi.fn(async (id, patch) => {
       if (id !== projectId || !project) throw new Error("Project not found");
       project = {
@@ -69,6 +72,11 @@ function projectRepository(): ProjectRepository {
         teachingBrief: { ...project.teachingBrief, ...patch },
         updatedAt: new Date("2026-07-15T12:01:00.000Z"),
       };
+      return project;
+    }),
+    updateStage: vi.fn(async (id, stage) => {
+      if (id !== projectId || !project) throw new Error("Project not found");
+      project = { ...project, stage, updatedAt: new Date() };
       return project;
     }),
     findVectorStoreId: vi.fn(async () => vectorStoreId),
