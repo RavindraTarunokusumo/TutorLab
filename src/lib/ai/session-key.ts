@@ -216,3 +216,15 @@ export async function withOpenAIRequestKey(
 
   return requestKeyStorage.run(apiKey, callback);
 }
+
+export async function withOptionalOpenAIRequestKey(
+  request: Request,
+  callback: () => Promise<Response>,
+): Promise<Response> {
+  if (isFixtureRuntime() || hasEnvironmentOpenAIKey()) return callback();
+
+  const apiKey = getSessionOpenAIKey(request);
+  if (!apiKey) return callback();
+
+  return requestKeyStorage.run(apiKey, callback);
+}

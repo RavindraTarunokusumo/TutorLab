@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import * as openaiFiles from "@/lib/ai/openai-files";
 import type {
   OpenAIFileProvider,
   VectorStoreFileProgress,
@@ -7,6 +8,7 @@ import type { ProjectRepository } from "@/lib/projects/repository";
 import type { SourceDocument } from "@/lib/schemas";
 import {
   ingestSource,
+  listSources,
   refreshSourceProcessing,
   removeSource,
 } from "@/lib/sources/ingestion";
@@ -536,5 +538,58 @@ describe("OpenAI source ingestion", () => {
     expect(openAI.deleteFile).toHaveBeenCalledWith("file-alpha");
     expect(sources.repository.delete).toHaveBeenCalledWith("project-alpha", "source-alpha");
     expect(sources.documents).toHaveLength(0);
+  });
+
+  it("lists sources without a live refresh when no OpenAI provider can be built", async () => {
+    // Bring-your-own-key: a plain source listing may have no usable key, so
+    // constructing the OpenAI provider throws. Listing must still succeed and
+    // return the stored statuses instead of failing the whole request.
+    const inProgress = storedSource({
+      source: {
+        ...storedSource().source,
+        processing: {
+          uploadStatus: "ready",
+          extractionStatus: "in_progress",
+          analysisStatus: "pending",
+        },
+      },
+    });
+    const sources = sourceRepository([inProgress]);
+    const providerSpy = vi
+      .spyOn(openaiFiles, "getOpenAIFileProvider")
+      .mockImplementation(() => {
+        throw new Error("OPENAI_API_KEY is required");
+      });
+
+    try {
+      const result = await listSources("project-alpha", {
+        sourceRepository: sources.repository,
+        projectRepository: projectRepository(),
+        // no provider override -> withDependencies builds one, which throws
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].processing.extractionStatus).toBe("in_progress");
+      expect(sources.repository.list).toHaveBeenCalledWith("project-alpha");
+    } finally {
+      providerSpy.mockRestore();
+    }
+  });
+
+  it("skips provider construction entirely when no source needs a refresh", async () => {
+    const sources = sourceRepository([storedSource()]); // extractionStatus: "failed"
+    const providerSpy = vi.spyOn(openaiFiles, "getOpenAIFileProvider");
+
+    try {
+      const result = await listSources("project-alpha", {
+        sourceRepository: sources.repository,
+        projectRepository: projectRepository(),
+      });
+
+      expect(result).toHaveLength(1);
+      expect(providerSpy).not.toHaveBeenCalled();
+    } finally {
+      providerSpy.mockRestore();
+    }
   });
 });

@@ -509,8 +509,28 @@ export async function listSources(
   projectId: string,
   overrides?: Partial<SourceIngestionDependencies>,
 ): Promise<SourceDocument[]> {
-  const dependencies = withDependencies(overrides);
-  const sources = await dependencies.sourceRepository.list(projectId);
+  const sourceRepository = overrides?.sourceRepository ?? getSourceRepository();
+  const sources = await sourceRepository.list(projectId);
+  const needsRefresh = sources.some(
+    (source) =>
+      source.processing.uploadStatus === "ready" &&
+      source.processing.extractionStatus === "in_progress",
+  );
+  if (!needsRefresh) {
+    return sources;
+  }
+
+  // Building dependencies constructs the OpenAI provider, which requires a key.
+  // Under the bring-your-own-key model a request may legitimately have no key
+  // (e.g. simply listing sources), so listing must still succeed — it returns
+  // the stored statuses without a live refresh rather than failing the request.
+  let dependencies: SourceIngestionDependencies;
+  try {
+    dependencies = withDependencies({ ...overrides, sourceRepository });
+  } catch {
+    return sources;
+  }
+
   return Promise.all(
     sources.map(async (source) => {
       if (
