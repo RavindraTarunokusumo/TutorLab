@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isProjectStageReachable } from "@/lib/projects/stages";
+import { furthestProjectStage, isProjectStageReachable } from "@/lib/projects/stages";
 
 const none = {
   hasCourseModel: false,
@@ -9,6 +9,12 @@ const none = {
 };
 
 describe("production project stage reachability", () => {
+  it("never regresses persisted progress when an earlier stage is completed again", () => {
+    expect(furthestProjectStage("preview", "sources")).toBe("preview");
+    expect(furthestProjectStage("preview", "preview")).toBe("preview");
+    expect(furthestProjectStage("design", "build")).toBe("build");
+  });
+
   it("unlocks Day 3 and Day 4 routes from their persisted artifacts", () => {
     expect(isProjectStageReachable("course_model", "design", { ...none, hasCourseModel: true })).toBe(true);
     expect(isProjectStageReachable("course_model", "build", { ...none, hasCourseModel: true, hasTutorDesign: true, hasActiveTutor: true })).toBe(true);

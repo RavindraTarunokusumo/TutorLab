@@ -99,7 +99,7 @@ function ReviewNavigation({ model, selection, onSelect }: { model: CourseModel; 
           <h2 id={`${section}-heading`} className="text-sm font-semibold">{sectionLabels[section]}</h2>
           {items.length === 0 ? <p className="mt-1 text-xs text-muted-foreground">None recorded.</p> : <ul className="mt-2 space-y-1">{items.map((item) => {
             const selected = selection.section === section && (section === "coverage" || selection.id === item.id);
-            return <li key={item.id}><button type="button" aria-current={selected ? "true" : undefined} onClick={() => onSelect(section === "coverage" ? { section } : { section, id: item.id })} className="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent aria-[current=true]:bg-primary/10 aria-[current=true]:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{item.label}</button></li>;
+            return <li key={item.id}><button type="button" aria-current={selected ? "true" : undefined} onClick={() => onSelect(section === "coverage" ? { section } : { section, id: item.id })} className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-left font-sans text-sm leading-5 text-foreground transition-[background-color,border-color,color,transform] duration-200 hover:border-primary/35 hover:bg-accent hover:!shadow-none aria-[current=true]:border-primary/40 aria-[current=true]:bg-primary/10 aria-[current=true]:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{item.label}</button></li>;
           })}</ul>}
         </section>
       ))}

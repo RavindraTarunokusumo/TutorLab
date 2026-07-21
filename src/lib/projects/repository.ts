@@ -7,6 +7,7 @@ import {
 } from "@/lib/fixture-runtime";
 import type { TeachingBrief } from "@/lib/schemas/teaching-brief";
 import type { ProjectStage, TeachingBriefPatch } from "@/lib/schemas/project";
+import { furthestProjectStage } from "./stages";
 
 export type StoredTeachingBrief =
   | TeachingBriefPatch
@@ -117,9 +118,15 @@ export function getProjectRepository(): ProjectRepository {
       );
     },
     async updateStage(id, stage) {
-      return toProjectRecord(
-        await db.project.update({ where: { id }, data: { stage } }),
-      );
+      return db.$transaction(async (transaction) => {
+        await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
+        const current = await transaction.project.findUniqueOrThrow({ where: { id } });
+        const nextStage = furthestProjectStage(current.stage as ProjectStage, stage);
+        if (nextStage === current.stage) return toProjectRecord(current);
+        return toProjectRecord(
+          await transaction.project.update({ where: { id }, data: { stage: nextStage } }),
+        );
+      });
     },
     async findVectorStoreId(projectId) {
       const project = await db.project.findUnique({

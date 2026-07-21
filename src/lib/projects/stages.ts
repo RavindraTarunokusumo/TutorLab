@@ -20,6 +20,15 @@ export function projectStageIndex(stage: ProjectStage): number {
   return projectStages.findIndex((item) => item.stage === stage);
 }
 
+export function furthestProjectStage(
+  currentStage: ProjectStage,
+  requestedStage: ProjectStage,
+): ProjectStage {
+  return projectStageIndex(requestedStage) > projectStageIndex(currentStage)
+    ? requestedStage
+    : currentStage;
+}
+
 export function isProjectStageReachable(
   currentStage: ProjectStage,
   requestedStage: ProjectStage,
