@@ -7,7 +7,8 @@ vi.mock("@/lib/analysis/course-synthesis", () => ({
   getCourseModelRepository: () => ({ findById: async () => null }),
 }));
 
-import { resetPreviewConversation, runtimeSources, sendPreviewMessage } from "@/lib/conversations/service";
+import { getOrCreatePreviewConversation, resetPreviewConversation, runtimeSources, sendPreviewMessage } from "@/lib/conversations/service";
+import * as openaiFiles from "@/lib/ai/openai-files";
 import { getTutorRuntime } from "@/lib/ai/tutor-runtime";
 import { streamPreviewReply } from "@/lib/conversations/preview-stream";
 import type { Conversation, SourceDocument, TutorSpec } from "@/lib/schemas";
@@ -31,6 +32,48 @@ const spec: TutorSpec = {
 };
 
 const version: TutorVersionRecord = { id: "tutor-preview", projectId: "project-preview", version: 1, courseModelVersionId: "course-preview", selectedDesignId: "design-preview", selectedDesignIdentity: spec.selectedDesign, spec, compiledPrompt: "internal compiled prompt", status: "ready", createdAt: new Date(), compiledAt: new Date() };
+
+describe("preview conversation without an OpenAI key", () => {
+  it("loads the preview conversation even when the OpenAI file provider cannot be built", async () => {
+    // GET /chat has no request key; under bring-your-own-key the provider throws.
+    const providerSpy = vi
+      .spyOn(openaiFiles, "getOpenAIFileProvider")
+      .mockImplementation(() => {
+        throw new Error("OPENAI_API_KEY is required");
+      });
+    const conversation = {
+      schemaVersion: "0.1" as const,
+      id: "conversation-preview",
+      projectId: "project-preview",
+      tutorVersionId: "tutor-preview",
+      mode: "teacher_preview" as const,
+      currentState: "diagnose" as const,
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      const result = await getOrCreatePreviewConversation(
+        { projectId: "project-preview", tutorVersionId: "tutor-preview" },
+        {
+          tutorRepository: {
+            findActiveVersion: async () => version,
+          } as never,
+          conversationRepository: {
+            findLatestForTutor: async () => conversation,
+          } as never,
+          sourceRepository: {} as never,
+          projectRepository: {} as never,
+        },
+      );
+
+      expect(result).toBe(conversation);
+    } finally {
+      providerSpy.mockRestore();
+    }
+  });
+});
 
 describe("preview runtime safeguards", () => {
   it("filters runtime sources by permission, student visibility, and protected status", () => {
