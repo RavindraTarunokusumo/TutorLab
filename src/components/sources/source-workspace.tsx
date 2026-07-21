@@ -273,7 +273,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
         return false;
       }
       if (file.size > DEFAULT_WORKSPACE_BUDGET.maxBytesPerFile) {
-        localErrors.push(`${file.name} exceeds the 10 MB per-file limit.`);
+        localErrors.push(`${file.name} exceeds the 5 MB per-file limit.`);
         return false;
       }
       return true;
@@ -288,7 +288,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
       DEFAULT_WORKSPACE_BUDGET.maxWorkspaceBytes
     ) {
       localErrors.push(
-        "The selected files would exceed the 200 MB workspace limit.",
+        "The selected files would exceed the 150 MB workspace limit.",
       );
     }
     setSelectedFiles(accepted.slice(0, Math.max(remainingFiles, 0)));
@@ -463,7 +463,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
           label="Storage"
           value={summary.bytes}
           limit={DEFAULT_WORKSPACE_BUDGET.maxWorkspaceBytes}
-          detail={`${formatBytes(summary.bytes)} of 200 MB`}
+          detail={`${formatBytes(summary.bytes)} of 150 MB`}
         />
       </section>
 
@@ -476,7 +476,7 @@ export function SourceWorkspace({ projectId }: { projectId: string }) {
             Upload course material
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            PDF only. Up to 10 MB each; text and rendered page images are used
+            PDF only. Up to 5 MB each; text and rendered page images are used
             during analysis.
           </p>
           <p className="mt-2 text-sm text-amber-700">

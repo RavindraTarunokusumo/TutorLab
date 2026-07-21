@@ -17,8 +17,8 @@ export const DEFAULT_WORKSPACE_BUDGET = {
   maxFiles: 30,
   maxPages: 500,
   maxExtractedTokens: 1_000_000,
-  maxBytesPerFile: 10 * 1024 * 1024,
-  maxWorkspaceBytes: 200 * 1024 * 1024,
+  maxBytesPerFile: 5 * 1024 * 1024,
+  maxWorkspaceBytes: 150 * 1024 * 1024,
 } as const;
 
 export const TUTOR_DESIGN_CANDIDATE_COUNT = 3;
