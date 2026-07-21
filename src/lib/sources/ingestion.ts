@@ -305,15 +305,30 @@ async function pollIndexing(
   throw new Error("Polling did not run");
 }
 
-async function extractOriginalContent(file: SourceUploadFile): Promise<string | undefined> {
-  try {
-    if (file.mimeType === "application/pdf") {
-      return await extractPdfText(file.bytes);
-    }
-  } catch {
-    return undefined;
+type OriginalContentResult = { content?: string; diagnostic: string };
+
+async function extractOriginalContent(
+  file: SourceUploadFile,
+): Promise<OriginalContentResult> {
+  if (file.mimeType !== "application/pdf") {
+    return { diagnostic: `skipped mime=${file.mimeType}` };
   }
-  return undefined;
+  try {
+    const content = await extractPdfText(file.bytes);
+    return {
+      content,
+      diagnostic: `ok len=${content.length} ff=${content.includes("\f")}`,
+    };
+  } catch (error) {
+    // TEMP DIAGNOSTIC: surface why extraction fails on the server (logs are
+    // unreliable on the current host). Remove once the root cause is fixed.
+    return {
+      diagnostic:
+        error instanceof Error
+          ? `threw ${error.name}: ${error.message}`
+          : `threw ${String(error)}`,
+    };
+  }
 }
 
 async function sourceOrThrow(
@@ -358,13 +373,18 @@ async function markIndexingFailure(
   projectId: string,
   sourceId: string,
   dependencies: SourceIngestionDependencies,
+  diagnostic?: string,
 ): Promise<SourceDocument> {
   return (
     await dependencies.sourceRepository.updateIngestion(projectId, sourceId, {
       uploadStatus: "ready",
       extractionStatus: "failed",
       requiresExtractionMetrics: false,
-      processingError: safeFailureMessage(),
+      // TEMP DIAGNOSTIC: when provided, record the real extraction outcome so it
+      // can be read from the DB. Falls back to the safe user message otherwise.
+      processingError: diagnostic
+        ? `[diag] ${diagnostic}`.slice(0, 300)
+        : safeFailureMessage(),
     })
   ).source;
 }
@@ -400,7 +420,8 @@ export async function ingestSource(
 ): Promise<SourceDocument> {
   const dependencies = withDependencies(overrides);
   const parsedMetadata = parseSourceUploadMetadata(metadata);
-  const originalContent = await extractOriginalContent(file);
+  const extraction = await extractOriginalContent(file);
+  const originalContent = extraction.content;
   const pageCount = originalContent === undefined
     ? undefined
     : extractedPageCountFromContent(originalContent);
@@ -436,7 +457,12 @@ export async function ingestSource(
       !parsedMetadata.permissions.useForRuntimeRetrieval
     ) {
       if (pageCount === undefined || extractedTokenCount === undefined) {
-        return markIndexingFailure(projectId, source.id, dependencies);
+        return markIndexingFailure(
+          projectId,
+          source.id,
+          dependencies,
+          extraction.diagnostic,
+        );
       }
       return dependencies.sourceRepository.recordExtractionMetrics(
         projectId,
