@@ -6,7 +6,9 @@ TutorLab is an evidence-grounded tutor builder for teachers and instructional de
 
 ## Built with Codex and GPT-5.6
 
-This project was built entirely with GPT-5.6 in ChatGPT Codex, from ideation to polish. The models used for testing and development were also GPT-5.6 (Luna and Terra) via OpenAI Responses API
+This project was built with GPT-5.6 in ChatGPT Codex, from ideation to polish. The models used for testing and development were also GPT-5.6 (Luna and Terra) via OpenAI Responses API.
+
+**Note:** Claude was used for debugging to save Codex credits...
 
 ## What it does
 
