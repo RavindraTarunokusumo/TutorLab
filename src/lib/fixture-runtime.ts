@@ -36,6 +36,7 @@ import type {
   ProjectRecord,
   ProjectRepository,
 } from "@/lib/projects/repository";
+import { projectStageIndex } from "@/lib/projects/stages";
 import type {
   ProviderSourceDocument,
   SourceExtractionMetrics,
@@ -362,7 +363,9 @@ export function getFixtureProjectRepository(): ProjectRepository {
     async updateStage(id, stage) {
       const project = projects.get(id);
       if (!project) throw new Error("Project not found");
-      project.stage = stage;
+      project.stage = projectStageIndex(stage) > projectStageIndex(project.stage)
+        ? stage
+        : project.stage;
       project.updatedAt = new Date();
       persistState();
       return project;
