@@ -10,7 +10,7 @@ import type {
 export const TUTOR_CATALOG_TEMPLATE_VERSION = "0.1" as const;
 
 export type TutorCatalogTemplate = {
-  archetypeId: "socratic" | "guided-practice" | "inquiry-case-based";
+  archetypeId: "socratic" | "guided-practice" | "inquiry-case-based" | "explicit-instruction" | "retrieval-practice" | "worked-example-fading" | "metacognitive-reflection" | "mastery-checkpoint";
   templateVersion: typeof TUTOR_CATALOG_TEMPLATE_VERSION;
   title: string;
   strategySummary: string;
@@ -21,6 +21,8 @@ export type TutorCatalogTemplate = {
   defaultConstraints: readonly string[];
   evaluationExpectations: readonly string[];
   relevantObservations: readonly PedagogicalObservation["observation"][];
+  requiresDiagnosis: boolean;
+  rank: number;
 };
 
 const SOCrATIC_TEMPLATE: TutorCatalogTemplate = {
@@ -68,6 +70,8 @@ const SOCrATIC_TEMPLATE: TutorCatalogTemplate = {
     "reasoning_before_calculation",
     "conceptual_justification_required",
   ],
+  requiresDiagnosis: true,
+  rank: 1,
 };
 
 const GUIDED_PRACTICE_TEMPLATE: TutorCatalogTemplate = {
@@ -117,6 +121,8 @@ const GUIDED_PRACTICE_TEMPLATE: TutorCatalogTemplate = {
     "consistent_solution_sequence",
     "assessment_answer_sensitive",
   ],
+  requiresDiagnosis: true,
+  rank: 2,
 };
 
 const INQUIRY_CASE_BASED_TEMPLATE: TutorCatalogTemplate = {
@@ -168,12 +174,34 @@ const INQUIRY_CASE_BASED_TEMPLATE: TutorCatalogTemplate = {
     "conceptual_justification_required",
     "formal_notation_required",
   ],
+  requiresDiagnosis: false,
+  rank: 3,
 };
+
+function directTemplate(input: Pick<TutorCatalogTemplate, "archetypeId" | "title" | "strategySummary" | "tradeOff" | "defaultControls" | "relevantObservations" | "requiresDiagnosis" | "rank">): TutorCatalogTemplate {
+  return {
+    ...input,
+    templateVersion: TUTOR_CATALOG_TEMPLATE_VERSION,
+    permittedAssistanceStates: ["diagnose", "hint_1", "hint_2", "worked_step", "explain", "check_understanding", "redirect", "escalate"],
+    permittedTeachingMoves: ["elicit_reasoning", "give_conceptual_hint", "give_procedural_hint", "model_worked_step", "explain_concept", "check_understanding", "summarize_learning", "redirect", "escalate"],
+    defaultConstraints: ["Keep assistance grounded in the approved course model.", "Never disclose protected final answers."],
+    evaluationExpectations: ["The tutor follows the selected teaching sequence and checks learner progress.", "Unsupported requests are bounded or redirected."],
+  };
+}
+
+const ADDITIONAL_TEMPLATES: readonly TutorCatalogTemplate[] = [
+  directTemplate({ archetypeId: "explicit-instruction", title: "Explicit Instruction Tutor", strategySummary: "Models a concise method, guides practice, and checks understanding before independent application.", tradeOff: "It gives learners less discovery time than inquiry-led approaches.", defaultControls: { diagnoseBeforeExplain: false, hintEscalation: "direct", tone: "neutral", maxWords: 180, offTopicHandling: "redirect" }, relevantObservations: ["consistent_solution_sequence", "formal_notation_required", "method_marks_emphasized"], requiresDiagnosis: false, rank: 4 }),
+  directTemplate({ archetypeId: "retrieval-practice", title: "Retrieval Practice Coach", strategySummary: "Uses short recall prompts and spaced revisiting to strengthen durable access to course knowledge.", tradeOff: "It is less suited to first exposure to a difficult procedure.", defaultControls: { diagnoseBeforeExplain: false, hintEscalation: "balanced", tone: "encouraging", maxWords: 120, offTopicHandling: "brief_redirect" }, relevantObservations: ["conceptual_justification_required", "formal_notation_required"], requiresDiagnosis: false, rank: 5 }),
+  directTemplate({ archetypeId: "worked-example-fading", title: "Worked-Example Fading Coach", strategySummary: "Starts from modeled examples and progressively removes steps as learner competence grows.", tradeOff: "It depends on strong source-grounded examples and can be too structured for open inquiry.", defaultControls: { diagnoseBeforeExplain: false, hintEscalation: "balanced", tone: "encouraging", maxWords: 200, offTopicHandling: "redirect" }, relevantObservations: ["worked_examples_frequently_used", "consistent_solution_sequence", "method_marks_emphasized"], requiresDiagnosis: false, rank: 6 }),
+  directTemplate({ archetypeId: "metacognitive-reflection", title: "Metacognitive Reflection Coach", strategySummary: "Prompts learners to plan, monitor, explain, and evaluate their own approach.", tradeOff: "Reflection adds turns and is less efficient for rapid factual review.", defaultControls: { diagnoseBeforeExplain: true, hintEscalation: "gradual", tone: "encouraging", maxWords: 150, offTopicHandling: "brief_redirect" }, relevantObservations: ["reasoning_before_calculation", "conceptual_justification_required", "common_misconception"], requiresDiagnosis: true, rank: 7 }),
+  directTemplate({ archetypeId: "mastery-checkpoint", title: "Mastery Checkpoint Tutor", strategySummary: "Uses focused checks and corrective feedback before advancing to the next objective.", tradeOff: "Frequent checkpoints can interrupt exploratory learning.", defaultControls: { diagnoseBeforeExplain: false, hintEscalation: "direct", tone: "neutral", maxWords: 140, offTopicHandling: "decline" }, relevantObservations: ["assessment_answer_sensitive", "method_marks_emphasized", "common_misconception"], requiresDiagnosis: false, rank: 8 }),
+];
 
 export const TUTOR_CATALOG: readonly TutorCatalogTemplate[] = [
   SOCrATIC_TEMPLATE,
   GUIDED_PRACTICE_TEMPLATE,
   INQUIRY_CASE_BASED_TEMPLATE,
+  ...ADDITIONAL_TEMPLATES,
 ];
 
 export type TutorCatalogArchetypeId = TutorCatalogTemplate["archetypeId"];

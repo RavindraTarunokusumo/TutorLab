@@ -1,7 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import {
-  getTutorArchitect,
   type TutorArchitect,
 } from "@/lib/ai/tutor-architect";
 import {
@@ -28,8 +27,10 @@ import {
 } from "@/lib/schemas";
 import {
   listTutorCatalog,
+  relevantTeacherConfirmedEvidence,
   validateCatalogDesign,
 } from "@/lib/tutor/catalog";
+import { recommendTutorStyles, recommendationFingerprint, type RecommendationPreferences } from "@/lib/tutor/recommendations";
 import {
   getTutorRepository,
   type TutorDesignRecord,
@@ -52,6 +53,7 @@ export type GenerateTutorDesignsInput = {
   project: ProjectRecord;
   idempotencyKey: string;
   courseModelVersionId?: string;
+  preferences?: RecommendationPreferences;
 };
 
 export type GenerateTutorDesignsResult = {
@@ -60,7 +62,7 @@ export type GenerateTutorDesignsResult = {
 };
 
 type Dependencies = {
-  architect: TutorArchitect;
+  architect?: TutorArchitect;
   courseModelRepository: CourseModelRepository;
   jobRepository: PipelineJobRepository;
   tutorRepository: TutorRepository;
@@ -70,7 +72,7 @@ type Dependencies = {
 
 function dependencies(overrides?: Partial<Dependencies>): Dependencies {
   return {
-    architect: overrides?.architect ?? getTutorArchitect(),
+    architect: overrides?.architect,
     courseModelRepository:
       overrides?.courseModelRepository ?? getCourseModelRepository(),
     jobRepository: overrides?.jobRepository ?? getPipelineJobRepository(),
@@ -152,20 +154,12 @@ function validateEvidenceReferences(
   });
 }
 
-const MAX_WORDS_BY_BRIEF_LENGTH = {
-  concise: 160,
-  balanced: 320,
-  detailed: 500,
-} as const;
-
 function applyTeachingBriefSafeguards(
   output: unknown,
   brief: TeachingBrief,
 ): unknown {
   const parsed = TutorDesignSetSchema.safeParse(output);
   if (!parsed.success) return output;
-
-  const maxWords = MAX_WORDS_BY_BRIEF_LENGTH[brief.style.responseLength];
 
   return {
     ...parsed.data,
@@ -174,7 +168,6 @@ function applyTeachingBriefSafeguards(
       controls: {
         ...candidate.controls,
         tone: brief.style.tone,
-        maxWords: Math.min(candidate.controls.maxWords, maxWords),
       },
     })),
   };
@@ -185,9 +178,7 @@ export function isTeachingBriefCompatible(
   brief: TeachingBrief,
 ): boolean {
   return (
-    design.controls.tone === brief.style.tone &&
-    design.controls.maxWords <=
-      MAX_WORDS_BY_BRIEF_LENGTH[brief.style.responseLength]
+    design.controls.tone === brief.style.tone
   );
 }
 
@@ -298,32 +289,43 @@ export async function generateTutorDesigns(
       designSetId: deps.createId(),
       generatedAt: deps.now().toISOString(),
     };
-    let first: unknown;
-    try {
-      first = await deps.architect.generate(architectInput);
-    } catch (error) {
-      if (!(error instanceof SyntaxError)) throw error;
-      first = { malformedStructuredOutput: true };
-    }
-    let set;
-    try {
-      set = validateDesignSet(
-        applyTeachingBriefSafeguards(first, brief),
-        architectInput,
-      );
-    } catch {
-      try {
-        set = validateDesignSet(
-          applyTeachingBriefSafeguards(
-            await deps.architect.repair(architectInput, first),
-            brief,
-          ),
-          architectInput,
-        );
-      } catch {
-        throw new TutorDesignGenerationError("INVALID_DESIGN_OUTPUT");
-      }
-    }
+    const preferences = input.preferences ?? { diagnoseBeforeExplain: true, hintEscalation: "gradual", offTopicHandling: "redirect", maxWords: 160 };
+    const fingerprint = recommendationFingerprint(brief, courseModelVersion.artifact, preferences);
+    const roles = ["best_fit", "strong_alternative", "balanced_option"] as const;
+    const ranked = recommendTutorStyles(brief, courseModelVersion.artifact, preferences);
+    const fallbackEvidence = courseModelVersion.artifact.courseIdentity.evidence[0]
+      ?? courseModelVersion.artifact.pedagogicalEvidence.flatMap(({ evidence }) => evidence)[0];
+    if (!fallbackEvidence || ranked.length !== 3) throw new TutorDesignGenerationError("INVALID_DESIGN_OUTPUT");
+    const candidates = ranked.map(({ template }, index) => {
+      const matchedEvidence = relevantTeacherConfirmedEvidence(courseModelVersion.artifact, template.archetypeId).flatMap(({ evidence }) => evidence).slice(0, 3);
+      return {
+        id: deps.createId(),
+        archetypeId: template.archetypeId,
+        templateVersion: template.templateVersion,
+        recommendationVersion: "1" as const,
+        recommendationFingerprint: fingerprint,
+        candidateRole: roles[index]!,
+        title: template.title,
+        strategySummary: template.strategySummary,
+        tradeOff: template.tradeOff,
+        evidence: matchedEvidence.length ? matchedEvidence : [fallbackEvidence],
+        comparisonLearnerMessage: DESIGN_COMPARISON_LEARNER_MESSAGE,
+        sampleResponse: `I’ll use ${template.title.toLowerCase()} strategies and keep support grounded in your course materials.`,
+        controls: { ...template.defaultControls, ...preferences, tone: brief.style.tone },
+        permittedAssistanceStates: template.permittedAssistanceStates.filter((state) => preferences.diagnoseBeforeExplain || state !== "diagnose"),
+        permittedTeachingMoves: template.permittedTeachingMoves,
+      };
+    });
+    const selectedIds = new Set(candidates.map(({ archetypeId }) => archetypeId));
+    const set = validateDesignSet(applyTeachingBriefSafeguards({
+      schemaVersion: "0.1",
+      id: architectInput.designSetId,
+      projectId: input.project.id,
+      courseModelVersionId: courseModelVersion.id,
+      candidates,
+      excludedCatalogOptions: listTutorCatalog().filter(({ archetypeId }) => !selectedIds.has(archetypeId)).map(({ archetypeId }) => ({ archetypeId, reason: "A higher-scoring compatible style was recommended for the current course model and preferences." })),
+      generatedAt: architectInput.generatedAt,
+    }, brief), architectInput);
     const designs = await deps.tutorRepository.saveDesignSet(set);
     const job = await deps.jobRepository.complete(started.job.id, set.id);
     return { job, designs };

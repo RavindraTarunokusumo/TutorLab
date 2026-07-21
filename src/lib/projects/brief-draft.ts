@@ -69,7 +69,7 @@ function normalizeDraft(value: unknown): TeachingBriefDraft | null {
 
   if (isRecord(raw.context)) {
     const context: ContextDraft = {};
-    for (const key of ["subject", "topic", "studentLevel", "language"] as const) {
+    for (const key of ["subject", "topic", "topicOther", "studentLevel", "language"] as const) {
       if (typeof raw.context[key] === "string") {
         context[key] = raw.context[key];
       }
@@ -88,7 +88,6 @@ function normalizeDraft(value: unknown): TeachingBriefDraft | null {
   if (isRecord(raw.style)) {
     const style: StyleDraft = {};
     if (isOneOf(raw.style.tone, ["encouraging", "neutral", "formal"])) style.tone = raw.style.tone;
-    if (isOneOf(raw.style.responseLength, ["concise", "balanced", "detailed"])) style.responseLength = raw.style.responseLength;
     if (Object.keys(style).length > 0) {
       draft.style = style;
     }

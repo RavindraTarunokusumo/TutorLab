@@ -539,10 +539,6 @@ function applyOperation(
     if (operation.statement !== undefined) item.statement = operation.statement;
     if (operation.correction !== undefined)
       item.correction = operation.correction;
-  } else if (operation.operation === "update_disclosure_label") {
-    const item = model.protectedSolutions.find(({ id }) => id === operation.id);
-    if (!item) throw new CourseSynthesisError("INVALID_COURSE_MODEL_PATCH");
-    item.disclosureLabel = operation.disclosureLabel;
   } else {
     const item = model.pedagogicalEvidence.find(
       ({ id }) => id === operation.id,

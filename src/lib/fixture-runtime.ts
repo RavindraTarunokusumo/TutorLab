@@ -582,11 +582,6 @@ function fixtureTutorDesignSet(
   input: TutorArchitectPromptInput,
 ) {
   const evidence = input.courseModel.courseIdentity.evidence;
-  const responseLengthLimit = {
-    concise: 160,
-    balanced: 320,
-    detailed: 500,
-  } as const;
   const roleByArchetype = new Map([
     [
       input.teachingBrief.purpose === "guided_practice"
@@ -607,11 +602,11 @@ function fixtureTutorDesignSet(
     id: input.designSetId,
     projectId: input.projectId,
     courseModelVersionId: input.courseModelVersionId,
-    candidates: listTutorCatalog().map((template) => ({
+    candidates: listTutorCatalog().slice(0, 3).map((template, index) => ({
       id: `design-${input.designSetId}-${template.archetypeId}`,
       archetypeId: template.archetypeId,
       templateVersion: template.templateVersion,
-      candidateRole: roleByArchetype.get(template.archetypeId)!,
+      candidateRole: roleByArchetype.get(template.archetypeId as "socratic" | "guided-practice" | "inquiry-case-based") ?? (["best_fit", "strong_alternative", "balanced_option"] as const)[index]!,
       title: template.title,
       strategySummary: template.strategySummary,
       tradeOff: template.tradeOff,
@@ -623,10 +618,6 @@ function fixtureTutorDesignSet(
       controls: {
         ...template.defaultControls,
         tone: input.teachingBrief.style.tone,
-        maxWords: Math.min(
-          template.defaultControls.maxWords,
-          responseLengthLimit[input.teachingBrief.style.responseLength],
-        ),
       },
       permittedAssistanceStates: [...template.permittedAssistanceStates],
       permittedTeachingMoves: [...template.permittedTeachingMoves],

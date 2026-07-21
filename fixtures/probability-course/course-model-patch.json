@@ -7,11 +7,6 @@
       "operation": "update_misconception",
       "id": "misconception-exclusive-independent",
       "correction": "For non-empty mutually exclusive events, observing one rules out the other, so they are not independent."
-    },
-    {
-      "operation": "update_disclosure_label",
-      "id": "solution-exam-1",
-      "disclosureLabel": "never_reveal"
     }
   ]
 }

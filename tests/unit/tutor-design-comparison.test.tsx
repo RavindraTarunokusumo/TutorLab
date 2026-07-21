@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TutorDesignComparison } from "@/components/tutor-design/tutor-design-comparison";
@@ -69,7 +69,7 @@ describe("TutorDesignComparison", () => {
     expect(screen.getByText("Strong alternative")).toBeInTheDocument();
     expect(screen.getByText("Balanced option")).toBeInTheDocument();
     expect(screen.queryByText("course-notes")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByText("Choose a tutor design to continue.")).toHaveAttribute("aria-live", "polite");
   });
 
   it("reveals the validated controls after selection and restores that selection after refresh", async () => {
@@ -81,7 +81,7 @@ describe("TutorDesignComparison", () => {
     expect(screen.getByLabelText("Hint progression")).toHaveValue("gradual");
     expect(screen.getByText("encouraging")).toBeInTheDocument();
     expect(screen.getByLabelText("Off-topic requests")).toHaveValue("redirect");
-    expect(screen.getByLabelText("Maximum words per reply")).toHaveValue("160");
+    expect(screen.getByRole("slider", { name: "Maximum words per reply" })).toHaveValue("160");
     expect(screen.getByRole("button", { name: "Compile tutor" })).toBeEnabled();
 
     first.unmount();
@@ -96,12 +96,11 @@ describe("TutorDesignComparison", () => {
     render(<TutorDesignComparison projectId="project-alpha" onCompile={onCompile} />);
 
     await userEvent.click(await screen.findByRole("button", { name: "Choose Tutor alpha" }));
-    fireEvent.change(screen.getByLabelText("Maximum words per reply"), { target: { value: "240" } });
     await userEvent.click(screen.getByRole("button", { name: "Compile tutor" }));
 
     await waitFor(() => expect(onCompile).toHaveBeenCalledWith({
       designId: "alpha",
-      overrides: expect.objectContaining({ maxWords: 240 }),
+      overrides: expect.objectContaining({ maxWords: 160 }),
     }));
   });
 
@@ -123,7 +122,7 @@ describe("TutorDesignComparison", () => {
     client.generateTutorDesignsClient.mockResolvedValue({ designs });
     render(<TutorDesignComparison projectId="project-alpha" />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Create tutor designs" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create recommendations" }));
     await screen.findByRole("button", { name: "Choose Tutor alpha" });
     resolveInitialLoad([design("stale", "best_fit")]);
 

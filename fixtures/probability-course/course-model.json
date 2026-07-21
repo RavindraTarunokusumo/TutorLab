@@ -141,7 +141,6 @@
       "id": "solution-exam-1",
       "exerciseId": "exercise-exam-1",
       "summary": "Protected reasoning and final result for the first sample-exam question.",
-      "disclosureLabel": "never_reveal",
       "provenance": "source_grounded",
       "evidence": [{ "documentId": "document-marking", "documentAnalysisId": "analysis-marking", "excerptId": "excerpt-marking-1", "page": 1, "locatorLabel": "Question 1 solution" }]
     }

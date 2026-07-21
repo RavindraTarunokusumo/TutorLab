@@ -328,7 +328,6 @@ describe("Day 1–2 fixture golden path", () => {
         objectives: ["Explain independent events"],
         style: {
           tone: "encouraging",
-          responseLength: "balanced",
         },
         completedSteps: [
           "context",

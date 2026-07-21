@@ -1,4 +1,5 @@
 import type { ProjectStage } from "@/lib/schemas/project";
+import { TeachingBriefSchema, type TeachingBrief } from "@/lib/schemas/teaching-brief";
 import type { ProjectSnapshot } from "@/lib/projects/project-snapshot";
 import { lastCompletedProjectStage } from "@/lib/projects/stages";
 import { StageHeader } from "./stage-header";
@@ -20,16 +21,18 @@ function TutorScreen({
   projectId,
   projectName,
   routeStage,
+  teachingBrief,
 }: {
   projectId: string;
   projectName: string;
+  teachingBrief?: TeachingBrief;
   routeStage: Extract<
     ProjectStage,
     "design" | "build" | "report" | "preview" | "export"
   >;
 }) {
   if (routeStage === "design") {
-    return <TutorDesignComparison projectId={projectId} />;
+    return <TutorDesignComparison projectId={projectId} teachingBrief={teachingBrief} />;
   }
 
   if (routeStage === "build") {
@@ -52,6 +55,7 @@ export function ProjectWorkspace({
   routeStage,
 }: ProjectWorkspaceProps) {
   const preview = routeStage === "preview";
+  const parsedBrief = TeachingBriefSchema.safeParse(project.teachingBrief);
   return (
     <main
       data-stage={routeStage}
@@ -89,6 +93,7 @@ export function ProjectWorkspace({
               projectId={project.id}
               projectName={project.name}
               routeStage={routeStage}
+              teachingBrief={parsedBrief.success ? parsedBrief.data : undefined}
             />
           </div>
         ) : (
@@ -96,6 +101,7 @@ export function ProjectWorkspace({
             projectId={project.id}
             projectName={project.name}
             routeStage={routeStage}
+            teachingBrief={parsedBrief.success ? parsedBrief.data : undefined}
           />
         )}
       </div>

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { SCHEMA_LIMITS } from "./constants";
 import {
-  DisclosureLabelSchema,
   OptionalEvidenceSchema,
   ProvenanceKindSchema,
   RequiredEvidenceSchema,
@@ -102,12 +101,16 @@ export const RubricCriterionSchema = z.strictObject({
   description: DescriptionSchema,
 });
 
-export const ProtectedSolutionSchema = z.strictObject({
+export const ProtectedSolutionSchema = z.preprocess((value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const solution = { ...(value as Record<string, unknown>) };
+  delete solution.disclosureLabel;
+  return solution;
+}, z.strictObject({
   ...EvidenceBackedShape,
   exerciseId: StableIdSchema,
   summary: z.string().trim().min(1).max(SCHEMA_LIMITS.shortText),
-  disclosureLabel: DisclosureLabelSchema,
-});
+}));
 
 export const MisconceptionSchema = z.strictObject({
   ...EvidenceBackedShape,

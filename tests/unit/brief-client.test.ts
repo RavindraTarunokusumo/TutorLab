@@ -33,10 +33,10 @@ describe("saveBriefPatch", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         context: {
-          subject: "Mathematics",
-          topic: "Probability",
-          studentLevel: "First year",
-          language: "English",
+          subject: "mathematics",
+          topic: "statistics-probability",
+          studentLevel: "undergraduate",
+          language: "en",
         },
       }),
     });

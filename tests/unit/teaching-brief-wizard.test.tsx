@@ -12,17 +12,17 @@ const project = {
 
 function completeContext() {
   fireEvent.change(screen.getByLabelText("Subject"), {
-    target: { value: "Mathematics" },
+    target: { value: "mathematics" },
   });
   fireEvent.change(screen.getByLabelText("Main topic"), {
-    target: { value: "Probability" },
+    target: { value: "statistics-probability" },
   });
   fireEvent.change(screen.getByLabelText("Student level"), {
-    target: { value: "First year" },
+    target: { value: "undergraduate" },
   });
-  fireEvent.change(screen.getByLabelText("Teaching language"), {
-    target: { value: "English" },
-  });
+  fireEvent.focus(screen.getByLabelText("Teaching language"));
+  fireEvent.change(screen.getByLabelText("Teaching language"), { target: { value: "English" } });
+  fireEvent.click(screen.getByRole("button", { name: "English (en)" }));
 }
 
 describe("TeachingBriefWizard", () => {
@@ -105,10 +105,10 @@ describe("TeachingBriefWizard", () => {
     expect(request.headers).toMatchObject({ "content-type": "application/json" });
     expect(JSON.parse(request.body as string)).toEqual({
       context: {
-        subject: "Mathematics",
-        topic: "Probability",
-        studentLevel: "First year",
-        language: "English",
+        subject: "mathematics",
+        topic: "statistics-probability",
+        studentLevel: "undergraduate",
+        language: "en",
       },
     });
   });
@@ -127,14 +127,14 @@ describe("TeachingBriefWizard", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent("stored in this browser");
     expect(localStorage.getItem("tutorlab:teaching-brief:project-alpha")).toContain(
-      "Mathematics",
+      "mathematics",
     );
 
     view.unmount();
     render(<TeachingBriefWizard project={project} />);
 
     expect(screen.getByText(/Recovered locally/)).toBeInTheDocument();
-    expect(screen.getByLabelText("Subject")).toHaveValue("Mathematics");
+    expect(screen.getByLabelText("Subject")).toHaveValue("mathematics");
   });
 
   it("ignores a stale failed save while a newer revision is queued", async () => {
@@ -148,7 +148,7 @@ describe("TeachingBriefWizard", () => {
 
     completeContext();
     await act(async () => { await vi.advanceTimersByTimeAsync(600); });
-    fireEvent.change(screen.getByLabelText("Subject"), { target: { value: "Statistics" } });
+    fireEvent.change(screen.getByLabelText("Student level"), { target: { value: "postgraduate" } });
     await act(async () => { await vi.advanceTimersByTimeAsync(600); });
 
     rejectFirst(new Error("Network down"));
@@ -156,7 +156,7 @@ describe("TeachingBriefWizard", () => {
     expect(screen.getByRole("status")).not.toHaveTextContent("Couldn't save");
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
-      body: expect.stringContaining("Statistics"),
+      body: expect.stringContaining("postgraduate"),
     });
 
     resolveSecond(new Response(JSON.stringify({ project }), { status: 200 }));
@@ -176,6 +176,6 @@ describe("TeachingBriefWizard", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(600); });
 
     expect(screen.getByRole("status")).toHaveTextContent("stored in this browser");
-    expect(localStorage.getItem("tutorlab:teaching-brief:project-alpha")).toContain("Mathematics");
+    expect(localStorage.getItem("tutorlab:teaching-brief:project-alpha")).toContain("mathematics");
   });
 });

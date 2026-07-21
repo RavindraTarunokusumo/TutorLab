@@ -10,11 +10,12 @@ import {
   TutorDesignGenerationError,
 } from "@/lib/tutor/architect";
 import { getCourseModelRepository } from "@/lib/analysis/course-synthesis";
-import { withOpenAIRequestKey } from "@/lib/ai/session-key";
+import { TutorDesignControlsSchema } from "@/lib/schemas";
 
 const DesignRequestSchema = z.strictObject({
   idempotencyKey: z.string().trim().min(1).max(160),
   courseModelVersionId: z.string().trim().min(1).max(96).optional(),
+  preferences: TutorDesignControlsSchema.pick({ diagnoseBeforeExplain: true, hintEscalation: true, maxWords: true, offTopicHandling: true }).optional(),
 });
 
 function errorResponse(error: unknown) {
@@ -51,8 +52,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ projectId: string }> },
 ) {
-  return withOpenAIRequestKey(request, async () => {
-    try {
+  try {
       const { projectId } = await params;
       const project = await requireProjectAccess(request, projectId);
       const body = DesignRequestSchema.parse(await request.json());
@@ -60,6 +60,7 @@ export async function POST(
         project,
         idempotencyKey: body.idempotencyKey,
         courseModelVersionId: body.courseModelVersionId,
+        ...(body.preferences ? { preferences: body.preferences } : {}),
       });
       return NextResponse.json(
         {
@@ -70,10 +71,9 @@ export async function POST(
           status: result.job.status === "completed" ? 201 : 202,
         },
       );
-    } catch (error) {
-      return errorResponse(error);
-    }
-  });
+  } catch (error) {
+    return errorResponse(error);
+  }
 }
 
 export async function GET(

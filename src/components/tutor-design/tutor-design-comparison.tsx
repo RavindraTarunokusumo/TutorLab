@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { TutorDesignControlsSchema, type TutorDesign, type TutorDesignControls } from "@/lib/schemas";
+import { TutorDesignControlsSchema, type TeachingBrief, type TutorDesign, type TutorDesignControls } from "@/lib/schemas";
+import { LANGUAGES, STUDENT_LEVELS, SUBJECTS, catalogLabel, topicsForSubject } from "@/lib/teaching-brief/catalogs";
 import { fetchTutorDesigns, generateTutorDesignsClient } from "@/lib/tutor/design-client";
 import { compileTutorClient } from "@/lib/tutor/compiler-client";
 
 export type TutorDesignCompileRequest = { designId: string; overrides: TutorDesignControls };
 
-type Props = { projectId: string; onCompile?: (request: TutorDesignCompileRequest) => Promise<void> };
+type Props = { projectId: string; teachingBrief?: TeachingBrief; onCompile?: (request: TutorDesignCompileRequest) => Promise<void> };
 
 const roles = {
   best_fit: "Recommended",
@@ -40,7 +41,7 @@ function Evidence({ evidence }: { evidence: TutorDesign["evidence"] }) {
   </ul>;
 }
 
-export function TutorDesignComparison({ projectId, onCompile }: Props) {
+export function TutorDesignComparison({ projectId, teachingBrief, onCompile }: Props) {
   const [designs, setDesigns] = useState<TutorDesign[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<TutorDesignControls | null>(null);
@@ -48,10 +49,16 @@ export function TutorDesignComparison({ projectId, onCompile }: Props) {
   const [error, setError] = useState("");
   const [generating, setGenerating] = useState(false);
   const [compiling, setCompiling] = useState(false);
+  const [preferences, setPreferences] = useState<Pick<TutorDesignControls, "diagnoseBeforeExplain" | "hintEscalation" | "offTopicHandling" | "maxWords">>({ diagnoseBeforeExplain: true, hintEscalation: "gradual", offTopicHandling: "redirect", maxWords: 160 });
+  const [stale, setStale] = useState(false);
   const requestSequence = useRef(0);
 
   const receiveDesigns = useCallback((next: TutorDesign[], message: string) => {
     setDesigns(next);
+    if (next[0]) {
+      const { diagnoseBeforeExplain, hintEscalation, offTopicHandling, maxWords } = next[0].controls;
+      setPreferences({ diagnoseBeforeExplain, hintEscalation, offTopicHandling, maxWords });
+    }
     const restoredId = storedSelection(projectId, next);
     setSelectedId(restoredId);
     const restored = restoredId ? next.find((design) => design.id === restoredId) : null;
@@ -87,9 +94,10 @@ export function TutorDesignComparison({ projectId, onCompile }: Props) {
     const request = ++requestSequence.current;
     setGenerating(true); setError(""); setStatus("Creating three evidence-backed tutor designs…");
     try {
-      const result = await generateTutorDesignsClient(projectId, { idempotencyKey: requestKey() });
+      const result = await generateTutorDesignsClient(projectId, { idempotencyKey: requestKey(), preferences });
       if (request !== requestSequence.current) return;
       receiveDesigns(result.designs, "Three tutor designs are ready to compare.");
+      setStale(false);
     } catch {
       if (request !== requestSequence.current) return;
       setStatus(""); setError("Tutor designs could not be created. Try again.");
@@ -123,6 +131,17 @@ export function TutorDesignComparison({ projectId, onCompile }: Props) {
       <p className="max-w-2xl text-muted-foreground">Compare three course-grounded teaching approaches, then choose one to tailor.</p>
     </div>
 
+    {teachingBrief && <BriefSummary brief={teachingBrief} projectId={projectId} />}
+
+    <section className="max-w-3xl space-y-4 rounded-xl border bg-card p-5" aria-labelledby="recommendation-preferences-heading">
+      <div><h2 id="recommendation-preferences-heading" className="text-xl font-semibold">Tutor behaviour</h2><p className="mt-1 text-sm text-muted-foreground">These choices determine which teaching styles are compatible.</p></div>
+      <label className="flex min-h-11 items-center gap-3 rounded-lg border p-4"><input type="checkbox" checked={preferences.diagnoseBeforeExplain} onChange={(event) => { setPreferences({ ...preferences, diagnoseBeforeExplain: event.target.checked }); setStale(designs.length > 0); }} /><span><span className="font-medium">Diagnose before explaining</span><span className="block text-sm text-muted-foreground">Ask about the learner’s reasoning before direct help.</span></span></label>
+      <div className="grid gap-4 sm:grid-cols-2"><Select label="Hint progression" value={preferences.hintEscalation} options={[["gradual", "Gradual"], ["balanced", "Balanced"], ["direct", "Direct"]]} onChange={(hintEscalation) => { setPreferences({ ...preferences, hintEscalation }); setStale(designs.length > 0); }} /><Select label="Off-topic requests" value={preferences.offTopicHandling} options={[["redirect", "Redirect to the course"], ["brief_redirect", "Briefly redirect"], ["decline", "Decline"]]} onChange={(offTopicHandling) => { setPreferences({ ...preferences, offTopicHandling }); setStale(designs.length > 0); }} /></div>
+      <label className="grid gap-2 text-sm font-medium"><span className="flex items-center justify-between">Maximum words per reply<output className="text-muted-foreground">{preferences.maxWords} words</output></span><input aria-label="Maximum words per reply" type="range" min="50" max="500" step="10" value={preferences.maxWords} onChange={(event) => { setPreferences({ ...preferences, maxWords: Number(event.target.value) }); setStale(designs.length > 0); }} className="accent-primary" /></label>
+      {stale && <p role="status" className="text-sm text-amber-700">Preferences changed. Update recommendations before compiling.</p>}
+      <button type="button" onClick={() => void generate()} disabled={generating} className="min-h-11 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">{generating ? "Updating recommendations…" : designs.length ? "Update recommendations" : "Create recommendations"}</button>
+    </section>
+
     {designs.length > 0 && <>
       <article className="rounded-xl border bg-muted/40 p-5">
         <h2 className="font-semibold">Shared learner prompt</h2>
@@ -147,25 +166,24 @@ export function TutorDesignComparison({ projectId, onCompile }: Props) {
       </div>
     </>}
 
-    {!designs.length && !error && <button type="button" onClick={() => void generate()} disabled={generating} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{generating ? "Creating designs…" : "Create tutor designs"}</button>}
     {error && <div className="space-y-3"><p role="alert" className="text-sm text-destructive">{error}</p><button type="button" onClick={() => void load()} className="rounded-md border px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Try again</button></div>}
 
     {selected && overrides && <form className="max-w-3xl space-y-5 rounded-xl border bg-card p-6 shadow-sm" onSubmit={(event) => { event.preventDefault(); void compile(); }}>
       <div><h2 className="text-xl font-semibold">Tailor {selected.title}</h2><p className="mt-1 text-sm text-muted-foreground">These controls become the teacher-approved starting policy.</p></div>
-      <label className="flex items-center gap-3 rounded-lg border p-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring"><input type="checkbox" checked={overrides.diagnoseBeforeExplain} onChange={(event) => setOverrides({ ...overrides, diagnoseBeforeExplain: event.target.checked })} /><span><span className="font-medium">Diagnose before explaining</span><span className="block text-sm text-muted-foreground">Ask about the learner’s reasoning before giving an explanation.</span></span></label>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Select label="Hint progression" value={overrides.hintEscalation} options={[["gradual", "Gradual"], ["balanced", "Balanced"], ["direct", "Direct"]]} onChange={(hintEscalation) => setOverrides({ ...overrides, hintEscalation })} />
-        <Select label="Off-topic requests" value={overrides.offTopicHandling} options={[["redirect", "Redirect to the course"], ["brief_redirect", "Briefly redirect"], ["decline", "Decline"]]} onChange={(offTopicHandling) => setOverrides({ ...overrides, offTopicHandling })} />
-        <label className="grid gap-2 text-sm font-medium"><span className="flex items-center justify-between">Maximum words per reply<output className="text-muted-foreground">{overrides.maxWords} words</output></span><input aria-label="Maximum words per reply" type="range" min="50" max="500" step="10" value={overrides.maxWords} onChange={(event) => setOverrides({ ...overrides, maxWords: Number(event.target.value) })} className="accent-primary" /><span className="flex justify-between text-xs font-normal text-muted-foreground"><span>50</span><span>500</span></span></label>
-      </div>
       <div className="rounded-lg border bg-muted/30 p-4 text-sm">
         <div><p className="font-medium">Tone</p><p className="mt-1 capitalize text-muted-foreground">{overrides.tone}</p><p className="mt-1 text-xs text-muted-foreground">Inherited from the teaching brief.</p></div>
       </div>
       {!validControls && <p role="alert" className="text-sm text-destructive">Choose a reply length between 50 and 500 words before compiling.</p>}
-      <div className="flex flex-wrap items-center gap-3 border-t pt-5"><button type="submit" disabled={!validControls || compiling} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{compiling ? "Compiling tutor…" : "Compile tutor"}</button></div>
+      <div className="flex flex-wrap items-center gap-3 border-t pt-5"><button type="submit" disabled={!validControls || compiling || stale} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{compiling ? "Compiling tutor…" : "Compile tutor"}</button></div>
     </form>}
     <p role="status" aria-live="polite" className="text-sm text-muted-foreground">{status}</p>
   </section>;
+}
+
+function BriefSummary({ brief, projectId }: { brief: TeachingBrief; projectId: string }) {
+  const topic = brief.context.topic === "other-topic" ? brief.context.topicOther ?? "Other topic" : catalogLabel(topicsForSubject(brief.context.subject), brief.context.topic);
+  const values = [["Subject", catalogLabel(SUBJECTS, brief.context.subject)], ["Main topic", topic], ["Student level", catalogLabel(STUDENT_LEVELS, brief.context.studentLevel)], ["Teaching language", catalogLabel(LANGUAGES, brief.context.language)], ["Purpose", brief.purpose.replaceAll("_", " ")], ["Tone", brief.style.tone]];
+  return <section className="rounded-xl border bg-muted/30 p-5" aria-labelledby="brief-summary-heading"><div className="flex flex-wrap items-center justify-between gap-3"><h2 id="brief-summary-heading" className="text-xl font-semibold">Teaching Brief</h2><a href={`/projects/${projectId}/setup`} className="text-sm font-medium text-primary underline-offset-4 hover:underline">Edit Brief</a></div><dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{values.map(([label, value]) => <div key={label}><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="mt-1 capitalize">{value}</dd></div>)}</dl><div className="mt-4"><h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Objectives</h3><ul className="mt-1 list-disc space-y-1 pl-5 text-sm">{brief.objectives.map((objective) => <li key={objective}>{objective}</li>)}</ul></div></section>;
 }
 
 function Select<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: ReadonlyArray<readonly [T, string]>; onChange: (value: T) => void }) {

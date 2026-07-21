@@ -47,6 +47,8 @@ export const TutorDesignSchema = z
     id: StableIdSchema,
     archetypeId: StableIdSchema,
     templateVersion: z.literal("0.1"),
+    recommendationVersion: z.literal("1").optional(),
+    recommendationFingerprint: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     candidateRole: TutorCandidateRoleSchema,
     title: z.string().trim().min(1).max(SCHEMA_LIMITS.label),
     strategySummary: RequiredTextSchema,

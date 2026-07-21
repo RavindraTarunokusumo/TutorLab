@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SCHEMA_LIMITS } from "./constants";
-import { DisclosureLabelSchema, StableIdSchema } from "./shared";
+import { StableIdSchema } from "./shared";
 
 const EditableTextSchema = z
   .string()
@@ -36,12 +36,6 @@ const UpdateMisconceptionSchema = z.strictObject({
   { message: "A misconception update must change at least one editable field" },
 );
 
-const UpdateDisclosureSchema = z.strictObject({
-  operation: z.literal("update_disclosure_label"),
-  id: StableIdSchema,
-  disclosureLabel: DisclosureLabelSchema,
-});
-
 const UpdateObservationStatusSchema = z.strictObject({
   operation: z.literal("update_pedagogical_observation_status"),
   id: StableIdSchema,
@@ -52,11 +46,10 @@ export const CourseModelPatchOperationSchema = z.union([
   UpdateConceptSchema,
   UpdateObjectiveSchema,
   UpdateMisconceptionSchema,
-  UpdateDisclosureSchema,
   UpdateObservationStatusSchema,
 ]);
 
-export const CourseModelPatchSchema = z.strictObject({
+const CurrentCourseModelPatchSchema = z.strictObject({
   schemaVersion: z.literal("0.1"),
   projectId: StableIdSchema,
   baseVersion: z.number().int().positive(),
@@ -66,6 +59,13 @@ export const CourseModelPatchSchema = z.strictObject({
     .max(SCHEMA_LIMITS.patchOperations),
 });
 
+export const CourseModelPatchSchema = z.preprocess((value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const patch = value as Record<string, unknown>;
+  if (!Array.isArray(patch.operations)) return value;
+  return { ...patch, operations: patch.operations.filter((operation) => !(operation && typeof operation === "object" && "operation" in operation && operation.operation === "update_disclosure_label")) };
+}, CurrentCourseModelPatchSchema);
+
 export type CourseModelPatchOperation = z.infer<
   typeof CourseModelPatchOperationSchema
 >;
@@ -74,4 +74,3 @@ export type CourseModelPatch = z.infer<typeof CourseModelPatchSchema>;
 export function parseCourseModelPatch(input: unknown): CourseModelPatch {
   return CourseModelPatchSchema.parse(input);
 }
-

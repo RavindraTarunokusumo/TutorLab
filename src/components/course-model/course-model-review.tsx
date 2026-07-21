@@ -35,7 +35,7 @@ const sectionLabels: Record<ReviewSection, string> = {
   objectives: "Objectives",
   misconceptions: "Misconceptions",
   observations: "Pedagogy",
-  solutions: "Disclosure labels",
+  solutions: "Protected solutions",
   warnings: "Warnings",
   conflicts: "Conflicts",
 };
@@ -141,8 +141,8 @@ function Detail({ model, selection, busy, onSave, onEvidence }: { model: CourseM
   }
   if (selection.section === "solutions") {
     const item = model.protectedSolutions.find(({ id }) => id === selection.id);
-    if (!item) return <p>Select a disclosure label to review it.</p>;
-    return <section className="space-y-4"><h1 className="text-2xl font-semibold">Protected solution</h1><p className="text-muted-foreground">Only the safe summary and disclosure policy are available here; protected source content is never displayed.</p><p>{item.summary}</p><label className="grid max-w-sm gap-2 text-sm font-medium"><span>Disclosure label{hasTeacherEdit(model, "update_disclosure_label", item.id) && <TeacherEditedMarker />}</span><select value={item.disclosureLabel} disabled={busy} onChange={(event) => void onSave({ operation: "update_disclosure_label", id: item.id, disclosureLabel: event.target.value as "never_reveal" | "reveal_after_sufficient_attempts" | "available_in_revision_mode" })} className="rounded-md border bg-background px-3 py-2 font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><option value="never_reveal">Never reveal</option><option value="reveal_after_sufficient_attempts">Reveal after sufficient attempts</option><option value="available_in_revision_mode">Available in revision mode</option></select></label><EvidenceButton evidence={item.evidence} onOpen={onEvidence} /></section>;
+    if (!item) return <p>Select a protected solution to review it.</p>;
+    return <section className="space-y-4"><h1 className="text-2xl font-semibold">Protected solution</h1><p className="text-muted-foreground">Only the safe summary is available here; protected source content and final answers are never displayed.</p><p>{item.summary}</p><EvidenceButton evidence={item.evidence} onOpen={onEvidence} /></section>;
   }
   if (selection.section === "warnings") {
     const item = model.warnings.find(({ id }) => id === selection.id);

@@ -10,6 +10,7 @@ import {
   TeachingBriefPurposeStepSchema,
   TeachingBriefStyleStepSchema,
 } from "@/lib/schemas/teaching-brief";
+import { LANGUAGES, STUDENT_LEVELS, SUBJECTS, catalogLabel, topicsForSubject } from "@/lib/teaching-brief/catalogs";
 
 type TeachingBriefWizardProps = {
   project: ClientProjectSnapshot;
@@ -89,7 +90,7 @@ function validationMessage(step: Step, draft: TeachingBriefDraft): string {
   if (step === "context") return "Complete each context detail before continuing.";
   if (step === "purpose") return "Choose the tutor's main purpose before continuing.";
   if (step === "objectives") return "Add at least one learning objective before continuing.";
-  return "Choose a tone and response length before continuing.";
+  return "Choose a tone before continuing.";
 }
 
 function isSameValue(left: unknown, right: unknown): boolean {
@@ -253,24 +254,11 @@ export function TeachingBriefWizard({ project }: TeachingBriefWizardProps) {
 
       {step === "context" && (
         <div className="grid gap-4 sm:grid-cols-2">
-          {([
-            ["subject", "Subject"],
-            ["topic", "Main topic"],
-            ["studentLevel", "Student level"],
-            ["language", "Teaching language"],
-          ] as const).map(([field, label]) => (
-            <label key={field} className="grid gap-2 text-sm font-medium">
-              {label}
-              <input
-                value={brief.context?.[field] ?? ""}
-                onChange={(event) => updateBrief((current) => ({
-                  ...current,
-                  context: { ...current.context, [field]: event.target.value },
-                }))}
-                className="rounded-md border bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              />
-            </label>
-          ))}
+          <CatalogSelect label="Subject" value={brief.context?.subject ?? ""} options={SUBJECTS} placeholder="Choose a subject" onChange={(subject) => updateBrief((current) => ({ ...current, context: { ...current.context, subject, topic: "", topicOther: undefined } }))} />
+          <CatalogSelect label="Main topic" value={brief.context?.topic ?? ""} options={topicsForSubject(brief.context?.subject)} placeholder={brief.context?.subject ? "Choose a main topic" : "Choose a subject first"} disabled={!brief.context?.subject} onChange={(topic) => updateBrief((current) => ({ ...current, context: { ...current.context, topic, topicOther: topic === "other-topic" ? current.context?.topicOther : undefined } }))} />
+          {brief.context?.topic === "other-topic" && <label className="grid gap-2 text-sm font-medium sm:col-span-2">Describe the main topic<input value={brief.context.topicOther ?? ""} onChange={(event) => updateBrief((current) => ({ ...current, context: { ...current.context, topicOther: event.target.value } }))} className="min-h-11 rounded-md border bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" /></label>}
+          <CatalogSelect label="Student level" value={brief.context?.studentLevel ?? ""} options={STUDENT_LEVELS} placeholder="Choose a student level" onChange={(studentLevel) => updateBrief((current) => ({ ...current, context: { ...current.context, studentLevel } }))} />
+          <LanguageCombobox value={brief.context?.language ?? ""} onChange={(language) => updateBrief((current) => ({ ...current, context: { ...current.context, language } }))} />
         </div>
       )}
 
@@ -312,7 +300,6 @@ export function TeachingBriefWizard({ project }: TeachingBriefWizardProps) {
       {step === "style" && (
         <div className="space-y-6">
           <CardChoices label="Tone" name="tone" value={brief.style?.tone} options={[["encouraging", "Encouraging"], ["neutral", "Neutral"], ["formal", "Formal"]]} onChange={(tone) => updateBrief((current) => ({ ...current, style: { ...current.style, tone } }))} />
-          <CardChoices label="Response length" name="responseLength" value={brief.style?.responseLength} options={[["concise", "Concise"], ["balanced", "Balanced"], ["detailed", "Detailed"]]} onChange={(responseLength) => updateBrief((current) => ({ ...current, style: { ...current.style, responseLength } }))} />
         </div>
       )}
 
@@ -324,6 +311,17 @@ export function TeachingBriefWizard({ project }: TeachingBriefWizardProps) {
       </div>
     </section>
   );
+}
+
+function CatalogSelect({ label, value, options, placeholder, disabled, onChange }: { label: string; value: string; options: readonly (readonly [string, string])[]; placeholder: string; disabled?: boolean; onChange: (value: string) => void }) {
+  return <label className="grid gap-2 text-sm font-medium">{label}<select value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} className="min-h-11 rounded-md border bg-background px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><option value="" disabled>{placeholder}</option>{options.map(([id, text]) => <option key={id} value={id}>{text}</option>)}</select>{disabled && <span className="text-xs font-normal text-muted-foreground">Choose a subject first.</span>}</label>;
+}
+
+function LanguageCombobox({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const [query, setQuery] = useState(() => value ? catalogLabel(LANGUAGES, value) : "");
+  const [open, setOpen] = useState(false);
+  const matches = LANGUAGES.filter(([code, label]) => `${label} ${code}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())).slice(0, 12);
+  return <div className="relative grid gap-2 text-sm font-medium"><label htmlFor="teaching-language">Teaching language</label><input id="teaching-language" role="combobox" aria-expanded={open} aria-controls="teaching-language-options" aria-autocomplete="list" value={query} placeholder="Search languages" onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setOpen(true); onChange(""); }} onBlur={() => window.setTimeout(() => { setOpen(false); setQuery(value ? catalogLabel(LANGUAGES, value) : ""); }, 100)} className="min-h-11 rounded-md border bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" />{open && <ul id="teaching-language-options" role="listbox" className="absolute top-full z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-md border bg-background p-1 shadow-lg">{matches.map(([code, label]) => <li key={code} role="option" aria-selected={value === code}><button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { onChange(code); setQuery(label); setOpen(false); }} className="min-h-11 w-full rounded px-3 py-2 text-left font-normal hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">{label} <span className="text-muted-foreground">({code})</span></button></li>)}{matches.length === 0 && <li className="px-3 py-2 font-normal text-muted-foreground">No matching language</li>}</ul>}</div>;
 }
 
 function CardChoices<T extends string>({ label, name, value, options, onChange }: { label: string; name: string; value: T | undefined; options: readonly (readonly [T, string])[]; onChange: (value: T) => void }) {

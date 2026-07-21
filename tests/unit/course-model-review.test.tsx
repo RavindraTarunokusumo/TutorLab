@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 import courseModel from "../../fixtures/probability-course/course-model.json";
 import { CourseModelReview } from "@/components/course-model/course-model-review";
 
@@ -186,7 +187,7 @@ describe("CourseModelReview", () => {
     await user.click(screen.getByRole("button", { name: "reasoning before calculation" }));
     expect(screen.getAllByText("Teacher edited")).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: /Protected reasoning and final result/i }));
-    expect(screen.getAllByText("Teacher edited")).toHaveLength(1);
+    expect(screen.queryByText("Teacher edited")).not.toBeInTheDocument();
   });
 
   it("resets the new project after a stale in-flight save", async () => {

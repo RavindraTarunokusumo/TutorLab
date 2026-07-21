@@ -34,7 +34,7 @@ const brief: TeachingBrief = {
   schemaVersion: "0.1", projectId: "project-alpha",
   context: { subject: "Mathematics", topic: "Probability", studentLevel: "Introductory", language: "English" },
   purpose: "guided_practice", objectives: ["Explain probability reasoning."],
-  style: { tone: "encouraging", responseLength: "concise" },
+  style: { tone: "encouraging" },
   completedSteps: ["context", "purpose", "objectives", "style"],
 };
 

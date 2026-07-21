@@ -2,10 +2,10 @@
   "schemaVersion": "0.1",
   "projectId": "project-probability",
   "context": {
-    "subject": "Probability",
-    "topic": "Independence and mutually exclusive events",
-    "studentLevel": "First-year university",
-    "language": "English"
+    "subject": "mathematics",
+    "topic": "statistics-probability",
+    "studentLevel": "undergraduate",
+    "language": "en"
   },
   "purpose": "guided_practice",
   "objectives": [
@@ -13,8 +13,7 @@
     "Justify probability calculations before evaluating them"
   ],
   "style": {
-    "tone": "encouraging",
-    "responseLength": "balanced"
+    "tone": "encouraging"
   },
   "completedSteps": ["context", "purpose", "objectives", "style"]
 }

@@ -3,6 +3,7 @@ import {
   TutorDesignSchema,
   type PipelineJob,
   type TutorDesign,
+  type TutorDesignControls,
 } from "@/lib/schemas";
 
 export type TutorDesignGenerationResponse = {
@@ -39,7 +40,7 @@ function parseResponse(input: unknown): TutorDesignGenerationResponse {
 
 export async function generateTutorDesignsClient(
   projectId: string,
-  input: { idempotencyKey: string; courseModelVersionId?: string },
+  input: { idempotencyKey: string; courseModelVersionId?: string; preferences: Pick<TutorDesignControls, "diagnoseBeforeExplain" | "hintEscalation" | "maxWords" | "offTopicHandling"> },
   signal?: AbortSignal,
 ): Promise<TutorDesignGenerationResponse> {
   const response = await fetch(`/api/projects/${projectId}/designs`, {

@@ -103,6 +103,11 @@ describe("Tutor catalog", () => {
       "socratic",
       "guided-practice",
       "inquiry-case-based",
+      "explicit-instruction",
+      "retrieval-practice",
+      "worked-example-fading",
+      "metacognitive-reflection",
+      "mastery-checkpoint",
     ]);
     expect(new Set(catalog.map(({ title }) => title)).size).toBe(catalog.length);
     expect(new Set(catalog.map(({ strategySummary }) => strategySummary)).size).toBe(catalog.length);
