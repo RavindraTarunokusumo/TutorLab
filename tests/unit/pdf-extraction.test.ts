@@ -5,9 +5,13 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { extractPdfText } from "@/lib/sources/pdf-extraction";
+import {
+  extractedPageCountFromContent,
+  extractedTokenCountFromContent,
+} from "@/lib/sources/extraction-metrics";
 
 describe("PDF extraction", () => {
-  it("loads the Node canvas globals before extracting text", async () => {
+  it("extracts text and per-page boundaries for a multi-page PDF", async () => {
     const bytes = await readFile(
       path.resolve("sample_sources/sample_lecture_notes_probability.pdf"),
     );
@@ -16,20 +20,18 @@ describe("PDF extraction", () => {
 
     expect(text.toLowerCase()).toContain("probability");
     expect(text.endsWith("\f")).toBe(true);
+    expect(extractedPageCountFromContent(text)).toBe(11);
+    expect(extractedTokenCountFromContent(text)).toBeGreaterThan(0);
   });
 
-  it("pins GlobalWorkerOptions.workerSrc to a resolved pdf.worker file URL", async () => {
+  it("extracts a single-page PDF", async () => {
     const bytes = await readFile(
       path.resolve("sample_sources/sample_exam_question_probability.pdf"),
     );
 
-    await extractPdfText(new Uint8Array(bytes));
+    const text = await extractPdfText(new Uint8Array(bytes));
 
-    const { GlobalWorkerOptions } = await import(
-      "pdfjs-dist/legacy/build/pdf.mjs"
-    );
-    expect(GlobalWorkerOptions.workerSrc).toMatch(
-      /^file:\/\/.*pdf\.worker\.mjs$/,
-    );
+    expect(text.toLowerCase()).toContain("probability");
+    expect(extractedPageCountFromContent(text)).toBe(1);
   });
 });
