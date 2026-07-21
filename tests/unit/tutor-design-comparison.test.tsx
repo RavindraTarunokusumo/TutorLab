@@ -81,7 +81,15 @@ describe("TutorDesignComparison", () => {
     expect(screen.getByLabelText("Hint progression")).toHaveValue("gradual");
     expect(screen.getByText("encouraging")).toBeInTheDocument();
     expect(screen.getByLabelText("Off-topic requests")).toHaveValue("redirect");
-    expect(screen.getByRole("slider", { name: "Maximum words per reply" })).toHaveValue("160");
+    const replyLength = screen.getByRole("slider", { name: "Maximum words per reply" });
+    expect(replyLength).toHaveValue("100");
+    expect(replyLength).toHaveAttribute("min", "100");
+    expect(replyLength).toHaveAttribute("max", "500");
+    expect(replyLength).toHaveAttribute("step", "200");
+    expect(replyLength).toHaveAttribute("aria-valuetext", "Concise, 100 words");
+    expect(screen.getByText("Concise")).toBeInTheDocument();
+    expect(screen.getAllByText("Balanced")).toHaveLength(2);
+    expect(screen.getByText("Detailed")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Compile tutor" })).toBeEnabled();
 
     first.unmount();
@@ -100,7 +108,7 @@ describe("TutorDesignComparison", () => {
 
     await waitFor(() => expect(onCompile).toHaveBeenCalledWith({
       designId: "alpha",
-      overrides: expect.objectContaining({ maxWords: 160 }),
+      overrides: expect.objectContaining({ maxWords: 100 }),
     }));
   });
 

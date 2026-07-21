@@ -31,8 +31,20 @@ function saveSelection(projectId: string, id: string) {
 
 function requestKey() { return globalThis.crypto?.randomUUID?.() ?? `design-${Date.now()}`; }
 
+const replyLengths = [
+  { value: 100, label: "Concise" },
+  { value: 300, label: "Balanced" },
+  { value: 500, label: "Detailed" },
+] as const;
+
 function wordLimit(value: number) {
-  return Math.min(500, Math.max(50, Math.round(value / 10) * 10));
+  return replyLengths.reduce<number>((nearest, option) =>
+    Math.abs(option.value - value) < Math.abs(nearest - value) ? option.value : nearest,
+  replyLengths[0].value);
+}
+
+function replyLength(value: number) {
+  return replyLengths.find((option) => option.value === value) ?? replyLengths[0];
 }
 
 function Evidence({ evidence }: { evidence: TutorDesign["evidence"] }) {
@@ -49,7 +61,7 @@ export function TutorDesignComparison({ projectId, teachingBrief, onCompile }: P
   const [error, setError] = useState("");
   const [generating, setGenerating] = useState(false);
   const [compiling, setCompiling] = useState(false);
-  const [preferences, setPreferences] = useState<Pick<TutorDesignControls, "diagnoseBeforeExplain" | "hintEscalation" | "offTopicHandling" | "maxWords">>({ diagnoseBeforeExplain: true, hintEscalation: "gradual", offTopicHandling: "redirect", maxWords: 160 });
+  const [preferences, setPreferences] = useState<Pick<TutorDesignControls, "diagnoseBeforeExplain" | "hintEscalation" | "offTopicHandling" | "maxWords">>({ diagnoseBeforeExplain: true, hintEscalation: "gradual", offTopicHandling: "redirect", maxWords: 300 });
   const [stale, setStale] = useState(false);
   const requestSequence = useRef(0);
 
@@ -57,7 +69,7 @@ export function TutorDesignComparison({ projectId, teachingBrief, onCompile }: P
     setDesigns(next);
     if (next[0]) {
       const { diagnoseBeforeExplain, hintEscalation, offTopicHandling, maxWords } = next[0].controls;
-      setPreferences({ diagnoseBeforeExplain, hintEscalation, offTopicHandling, maxWords });
+      setPreferences({ diagnoseBeforeExplain, hintEscalation, offTopicHandling, maxWords: wordLimit(maxWords) });
     }
     const restoredId = storedSelection(projectId, next);
     setSelectedId(restoredId);
@@ -137,7 +149,7 @@ export function TutorDesignComparison({ projectId, teachingBrief, onCompile }: P
       <div><h2 id="recommendation-preferences-heading" className="text-xl font-semibold">Tutor behaviour</h2><p className="mt-1 text-sm text-muted-foreground">These choices determine which teaching styles are compatible.</p></div>
       <label className="flex min-h-11 items-center gap-3 rounded-lg border p-4"><input type="checkbox" checked={preferences.diagnoseBeforeExplain} onChange={(event) => { setPreferences({ ...preferences, diagnoseBeforeExplain: event.target.checked }); setStale(designs.length > 0); }} /><span><span className="font-medium">Diagnose before explaining</span><span className="block text-sm text-muted-foreground">Ask about the learner’s reasoning before direct help.</span></span></label>
       <div className="grid gap-4 sm:grid-cols-2"><Select label="Hint progression" value={preferences.hintEscalation} options={[["gradual", "Gradual"], ["balanced", "Balanced"], ["direct", "Direct"]]} onChange={(hintEscalation) => { setPreferences({ ...preferences, hintEscalation }); setStale(designs.length > 0); }} /><Select label="Off-topic requests" value={preferences.offTopicHandling} options={[["redirect", "Redirect to the course"], ["brief_redirect", "Briefly redirect"], ["decline", "Decline"]]} onChange={(offTopicHandling) => { setPreferences({ ...preferences, offTopicHandling }); setStale(designs.length > 0); }} /></div>
-      <label className="grid gap-2 text-sm font-medium"><span className="flex items-center justify-between">Maximum words per reply<output className="text-muted-foreground">{preferences.maxWords} words</output></span><input aria-label="Maximum words per reply" type="range" min="50" max="500" step="10" value={preferences.maxWords} onChange={(event) => { setPreferences({ ...preferences, maxWords: Number(event.target.value) }); setStale(designs.length > 0); }} className="accent-primary" /></label>
+      <label className="grid gap-2 text-sm font-medium"><span className="flex items-center justify-between">Maximum words per reply<output className="text-muted-foreground">{replyLength(preferences.maxWords).label} · {preferences.maxWords} words</output></span><input aria-label="Maximum words per reply" aria-valuetext={`${replyLength(preferences.maxWords).label}, ${preferences.maxWords} words`} type="range" min="100" max="500" step="200" value={preferences.maxWords} onChange={(event) => { setPreferences({ ...preferences, maxWords: Number(event.target.value) }); setStale(designs.length > 0); }} className="accent-primary" /><span className="flex justify-between text-xs font-medium text-muted-foreground"><span>Concise</span><span>Balanced</span><span>Detailed</span></span></label>
       {stale && <p role="status" className="text-sm text-amber-700">Preferences changed. Update recommendations before compiling.</p>}
       <button type="button" onClick={() => void generate()} disabled={generating} className="min-h-11 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">{generating ? "Updating recommendations…" : designs.length ? "Update recommendations" : "Create recommendations"}</button>
     </section>
@@ -173,7 +185,7 @@ export function TutorDesignComparison({ projectId, teachingBrief, onCompile }: P
       <div className="rounded-lg border bg-muted/30 p-4 text-sm">
         <div><p className="font-medium">Tone</p><p className="mt-1 capitalize text-muted-foreground">{overrides.tone}</p><p className="mt-1 text-xs text-muted-foreground">Inherited from the teaching brief.</p></div>
       </div>
-      {!validControls && <p role="alert" className="text-sm text-destructive">Choose a reply length between 50 and 500 words before compiling.</p>}
+      {!validControls && <p role="alert" className="text-sm text-destructive">Choose Concise, Balanced, or Detailed before compiling.</p>}
       <div className="flex flex-wrap items-center gap-3 border-t pt-5"><button type="submit" disabled={!validControls || compiling || stale} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{compiling ? "Compiling tutor…" : "Compile tutor"}</button></div>
     </form>}
     <p role="status" aria-live="polite" className="text-sm text-muted-foreground">{status}</p>
