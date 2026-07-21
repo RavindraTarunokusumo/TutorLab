@@ -31,13 +31,21 @@ type Dependencies = {
 };
 
 function dependencies(overrides?: Partial<Dependencies>): Dependencies {
+  // Build the OpenAI file provider lazily: only sendPreviewMessage (POST, which
+  // runs with the caller's key) actually uses it. The GET/DELETE paths must not
+  // fail just because no key is available — under the bring-your-own-key model
+  // getOpenAIFileProvider() throws when no key is present.
+  let resolvedFileProvider: OpenAIFileProvider | undefined;
   return {
     conversationRepository: overrides?.conversationRepository ?? getConversationRepository(),
     sourceRepository: overrides?.sourceRepository ?? getSourceRepository(),
     tutorRepository: overrides?.tutorRepository ?? getTutorRepository(),
     runtime: overrides?.runtime ?? getTutorRuntime(),
     projectRepository: overrides?.projectRepository ?? getProjectRepository(),
-    fileProvider: overrides?.fileProvider ?? getOpenAIFileProvider(),
+    get fileProvider() {
+      return (resolvedFileProvider ??=
+        overrides?.fileProvider ?? getOpenAIFileProvider());
+    },
     courseModelRepository: overrides?.courseModelRepository ?? getCourseModelRepository(),
     createId: overrides?.createId ?? randomUUID,
     now: overrides?.now ?? (() => new Date()),
