@@ -17,4 +17,19 @@ describe("PDF extraction", () => {
     expect(text.toLowerCase()).toContain("probability");
     expect(text.endsWith("\f")).toBe(true);
   });
+
+  it("pins GlobalWorkerOptions.workerSrc to a resolved pdf.worker file URL", async () => {
+    const bytes = await readFile(
+      path.resolve("sample_sources/sample_exam_question_probability.pdf"),
+    );
+
+    await extractPdfText(new Uint8Array(bytes));
+
+    const { GlobalWorkerOptions } = await import(
+      "pdfjs-dist/legacy/build/pdf.mjs"
+    );
+    expect(GlobalWorkerOptions.workerSrc).toMatch(
+      /^file:\/\/.*pdf\.worker\.mjs$/,
+    );
+  });
 });
