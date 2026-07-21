@@ -839,7 +839,7 @@ function SourceRow({
             disabled={busy}
             onClick={onRemove}
             aria-label={`Remove ${source.name}`}
-            className="rounded-md px-3 py-1.5 text-xs font-medium text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium text-destructive transition-[color,background-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-px hover:bg-destructive hover:text-destructive-foreground hover:shadow-sm active:translate-y-0 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transform-none motion-reduce:transition-none"
           >
             Remove
           </button>
