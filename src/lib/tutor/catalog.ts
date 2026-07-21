@@ -14,6 +14,7 @@ export type TutorCatalogTemplate = {
   templateVersion: typeof TUTOR_CATALOG_TEMPLATE_VERSION;
   title: string;
   strategySummary: string;
+  sampleResponse: string;
   tradeOff: string;
   defaultControls: TutorDesignControls;
   permittedAssistanceStates: readonly AssistanceState[];
@@ -31,6 +32,8 @@ const SOCrATIC_TEMPLATE: TutorCatalogTemplate = {
   title: "Socratic Concept Tutor",
   strategySummary:
     "Elicits the learner's reasoning, diagnoses misconceptions, and uses concise conceptual prompts before explaining.",
+  sampleResponse:
+    "Walk me through the step where your reasoning led to that answer. What rule or assumption makes that step valid?",
   tradeOff:
     "It can require more turns when a learner wants rapid procedural revision.",
   defaultControls: {
@@ -80,6 +83,8 @@ const GUIDED_PRACTICE_TEMPLATE: TutorCatalogTemplate = {
   title: "Hint-Ladder Problem Coach",
   strategySummary:
     "Moves through a deliberate hint ladder, giving increasingly explicit support while keeping the learner responsible for the solution.",
+  sampleResponse:
+    "Show me your method and where you felt least certain. I’ll start with one small hint, then make it more explicit only if you’re still stuck.",
   tradeOff:
     "It is less efficient for broad concept review than a direct explanatory tutor.",
   defaultControls: {
@@ -131,6 +136,8 @@ const INQUIRY_CASE_BASED_TEMPLATE: TutorCatalogTemplate = {
   title: "Inquiry and Case-Based Guide",
   strategySummary:
     "Uses a bounded scenario or case to help learners form hypotheses, connect evidence, and test their explanations.",
+  sampleResponse:
+    "Let’s treat your answer as a hypothesis. Which condition or piece of evidence from the problem could confirm—or challenge—it?",
   tradeOff:
     "It needs clear milestones and can feel indirect for tightly constrained procedural tasks.",
   defaultControls: {
@@ -178,7 +185,7 @@ const INQUIRY_CASE_BASED_TEMPLATE: TutorCatalogTemplate = {
   rank: 3,
 };
 
-function directTemplate(input: Pick<TutorCatalogTemplate, "archetypeId" | "title" | "strategySummary" | "tradeOff" | "defaultControls" | "relevantObservations" | "requiresDiagnosis" | "rank">): TutorCatalogTemplate {
+function directTemplate(input: Pick<TutorCatalogTemplate, "archetypeId" | "title" | "strategySummary" | "sampleResponse" | "tradeOff" | "defaultControls" | "relevantObservations" | "requiresDiagnosis" | "rank">): TutorCatalogTemplate {
   return {
     ...input,
     templateVersion: TUTOR_CATALOG_TEMPLATE_VERSION,
@@ -190,11 +197,11 @@ function directTemplate(input: Pick<TutorCatalogTemplate, "archetypeId" | "title
 }
 
 const ADDITIONAL_TEMPLATES: readonly TutorCatalogTemplate[] = [
-  directTemplate({ archetypeId: "explicit-instruction", title: "Explicit Instruction Tutor", strategySummary: "Models a concise method, guides practice, and checks understanding before independent application.", tradeOff: "It gives learners less discovery time than inquiry-led approaches.", defaultControls: { diagnoseBeforeExplain: false, hintEscalation: "direct", tone: "neutral", maxWords: 180, offTopicHandling: "redirect" }, relevantObservations: ["consistent_solution_sequence", "formal_notation_required", "method_marks_emphasized"], requiresDiagnosis: false, rank: 4 }),
-  directTemplate({ archetypeId: "retrieval-practice", title: "Retrieval Practice Coach", strategySummary: "Uses short recall prompts and spaced revisiting to strengthen durable access to course knowledge.", tradeOff: "It is less suited to first exposure to a difficult procedure.", defaultControls: { diagnoseBeforeExplain: false, hintEscalation: "balanced", tone: "encouraging", maxWords: 120, offTopicHandling: "brief_redirect" }, relevantObservations: ["conceptual_justification_required", "formal_notation_required"], requiresDiagnosis: false, rank: 5 }),
-  directTemplate({ archetypeId: "worked-example-fading", title: "Worked-Example Fading Coach", strategySummary: "Starts from modeled examples and progressively removes steps as learner competence grows.", tradeOff: "It depends on strong source-grounded examples and can be too structured for open inquiry.", defaultControls: { diagnoseBeforeExplain: false, hintEscalation: "balanced", tone: "encouraging", maxWords: 200, offTopicHandling: "redirect" }, relevantObservations: ["worked_examples_frequently_used", "consistent_solution_sequence", "method_marks_emphasized"], requiresDiagnosis: false, rank: 6 }),
-  directTemplate({ archetypeId: "metacognitive-reflection", title: "Metacognitive Reflection Coach", strategySummary: "Prompts learners to plan, monitor, explain, and evaluate their own approach.", tradeOff: "Reflection adds turns and is less efficient for rapid factual review.", defaultControls: { diagnoseBeforeExplain: true, hintEscalation: "gradual", tone: "encouraging", maxWords: 150, offTopicHandling: "brief_redirect" }, relevantObservations: ["reasoning_before_calculation", "conceptual_justification_required", "common_misconception"], requiresDiagnosis: true, rank: 7 }),
-  directTemplate({ archetypeId: "mastery-checkpoint", title: "Mastery Checkpoint Tutor", strategySummary: "Uses focused checks and corrective feedback before advancing to the next objective.", tradeOff: "Frequent checkpoints can interrupt exploratory learning.", defaultControls: { diagnoseBeforeExplain: false, hintEscalation: "direct", tone: "neutral", maxWords: 140, offTopicHandling: "decline" }, relevantObservations: ["assessment_answer_sensitive", "method_marks_emphasized", "common_misconception"], requiresDiagnosis: false, rank: 8 }),
+  directTemplate({ archetypeId: "explicit-instruction", title: "Explicit Instruction Tutor", strategySummary: "Models a concise method, guides practice, and checks understanding before independent application.", sampleResponse: "Show me each step you used. We’ll compare it with the course method, identify the first mismatch, and then correct that step together.", tradeOff: "It gives learners less discovery time than inquiry-led approaches.", defaultControls: { diagnoseBeforeExplain: false, hintEscalation: "direct", tone: "neutral", maxWords: 180, offTopicHandling: "redirect" }, relevantObservations: ["consistent_solution_sequence", "formal_notation_required", "method_marks_emphasized"], requiresDiagnosis: false, rank: 4 }),
+  directTemplate({ archetypeId: "retrieval-practice", title: "Retrieval Practice Coach", strategySummary: "Uses short recall prompts and spaced revisiting to strengthen durable access to course knowledge.", sampleResponse: "Before checking the answer, recall the rule you used and state when it applies. Then we’ll test whether your working meets those conditions.", tradeOff: "It is less suited to first exposure to a difficult procedure.", defaultControls: { diagnoseBeforeExplain: false, hintEscalation: "balanced", tone: "encouraging", maxWords: 120, offTopicHandling: "brief_redirect" }, relevantObservations: ["conceptual_justification_required", "formal_notation_required"], requiresDiagnosis: false, rank: 5 }),
+  directTemplate({ archetypeId: "worked-example-fading", title: "Worked-Example Fading Coach", strategySummary: "Starts from modeled examples and progressively removes steps as learner competence grows.", sampleResponse: "Compare your working with the course’s example sequence: set up, apply the method, then verify. You fill in the verification step—what check would catch an error?", tradeOff: "It depends on strong source-grounded examples and can be too structured for open inquiry.", defaultControls: { diagnoseBeforeExplain: false, hintEscalation: "balanced", tone: "encouraging", maxWords: 200, offTopicHandling: "redirect" }, relevantObservations: ["worked_examples_frequently_used", "consistent_solution_sequence", "method_marks_emphasized"], requiresDiagnosis: false, rank: 6 }),
+  directTemplate({ archetypeId: "metacognitive-reflection", title: "Metacognitive Reflection Coach", strategySummary: "Prompts learners to plan, monitor, explain, and evaluate their own approach.", sampleResponse: "What was your plan, which step are you least confident about, and how could you independently check it? Your answers will tell us where to review.", tradeOff: "Reflection adds turns and is less efficient for rapid factual review.", defaultControls: { diagnoseBeforeExplain: true, hintEscalation: "gradual", tone: "encouraging", maxWords: 150, offTopicHandling: "brief_redirect" }, relevantObservations: ["reasoning_before_calculation", "conceptual_justification_required", "common_misconception"], requiresDiagnosis: true, rank: 7 }),
+  directTemplate({ archetypeId: "mastery-checkpoint", title: "Mastery Checkpoint Tutor", strategySummary: "Uses focused checks and corrective feedback before advancing to the next objective.", sampleResponse: "First checkpoint: state the method you chose and justify why it fits. If that holds, we’ll check one key step before moving on.", tradeOff: "Frequent checkpoints can interrupt exploratory learning.", defaultControls: { diagnoseBeforeExplain: false, hintEscalation: "direct", tone: "neutral", maxWords: 140, offTopicHandling: "decline" }, relevantObservations: ["assessment_answer_sensitive", "method_marks_emphasized", "common_misconception"], requiresDiagnosis: false, rank: 8 }),
 ];
 
 export const TUTOR_CATALOG: readonly TutorCatalogTemplate[] = [

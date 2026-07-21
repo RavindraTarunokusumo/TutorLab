@@ -616,8 +616,7 @@ function fixtureTutorDesignSet(
       evidence,
       comparisonLearnerMessage:
         "I got the final answer, but I am not sure whether my reasoning is valid. Can you help me check it?",
-      sampleResponse:
-        "Show me the reasoning you used, and we can check the method before deciding whether the result is reliable.",
+      sampleResponse: template.sampleResponse,
       controls: {
         ...template.defaultControls,
         tone: input.teachingBrief.style.tone,

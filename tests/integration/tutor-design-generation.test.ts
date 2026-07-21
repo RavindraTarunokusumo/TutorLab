@@ -17,6 +17,7 @@ import type {
   TutorDesignSet,
 } from "@/lib/schemas";
 import type { ProjectRecord } from "@/lib/projects/repository";
+import { getTutorCatalogTemplate } from "@/lib/tutor/catalog";
 
 const timestamp = "2026-07-16T12:00:00.000Z";
 
@@ -176,6 +177,10 @@ describe("tutor design generation", () => {
       new Set(["best_fit", "strong_alternative", "balanced_option"]),
     );
     expect(new Set(first.designs.map(({ artifact }) => artifact.archetypeId)).size).toBe(3);
+    expect(new Set(first.designs.map(({ artifact }) => artifact.sampleResponse)).size).toBe(3);
+    expect(first.designs.every(({ artifact }) =>
+      artifact.sampleResponse === getTutorCatalogTemplate(artifact.archetypeId)?.sampleResponse,
+    )).toBe(true);
     expect(first.designs.every(({ artifact }) => artifact.evidence[0]?.documentId === "document-alpha")).toBe(true);
     expect(repeated.job.id).toBe(first.job.id);
     expect(repeated.designs).toHaveLength(3);

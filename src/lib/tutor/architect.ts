@@ -310,7 +310,7 @@ export async function generateTutorDesigns(
         tradeOff: template.tradeOff,
         evidence: matchedEvidence.length ? matchedEvidence : [fallbackEvidence],
         comparisonLearnerMessage: DESIGN_COMPARISON_LEARNER_MESSAGE,
-        sampleResponse: `I’ll use ${template.title.toLowerCase()} strategies and keep support grounded in your course materials.`,
+        sampleResponse: template.sampleResponse,
         controls: { ...template.defaultControls, ...preferences, tone: brief.style.tone },
         permittedAssistanceStates: template.permittedAssistanceStates.filter((state) => preferences.diagnoseBeforeExplain || state !== "diagnose"),
         permittedTeachingMoves: template.permittedTeachingMoves,

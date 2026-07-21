@@ -111,6 +111,10 @@ describe("Tutor catalog", () => {
     ]);
     expect(new Set(catalog.map(({ title }) => title)).size).toBe(catalog.length);
     expect(new Set(catalog.map(({ strategySummary }) => strategySummary)).size).toBe(catalog.length);
+    expect(new Set(catalog.map(({ sampleResponse }) => sampleResponse)).size).toBe(catalog.length);
+    expect(catalog.every(({ sampleResponse }) => sampleResponse.trim().length > 0)).toBe(true);
+    expect(catalog.every(({ sampleResponse }) => sampleResponse.length <= 220)).toBe(true);
+    expect(catalog.every(({ sampleResponse }) => !sampleResponse.includes("keep support grounded"))).toBe(true);
     expect(catalog.every((template) => template.defaultConstraints.length > 0)).toBe(true);
     expect(catalog.every((template) => template.evaluationExpectations.length > 0)).toBe(true);
     expect(isCatalogIdentity("socratic", "0.1")).toBe(true);
